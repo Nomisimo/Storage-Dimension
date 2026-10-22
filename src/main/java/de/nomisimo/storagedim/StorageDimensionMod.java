@@ -23,6 +23,7 @@ public class StorageDimensionMod implements ModInitializer {
 		StorageEvents.register();
 		StorageCommands.register();
 		Extras.register();
+		SmokeTest.registerIfEnabled();
 		LOGGER.info("Storage Dimension geladen");
 	}
 

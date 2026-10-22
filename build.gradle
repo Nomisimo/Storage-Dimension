@@ -12,6 +12,13 @@ repositories {
 }
 
 loom {
+	runs {
+		server {
+			// CI sets STORAGEDIM_SMOKETEST=true to boot a server once and check the mod loaded correctly.
+			vmArg "-Dstoragedim.smoketest=${System.getenv('STORAGEDIM_SMOKETEST') ?: 'false'}"
+		}
+	}
+
 	mods {
 		"storagedim" {
 			sourceSet sourceSets.main

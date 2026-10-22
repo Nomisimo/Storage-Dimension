@@ -23,6 +23,14 @@ jobs:
         run: chmod +x ./gradlew
       - name: build
         run: ./gradlew build
+      - name: server smoke test
+        env:
+          STORAGEDIM_SMOKETEST: 'true'
+        run: |
+          mkdir -p run
+          echo "eula=true" > run/eula.txt
+          timeout 900 ./gradlew runServer --args="nogui" 2>&1 | tee server.log
+          grep -q "SMOKETEST OK" server.log
       - name: capture build artifacts
         uses: actions/upload-artifact@v7
         with:
