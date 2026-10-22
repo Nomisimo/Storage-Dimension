@@ -1,0 +1,29 @@
+{
+	"schemaVersion": 1,
+	"id": "storagedim",
+	"version": "${version}",
+	"name": "Storage Dimension",
+	"description": "Dimensionskisten, die ihren Besitzer in einen eigenen Lagerraum ziehen, mit ME-artigem Speicher, Teilen und Hopper-Eingang.",
+	"authors": [
+		"Nomisimo"
+	],
+	"contact": {
+		"sources": "https://github.com/Nomisimo/Storage-Dimension"
+	},
+	"license": "CC0-1.0",
+	"environment": "*",
+	"entrypoints": {
+		"main": [
+			"de.nomisimo.storagedim.StorageDimensionMod"
+		]
+	},
+	"mixins": [
+		"storagedim.mixins.json"
+	],
+	"depends": {
+		"fabricloader": ">=0.19.5",
+		"minecraft": "~26.1.2",
+		"java": ">=25",
+		"fabric-api": "*"
+	}
+}

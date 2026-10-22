@@ -1,0 +1,36 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "pattern": [
+    "APA",
+    "PCP",
+    "APA"
+  ],
+  "key": {
+    "A": "minecraft:amethyst_shard",
+    "P": "minecraft:ender_pearl",
+    "C": "minecraft:chest"
+  },
+  "result": {
+    "id": "minecraft:chest",
+    "count": 1,
+    "components": {
+      "minecraft:custom_data": {
+        "storagedim_chest": true
+      },
+      "minecraft:item_name": "Dimensionskiste",
+      "minecraft:lore": [
+        {
+          "text": "Öffnen bringt dich in deine Storage Dimension",
+          "color": "gray",
+          "italic": false
+        },
+        {
+          "text": "Hopper liefern direkt in den Speicher",
+          "color": "gray",
+          "italic": false
+        }
+      ]
+    }
+  }
+}
