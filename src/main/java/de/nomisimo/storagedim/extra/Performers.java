@@ -18,6 +18,7 @@ import com.google.gson.reflect.TypeToken;
 import com.mojang.serialization.JsonOps;
 
 import de.nomisimo.storagedim.StorageDimensionMod;
+import de.nomisimo.storagedim.mixin.MannequinAccessor;
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.Holder;
 import net.minecraft.network.chat.Component;
@@ -281,14 +282,14 @@ public final class Performers {
 		ResolvableProfile profile = profile(character, config);
 
 		if (profile != null) {
-			entity.setProfile(profile);
+			((MannequinAccessor) entity).storagedim$setProfile(profile);
 		}
 
 		entity.setCustomName(Component.literal(character.name).withStyle(ChatFormatting.LIGHT_PURPLE));
 		entity.setCustomNameVisible(true);
-		entity.setDescription(Component.literal("♪ " + character.song + " ♪ · will: " + Tokens.byId(live.booking.token).name())
+		((MannequinAccessor) entity).storagedim$setDescription(Component.literal("♪ " + character.song + " ♪ · will: " + Tokens.byId(live.booking.token).name())
 				.withStyle(ChatFormatting.GRAY));
-		entity.setHideDescription(false);
+		((MannequinAccessor) entity).storagedim$setHideDescription(false);
 		entity.setInvulnerable(true);
 		entity.addTag(ENTITY_TAG);
 

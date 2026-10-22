@@ -40,7 +40,7 @@ public final class Tokens {
 	public static String idOf(ItemStack stack) {
 		CustomData data = stack.get(DataComponents.CUSTOM_DATA);
 
-		if (data == null || !data.contains(TAG)) {
+		if (data == null || !data.copyTag().contains(TAG)) {
 			return null;
 		}
 

@@ -36,6 +36,6 @@ public final class StorageItems {
 		}
 
 		CustomData data = stack.get(DataComponents.CUSTOM_DATA);
-		return data != null && data.contains(CHEST_TAG);
+		return data != null && data.copyTag().contains(CHEST_TAG);
 	}
 }
