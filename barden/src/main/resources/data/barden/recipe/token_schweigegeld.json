@@ -1,0 +1,24 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "category": "misc",
+  "ingredients": [
+    "minecraft:emerald_block",
+    "minecraft:gold_block",
+    "minecraft:paper",
+    "minecraft:ink_sac",
+    "minecraft:diamond"
+  ],
+  "result": {
+    "id": "minecraft:paper",
+    "count": 1,
+    "components": {
+      "minecraft:custom_data": {
+        "barden_token": "schweigegeld"
+      },
+      "minecraft:item_name": "Schweigegeld-Scheck",
+      "minecraft:rarity": "epic",
+      "minecraft:enchantment_glint_override": true,
+      "minecraft:max_stack_size": 16
+    }
+  }
+}

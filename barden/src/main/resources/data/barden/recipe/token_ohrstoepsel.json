@@ -1,0 +1,24 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "category": "misc",
+  "ingredients": [
+    "minecraft:honeycomb",
+    "minecraft:honeycomb",
+    "minecraft:slime_ball",
+    "minecraft:white_wool",
+    "minecraft:amethyst_shard"
+  ],
+  "result": {
+    "id": "minecraft:white_dye",
+    "count": 1,
+    "components": {
+      "minecraft:custom_data": {
+        "barden_token": "ohrstoepsel"
+      },
+      "minecraft:item_name": "Ohrstöpsel",
+      "minecraft:rarity": "epic",
+      "minecraft:enchantment_glint_override": true,
+      "minecraft:max_stack_size": 16
+    }
+  }
+}

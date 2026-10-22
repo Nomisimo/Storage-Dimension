@@ -9,6 +9,13 @@ on: [pull_request, push]
 jobs:
   build:
     runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        mod: [storage-dimension, barden]
+    defaults:
+      run:
+        working-directory: ${{ matrix.mod }}
     steps:
       - name: checkout repository
         uses: actions/checkout@v6
@@ -26,6 +33,7 @@ jobs:
       - name: server smoke test
         env:
           STORAGEDIM_SMOKETEST: 'true'
+          BARDEN_SMOKETEST: 'true'
         run: |
           mkdir -p run
           echo "eula=true" > run/eula.txt
@@ -34,5 +42,5 @@ jobs:
       - name: capture build artifacts
         uses: actions/upload-artifact@v7
         with:
-          name: Artifacts
-          path: build/libs/
+          name: ${{ matrix.mod }}
+          path: ${{ matrix.mod }}/build/libs/

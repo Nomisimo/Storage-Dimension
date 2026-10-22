@@ -1,0 +1,11 @@
+{
+	"required": true,
+	"package": "de.nomisimo.barden.mixin",
+	"compatibilityLevel": "JAVA_25",
+	"mixins": [
+		"MannequinAccessor"
+	],
+	"injectors": {
+		"defaultRequire": 1
+	}
+}

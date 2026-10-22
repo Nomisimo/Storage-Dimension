@@ -1,0 +1,24 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "category": "misc",
+  "ingredients": [
+    "minecraft:book",
+    "minecraft:feather",
+    "minecraft:glow_ink_sac",
+    "minecraft:gold_ingot",
+    "minecraft:lapis_block"
+  ],
+  "result": {
+    "id": "minecraft:paper",
+    "count": 1,
+    "components": {
+      "minecraft:custom_data": {
+        "barden_token": "autogramm"
+      },
+      "minecraft:item_name": "Signierte Autogrammkarte",
+      "minecraft:rarity": "epic",
+      "minecraft:enchantment_glint_override": true,
+      "minecraft:max_stack_size": 16
+    }
+  }
+}

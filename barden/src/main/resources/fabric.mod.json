@@ -1,0 +1,26 @@
+{
+	"schemaVersion": 1,
+	"id": "barden",
+	"version": "${version}",
+	"name": "Barden",
+	"description": "Server-Erweiterung.",
+	"authors": [
+		"Nomisimo"
+	],
+	"license": "CC0-1.0",
+	"environment": "*",
+	"entrypoints": {
+		"main": [
+			"de.nomisimo.barden.BardenMod"
+		]
+	},
+	"mixins": [
+		"barden.mixins.json"
+	],
+	"depends": {
+		"fabricloader": ">=0.19.5",
+		"minecraft": "~26.1.2",
+		"java": ">=25",
+		"fabric-api": "*"
+	}
+}

@@ -41,10 +41,11 @@ A P A      C = Kiste
 Java 25 wird benötigt.
 
 ```
+cd storage-dimension
 ./gradlew build
 ```
 
-Die fertige Datei liegt in `build/libs/`. GitHub Actions baut bei jedem Push automatisch, die .jar gibt es dann unter *Actions → Artifacts*.
+Die fertige Datei liegt in `storage-dimension/build/libs/`. GitHub Actions baut bei jedem Push automatisch, die .jar gibt es dann unter *Actions → Artifacts*.
 
 ## Installation
 
