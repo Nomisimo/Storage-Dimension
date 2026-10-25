@@ -15,6 +15,9 @@
 	"entrypoints": {
 		"main": [
 			"de.nomisimo.storagedim.StorageDimensionMod"
+		],
+		"client": [
+			"de.nomisimo.storagedim.client.StorageDimensionClient"
 		]
 	},
 	"mixins": [

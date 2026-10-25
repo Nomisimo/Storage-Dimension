@@ -2,6 +2,7 @@ package de.nomisimo.storagedim;
 
 import de.nomisimo.storagedim.storage.StorageCommands;
 import de.nomisimo.storagedim.storage.StorageEvents;
+import de.nomisimo.storagedim.storage.TerminalNetworking;
 import net.fabricmc.api.ModInitializer;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.Identifier;
@@ -22,6 +23,7 @@ public class StorageDimensionMod implements ModInitializer {
 		StorageConfig.load();
 		StorageEvents.register();
 		StorageCommands.register();
+		TerminalNetworking.register();
 		SmokeTest.registerIfEnabled();
 		LOGGER.info("Storage Dimension geladen");
 	}

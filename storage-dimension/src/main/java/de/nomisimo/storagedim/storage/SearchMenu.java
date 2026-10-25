@@ -28,7 +28,7 @@ public class SearchMenu extends AnvilMenu {
 	private SearchMenu(int containerId, Inventory inventory, String current, Consumer<String> onDone) {
 		super(containerId, inventory, ContainerLevelAccess.NULL);
 		this.onDone = onDone;
-		this.text = current;
+		this.text = current == null ? "" : current;
 		ItemStack paper = new ItemStack(Items.PAPER);
 		paper.set(DataComponents.CUSTOM_NAME, Component.literal(current.isEmpty() ? PLACEHOLDER : current));
 		inputSlots.setItem(0, paper);
@@ -38,6 +38,24 @@ public class SearchMenu extends AnvilMenu {
 		player.openMenu(new SimpleMenuProvider(
 				(id, inventory, p) -> new SearchMenu(id, inventory, current, onDone),
 				Component.literal("Suche: Text eingeben, dann rechts klicken")));
+	}
+
+	/**
+	 * Replaces the anvil logic: the result is just the paper with the typed name, and the level cost stays 0,
+	 * so searching never costs experience.
+	 */
+	@Override
+	public void createResult() {
+		ItemStack input = inputSlots.getItem(0);
+
+		if (input.isEmpty()) {
+			resultSlots.setItem(0, ItemStack.EMPTY);
+			return;
+		}
+
+		ItemStack result = input.copy();
+		result.set(DataComponents.CUSTOM_NAME, Component.literal(text == null || text.isEmpty() ? PLACEHOLDER : text));
+		resultSlots.setItem(0, result);
 	}
 
 	@Override

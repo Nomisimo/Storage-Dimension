@@ -42,15 +42,18 @@ public class StorageMenu extends ChestMenu {
 	private static final int SLOT_NEXT = 53;
 	private static final int ICON_MAX = 99;
 	private static final Set<StorageMenu> OPEN = java.util.Collections.newSetFromMap(new WeakHashMap<>());
-	/** Search text and sort order per player, kept until the server restarts. */
-	private static final Map<UUID, View> VIEWS = new HashMap<>();
+	/** Sort order per player, kept until the server restarts. The search starts empty every time. */
+	private static final Map<UUID, Sort> SORTS = new HashMap<>();
+	private static final int MAX_SEARCH = 50;
 
 	private final StorageNetwork network;
 	private final SimpleContainer display;
 	private final Player viewer;
 	/** Filter items of a filter chest, or null for the full terminal. */
 	private final List<ItemStack> filter;
-	private final View view;
+	/** The player has the mod on the client, which draws a search field and sort button instead of the bottom buttons. */
+	private final boolean clientUi;
+	private String search;
 	private List<StorageNetwork.StoredItem> shown = new ArrayList<>();
 	private int page;
 
@@ -64,18 +67,15 @@ public class StorageMenu extends ChestMenu {
 		}
 	}
 
-	private static final class View {
-		Sort sort = Sort.AMOUNT;
-		String search = "";
-	}
-
-	private StorageMenu(int containerId, Inventory inventory, SimpleContainer display, StorageNetwork network, List<ItemStack> filter) {
+	private StorageMenu(int containerId, Inventory inventory, SimpleContainer display, StorageNetwork network, List<ItemStack> filter,
+			String search, boolean clientUi) {
 		super(MenuType.GENERIC_9x6, containerId, inventory, display, 6);
 		this.network = network;
 		this.display = display;
 		this.viewer = inventory.player;
 		this.filter = filter;
-		this.view = VIEWS.computeIfAbsent(inventory.player.getUUID(), id -> new View());
+		this.search = search;
+		this.clientUi = clientUi;
 		refresh();
 		OPEN.add(this);
 	}
@@ -86,9 +86,45 @@ public class StorageMenu extends ChestMenu {
 
 	/** Opens the terminal; with a filter list only those items are shown and accepted. */
 	public static void open(ServerPlayer player, StorageNetwork network, List<ItemStack> filter) {
+		open(player, network, filter, "");
+	}
+
+	private static void open(ServerPlayer player, StorageNetwork network, List<ItemStack> filter, String search) {
+		boolean clientUi = TerminalNetworking.hasClientUi(player);
+		// With the client UI the search field sits where the title would be.
+		Component title = clientUi ? Component.empty() : Component.literal(filter == null ? "ME-Speicher" : "Filterkiste");
 		player.openMenu(new SimpleMenuProvider(
-				(id, inventory, p) -> new StorageMenu(id, inventory, new SimpleContainer(54), network, filter),
-				Component.literal(filter == null ? "ME-Speicher" : "Filterkiste")));
+				(id, inventory, p) -> new StorageMenu(id, inventory, new SimpleContainer(54), network, filter, search, clientUi),
+				title));
+
+		if (clientUi && player.containerMenu instanceof StorageMenu menu) {
+			TerminalNetworking.sendOpened(player, menu.containerId, menu.sort());
+		}
+	}
+
+	private Sort sort() {
+		return SORTS.getOrDefault(viewer.getUUID(), Sort.AMOUNT);
+	}
+
+	/** Search text typed into the client's search field. */
+	public void setSearch(String text) {
+		String clean = text.length() > MAX_SEARCH ? text.substring(0, MAX_SEARCH) : text;
+
+		if (!clean.equals(search)) {
+			search = clean;
+			page = 0;
+			refresh();
+			sync();
+		}
+	}
+
+	/** Switches the sort order and returns the new one. */
+	public Sort toggleSort() {
+		SORTS.put(viewer.getUUID(), next(sort()));
+		page = 0;
+		refresh();
+		sync();
+		return sort();
 	}
 
 	/** Redraws every open terminal of this network, e.g. after a hopper delivered items. */
@@ -106,11 +142,11 @@ public class StorageMenu extends ChestMenu {
 	}
 
 	private boolean matchesSearch(ItemStack stack) {
-		if (view.search.isEmpty()) {
+		if (search.isBlank()) {
 			return true;
 		}
 
-		String query = view.search.toLowerCase(Locale.ROOT);
+		String query = search.trim().toLowerCase(Locale.ROOT);
 		return stack.getHoverName().getString().toLowerCase(Locale.ROOT).contains(query)
 				|| BuiltInRegistries.ITEM.getKey(stack.getItem()).getPath().contains(query);
 	}
@@ -124,7 +160,7 @@ public class StorageMenu extends ChestMenu {
 			}
 		}
 
-		if (view.sort == Sort.NAME) {
+		if (sort() == Sort.NAME) {
 			Collator collator = Collator.getInstance(Locale.GERMAN);
 			list.sort(Comparator.comparing((StorageNetwork.StoredItem e) -> e.prototype.getHoverName().getString(), collator));
 		} else {
@@ -170,16 +206,18 @@ public class StorageMenu extends ChestMenu {
 			display.setItem(SLOT_NEXT, button(Items.ARROW, "Nächste Seite"));
 		}
 
-		ItemStack search = button(Items.OAK_SIGN, view.search.isEmpty() ? "Suchen" : "Suche: " + view.search);
-		search.set(DataComponents.LORE, new ItemLore(List.of(
-				Component.literal("Linksklick: Suchbegriff eingeben").withStyle(ChatFormatting.GRAY),
-				Component.literal("Rechtsklick: Suche löschen").withStyle(ChatFormatting.GRAY))));
-		display.setItem(SLOT_SEARCH, search);
+		if (!clientUi) {
+			ItemStack searchButton = button(Items.OAK_SIGN, search.isEmpty() ? "Suchen" : "Suche: " + search);
+			searchButton.set(DataComponents.LORE, new ItemLore(List.of(
+					Component.literal("Linksklick: Suchbegriff eingeben").withStyle(ChatFormatting.GRAY),
+					Component.literal("Rechtsklick: Suche löschen").withStyle(ChatFormatting.GRAY))));
+			display.setItem(SLOT_SEARCH, searchButton);
 
-		ItemStack sort = button(Items.COMPARATOR, "Sortierung: " + view.sort.label);
-		sort.set(DataComponents.LORE, new ItemLore(List.of(
-				Component.literal("Klick: nach " + next(view.sort).label + " sortieren").withStyle(ChatFormatting.GRAY))));
-		display.setItem(SLOT_SORT, sort);
+			ItemStack sortButton = button(Items.COMPARATOR, "Sortierung: " + sort().label);
+			sortButton.set(DataComponents.LORE, new ItemLore(List.of(
+					Component.literal("Klick: nach " + next(sort()).label + " sortieren").withStyle(ChatFormatting.GRAY))));
+			display.setItem(SLOT_SORT, sortButton);
+		}
 
 		display.setItem(SLOT_DEPOSIT, button(Items.HOPPER, filter == null
 				? "Inventar einlagern (ohne Hotbar)" : "Passende Items einlagern (ohne Hotbar)"));
@@ -223,15 +261,12 @@ public class StorageMenu extends ChestMenu {
 
 	@Override
 	public void clicked(int slotIndex, int buttonNum, ContainerInput input, Player player) {
-		if (slotIndex == SLOT_SEARCH && player instanceof ServerPlayer serverPlayer) {
+		if (slotIndex == SLOT_SEARCH && !clientUi && player instanceof ServerPlayer serverPlayer) {
 			if (buttonNum == 1) {
-				view.search = "";
+				search = "";
 				page = 0;
 			} else {
-				SearchMenu.open(serverPlayer, view.search, text -> {
-					view.search = text;
-					open(serverPlayer, network, filter);
-				});
+				SearchMenu.open(serverPlayer, search, text -> open(serverPlayer, network, filter, text));
 				return;
 			}
 		} else if (slotIndex >= 0 && slotIndex < 54) {
@@ -264,8 +299,8 @@ public class StorageMenu extends ChestMenu {
 			return;
 		}
 
-		if (slot == SLOT_SORT) {
-			view.sort = next(view.sort);
+		if (slot == SLOT_SORT && !clientUi) {
+			SORTS.put(player.getUUID(), next(sort()));
 			page = 0;
 			return;
 		}

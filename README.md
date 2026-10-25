@@ -1,6 +1,6 @@
 # Storage Dimension
 
-Ein Fabric-Server-Mod für **Minecraft 26.1.2**. Spieler brauchen keinen Client-Mod, alles läuft auf dem Server (nur das optionale Traveler's-Backpack-Add-on muss auch bei den Spielern installiert sein).
+Ein Fabric-Server-Mod für **Minecraft 26.1.2**. Spieler brauchen keinen Client-Mod, alles läuft auf dem Server. Optional: dieselbe Jar beim Spieler bringt ein Suchfeld ins ME-Terminal, und das Traveler's-Backpack-Add-on muss bei den Spielern installiert sein.
 
 **Download:** Die fertigen Dateien gibt es unter [Releases](https://github.com/Nomisimo/Storage-Dimension/releases). Dort steht auch, welche Datei wohin gehört.
 
@@ -11,8 +11,9 @@ Ein Fabric-Server-Mod für **Minecraft 26.1.2**. Spieler brauchen keinen Client-
   - Linksklick nimmt einen Stapel, Rechtsklick einen halben, Shift-Klick schiebt ihn ins Inventar.
   - Item auf dem Cursor in das Terminal klicken oder Shift-Klick im eigenen Inventar lagert ein.
   - Der Trichter-Knopf lagert das ganze Inventar (ohne Hotbar) ein.
-  - **Suche:** Das Schild öffnet ein Eingabefeld. Text eintippen, dann auf das Ergebnisfeld rechts klicken. Rechtsklick auf das Schild löscht die Suche.
-  - **Sortierung:** Der Komparator schaltet zwischen *Menge* und *Alphabet* um.
+  - **Suche und Sortierung:** Wer `storage-dimension-*.jar` auch auf dem eigenen Client hat, bekommt oben links im Fenster ein echtes Suchfeld und rechts daneben den Sortier-Knopf (*Menge* / *A–Z*). Gesucht wird beim Tippen.
+  - Ohne den Mod auf dem Client gibt es stattdessen unten ein Schild (öffnet ein Eingabefeld im Amboss, kostet keine Level: Text eintippen, dann rechts aufs Ergebnis klicken; Rechtsklick löscht) und einen Komparator für die Sortierung.
+  - Die Suche ist beim nächsten Öffnen wieder leer, die Sortierung bleibt.
 - **Hopper-Eingang:** Trichter, die in eine Dimensionskiste zeigen, liefern direkt in den Speicher des Besitzers. Zum Anbauen mit einem Item in der Hand schleichen.
 - **Werkbank und Ofen** stehen im Raum, gecraftet wird direkt in der Dimension.
 - **Gemeinsamer Speicher:** Standardmäßig teilen sich alle Spieler einen Speicher und einen Raum. Mit `"sharedStorage": false` in `config/storagedim.json` bekommt jeder seinen eigenen, der sich per `/storage teilen` freigeben lässt.
@@ -94,7 +95,7 @@ Im Ordner `storagedim-tb/` liegt ein kleiner Zusatz-Mod. Er fügt ein echtes **M
 - Der Rucksack muss nicht in der Hand sein: auf dem Rücken tragen und mit der Rucksack-Taste von Traveler's Backpack (Standard **B**) öffnen reicht.
 - **Crafting aus dem ME-Speicher:** Hat der Rucksack zusätzlich das Crafting-Upgrade, holt der „+“-Knopf von [JEI](https://modrinth.com/mod/jei) fehlende Zutaten auch aus dem ME-Speicher, genauso wie aus Inventar und Rucksack. Shift + „+“ füllt das Raster für so viele Durchgänge wie möglich (bis zu einem Stapel). Was vorher im Raster lag, kommt zurück ins Inventar oder, wenn das voll ist, in den Speicher.
   - Der kleine Schalter neben dem ME-Symbol stellt zwischen *ME als Quelle* (Standard) und *nur Inventar* um. Auf *nur Inventar* arbeitet „+“ wie ohne Upgrade.
-- Installation: `storagedim-tb-*.jar` **auf dem Server und bei allen Spielern**, zusammen mit Traveler's Backpack (und dessen Abhängigkeiten) und Fabric API. Storage Dimension selbst muss auf dem Server laufen. JEI wird nur für „+“ gebraucht und reicht bei den Spielern.
+- Installation: `storagedim-tb-*.jar` und `storage-dimension-*.jar` **auf dem Server und bei allen Spielern**, zusammen mit Traveler's Backpack (und dessen Abhängigkeiten) und Fabric API. Storage Dimension selbst muss auf dem Server laufen. JEI wird nur für „+“ gebraucht und reicht bei den Spielern.
 
 ### Als Modrinth-Pack
 
