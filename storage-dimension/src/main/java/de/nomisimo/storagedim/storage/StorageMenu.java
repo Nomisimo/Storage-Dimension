@@ -40,6 +40,7 @@ public class StorageMenu extends ChestMenu {
 	private static final int SLOT_DEPOSIT = 48;
 	private static final int SLOT_INFO = 49;
 	private static final int SLOT_NEXT = 53;
+	private static final int ICON_MAX = 99;
 	private static final Set<StorageMenu> OPEN = java.util.Collections.newSetFromMap(new WeakHashMap<>());
 	/** Search text and sort order per player, kept until the server restarts. */
 	private static final Map<UUID, View> VIEWS = new HashMap<>();
@@ -145,7 +146,7 @@ public class StorageMenu extends ChestMenu {
 
 		for (int i = 0; i < shown.size(); i++) {
 			StorageNetwork.StoredItem entry = shown.get(i);
-			ItemStack icon = entry.prototype.copyWithCount((int) Math.min(entry.count, entry.prototype.getMaxStackSize()));
+			ItemStack icon = displayIcon(entry);
 			List<Component> lore = new ArrayList<>();
 			lore.add(Component.literal("Gespeichert: " + format(entry.count)).withStyle(ChatFormatting.GOLD));
 			lore.add(Component.literal("Linksklick: Stapel nehmen").withStyle(ChatFormatting.GRAY));
@@ -184,6 +185,26 @@ public class StorageMenu extends ChestMenu {
 				? "Inventar einlagern (ohne Hotbar)" : "Passende Items einlagern (ohne Hotbar)"));
 		display.setItem(SLOT_INFO, button(Items.ENDER_EYE, "Seite " + (page + 1) + "/" + pages + " · "
 				+ all.size() + " Sorten · " + format(all.stream().mapToLong(e -> e.count).sum()) + " Items"));
+	}
+
+	/**
+	 * The icon of a stored item. A slot can only show up to 99, so stackable items go up to 99 on the icon
+	 * and the exact amount is always part of the name.
+	 */
+	private static ItemStack displayIcon(StorageNetwork.StoredItem entry) {
+		ItemStack icon = entry.prototype.copyWithCount(1);
+		int max = icon.getMaxStackSize();
+
+		if (max > 1) {
+			icon.set(DataComponents.MAX_STACK_SIZE, ICON_MAX);
+			icon.setCount((int) Math.min(entry.count, ICON_MAX));
+		}
+
+		icon.set(DataComponents.CUSTOM_NAME, Component.empty()
+				.append(entry.prototype.getHoverName())
+				.append(Component.literal(" × " + format(entry.count)).withStyle(ChatFormatting.GOLD))
+				.withStyle(s -> s.withItalic(false)));
+		return icon;
 	}
 
 	private static Sort next(Sort sort) {
