@@ -1,0 +1,35 @@
+# Started by hand (Actions → release → Run workflow). Creates a GitHub release from the latest jars on the
+# "builds" branch, with the install notes from .github/release-notes.md. The barden jar is left out on purpose.
+name: release
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Release tag'
+        required: true
+        default: 'v0.1.0'
+
+jobs:
+  release:
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - name: checkout repository
+        uses: actions/checkout@v6
+      - name: fetch built jars
+        run: |
+          git fetch --depth 1 origin builds
+          mkdir out
+          for f in storage-dimension-0.1.0.jar storagedim-tb-0.1.0.jar storage-dimension.mrpack; do
+            git show "origin/builds:$f" > "out/$f"
+          done
+          ls -l out
+      - name: create release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release create "${{ inputs.tag }}" out/* \
+            --target "$GITHUB_SHA" \
+            --title "Storage Dimension ${{ inputs.tag }} (MC 26.1.2)" \
+            --notes-file .github/release-notes.md
