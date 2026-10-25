@@ -78,8 +78,9 @@ Im Ordner `storagedim-tb/` liegt ein kleiner Zusatz-Mod. Er fügt ein echtes **M
 
 - Rezept (formlos): Leeres Upgrade (Traveler's Backpack), Enderauge, 2× Amethystscherbe, Redstoneblock.
 - Upgrade in einen Upgrade-Slot des Rucksacks legen. Linksklick auf das ME-Symbol im Rucksack-Fenster öffnet den ME-Speicher, Rechtsklick nimmt das Upgrade wieder heraus.
-- **Crafting aus dem ME-Speicher:** Neben dem ME-Symbol sitzt ein kleiner Schalter. Steht er auf *ME als Quelle* (Standard), füllt der Rucksack das Crafting-Upgrade nach jedem Craften aus dem ME-Speicher wieder auf. Ein Satz Zutaten im Raster reicht, Shift-Klick auf das Ergebnis craftet dann so lange, wie der Speicher Nachschub hat. Auf *nur Inventar* funktioniert das Raster ganz normal.
-- Installation: `storagedim-tb-*.jar` **auf dem Server und bei allen Spielern**, zusammen mit Traveler's Backpack (und dessen Abhängigkeiten) und Fabric API. Storage Dimension selbst muss auf dem Server laufen.
+- **Crafting aus dem ME-Speicher:** Hat der Rucksack zusätzlich das Crafting-Upgrade, holt der „+“-Knopf von [JEI](https://modrinth.com/mod/jei) fehlende Zutaten auch aus dem ME-Speicher, genauso wie aus Inventar und Rucksack. Shift + „+“ füllt das Raster für so viele Durchgänge wie möglich (bis zu einem Stapel). Was vorher im Raster lag, kommt zurück ins Inventar oder, wenn das voll ist, in den Speicher.
+  - Der kleine Schalter neben dem ME-Symbol stellt zwischen *ME als Quelle* (Standard) und *nur Inventar* um. Auf *nur Inventar* arbeitet „+“ wie ohne Upgrade.
+- Installation: `storagedim-tb-*.jar` **auf dem Server und bei allen Spielern**, zusammen mit Traveler's Backpack (und dessen Abhängigkeiten) und Fabric API. Storage Dimension selbst muss auf dem Server laufen. JEI wird nur für „+“ gebraucht und reicht bei den Spielern.
 
 ### Als Modrinth-Pack
 

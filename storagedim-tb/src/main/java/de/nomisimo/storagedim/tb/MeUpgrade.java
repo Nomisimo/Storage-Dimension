@@ -17,8 +17,8 @@ import net.fabricmc.api.Environment;
 import net.minecraft.world.inventory.Slot;
 
 /**
- * Its widget opens the shared ME storage. The upgrade's on/off switch is the "ME als Quelle" setting for the
- * crafting upgrade (see {@link MeCrafting}); TB keeps it on the upgrade item.
+ * Its widget opens the shared ME storage. The upgrade's on/off switch is the "ME als Quelle" setting for JEI's + button
+ * in the crafting upgrade (see {@link JeiTransfer}); TB keeps it on the upgrade item.
  */
 public class MeUpgrade extends UpgradeBase<MeUpgrade> implements IEnable {
 	public MeUpgrade(UpgradeManager manager, int dataHolderSlot) {
