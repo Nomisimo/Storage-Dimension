@@ -17,7 +17,7 @@ import org.slf4j.LoggerFactory;
 
 /**
  * Adds an ME upgrade for Traveler's Backpack. Clicking it in the backpack screen opens the Storage Dimension terminal,
- * and with its switch on, the backpack crafting grid is refilled from ME storage (see MeCrafting).
+ * and with its switch on "ME als Quelle", JEI's + button also takes crafting ingredients from ME storage.
  */
 public class StorageTbMod implements ModInitializer {
 	public static final String MOD_ID = "storagedim_tb";
@@ -32,6 +32,8 @@ public class StorageTbMod implements ModInitializer {
 
 		PayloadTypeRegistry.serverboundPlay().register(OpenStoragePayload.TYPE, OpenStoragePayload.CODEC);
 		ServerPlayNetworking.registerGlobalReceiver(OpenStoragePayload.TYPE, (payload, context) -> open(context.player()));
+		PayloadTypeRegistry.serverboundPlay().register(FillGridPayload.TYPE, FillGridPayload.CODEC);
+		ServerPlayNetworking.registerGlobalReceiver(FillGridPayload.TYPE, (payload, context) -> GridFiller.fill(context.player(), payload));
 	}
 
 	private static void open(ServerPlayer player) {

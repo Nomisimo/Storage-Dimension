@@ -32,6 +32,9 @@ dependencies {
 	// Traveler's Backpack 11.2.11 for 26.1.2 and its config library, only needed to compile against.
 	compileOnly "maven.modrinth:travelersbackpack:${project.travelersbackpack_version}"
 	compileOnly "maven.modrinth:forge-config-api-port:${project.forge_config_api_port_version}"
+
+	// JEI 29.43.0.107, only for the recipe transfer into the backpack crafting grid.
+	compileOnly "maven.modrinth:jei:${project.jei_version}"
 }
 
 processResources {
