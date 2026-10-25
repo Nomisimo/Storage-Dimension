@@ -1,7 +1,5 @@
 package de.nomisimo.storagedim.tb;
 
-import java.lang.reflect.Method;
-
 import com.tiviacz.travelersbackpack.inventory.menu.BackpackBaseMenu;
 
 import net.fabricmc.api.ModInitializer;
@@ -18,13 +16,13 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Adds an ME upgrade for Traveler's Backpack. Clicking it in the backpack screen opens the Storage Dimension terminal.
+ * Adds an ME upgrade for Traveler's Backpack. Clicking it in the backpack screen opens the Storage Dimension terminal,
+ * and JEI recipe transfers into the backpack crafting grid also take ingredients from ME storage.
  */
 public class StorageTbMod implements ModInitializer {
 	public static final String MOD_ID = "storagedim_tb";
 	public static final Logger LOGGER = LoggerFactory.getLogger(MOD_ID);
 	public static Item ME_UPGRADE;
-	private static Method openStorage;
 
 	@Override
 	public void onInitialize() {
@@ -34,6 +32,8 @@ public class StorageTbMod implements ModInitializer {
 
 		PayloadTypeRegistry.serverboundPlay().register(OpenStoragePayload.TYPE, OpenStoragePayload.CODEC);
 		ServerPlayNetworking.registerGlobalReceiver(OpenStoragePayload.TYPE, (payload, context) -> open(context.player()));
+		PayloadTypeRegistry.serverboundPlay().register(FillGridPayload.TYPE, FillGridPayload.CODEC);
+		ServerPlayNetworking.registerGlobalReceiver(FillGridPayload.TYPE, (payload, context) -> GridFiller.fill(context.player(), payload));
 	}
 
 	private static void open(ServerPlayer player) {
@@ -42,15 +42,7 @@ public class StorageTbMod implements ModInitializer {
 			return;
 		}
 
-		try {
-			if (openStorage == null) {
-				openStorage = Class.forName("de.nomisimo.storagedim.api.StorageApi").getMethod("openStorage", ServerPlayer.class);
-			}
-
-			openStorage.invoke(null, player);
-		} catch (ReflectiveOperationException e) {
-			LOGGER.error("Storage Dimension konnte nicht geöffnet werden", e);
-		}
+		MeBridge.openStorage(player);
 	}
 
 	public static Identifier id(String path) {
