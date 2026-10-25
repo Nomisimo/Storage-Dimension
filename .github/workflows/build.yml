@@ -12,7 +12,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        mod: [storage-dimension, barden]
+        mod: [storage-dimension, barden, storagedim-tb]
     defaults:
       run:
         working-directory: ${{ matrix.mod }}
@@ -31,6 +31,7 @@ jobs:
       - name: build
         run: ./gradlew build
       - name: server smoke test
+        if: matrix.mod != 'storagedim-tb'
         env:
           STORAGEDIM_SMOKETEST: 'true'
           BARDEN_SMOKETEST: 'true'

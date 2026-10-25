@@ -1,0 +1,14 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "category": "misc",
+  "ingredients": [
+    "travelersbackpack:blank_upgrade",
+    "minecraft:ender_eye",
+    "minecraft:amethyst_shard",
+    "minecraft:amethyst_shard",
+    "minecraft:redstone_block"
+  ],
+  "result": {
+    "id": "storagedim_tb:me_upgrade"
+  }
+}

@@ -72,6 +72,14 @@ Die fertige Datei liegt in `storage-dimension/build/libs/`. GitHub Actions baut 
 
 Die Daten liegen in `world/storagedim.json`.
 
+### Traveler's-Backpack-Add-on (optional)
+
+Im Ordner `storagedim-tb/` liegt ein kleiner Zusatz-Mod. Er fügt ein echtes **ME-Upgrade** für den Upgrade-Slot von Traveler's Backpack hinzu.
+
+- Rezept (formlos): Leeres Upgrade (Traveler's Backpack), Enderauge, 2× Amethystscherbe, Redstoneblock.
+- Upgrade in einen Upgrade-Slot des Rucksacks legen. Linksklick auf das ME-Symbol im Rucksack-Fenster öffnet den ME-Speicher, Rechtsklick nimmt das Upgrade wieder heraus.
+- Installation: `storagedim-tb-*.jar` **auf dem Server und bei allen Spielern**, zusammen mit Traveler's Backpack (und dessen Abhängigkeiten) und Fabric API. Storage Dimension selbst muss auf dem Server laufen.
+
 ### Als Modrinth-Pack
 
 GitHub Actions baut bei jedem Push auch `storage-dimension.mrpack` (im Artifact *storage-dimension*). Das Pack enthält Fabric API (wird von Modrinth geladen) und die Storage-Dimension-Jar. Minecraft 26.1.2 und Fabric Loader 0.19.5 sind darin festgelegt.

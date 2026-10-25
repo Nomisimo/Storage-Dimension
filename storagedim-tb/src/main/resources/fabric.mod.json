@@ -1,0 +1,25 @@
+{
+	"schemaVersion": 1,
+	"id": "storagedim_tb",
+	"version": "${version}",
+	"name": "Storage Dimension: Traveler's Backpack",
+	"description": "ME-Upgrade für Traveler's Backpack, das den Speicher der Storage Dimension öffnet.",
+	"authors": [
+		"Nomisimo"
+	],
+	"license": "CC0-1.0",
+	"environment": "*",
+	"entrypoints": {
+		"main": [
+			"de.nomisimo.storagedim.tb.StorageTbMod"
+		]
+	},
+	"depends": {
+		"fabricloader": ">=0.19.5",
+		"minecraft": "~26.1.2",
+		"java": ">=25",
+		"fabric-api": "*",
+		"storagedim": "*",
+		"travelersbackpack": ">=11.2.10"
+	}
+}
