@@ -29,11 +29,11 @@ dependencies {
 	// Fabric API. This is technically optional, but you probably want it anyway.
 	implementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_api_version}"
 
-	// Traveler's Backpack 11.3.3 for 26.2 and its config library, only needed to compile against.
+	// Traveler's Backpack 11.2.11 for 26.1.2 and its config library, only needed to compile against.
 	compileOnly "maven.modrinth:travelersbackpack:${project.travelersbackpack_version}"
 	compileOnly "maven.modrinth:forge-config-api-port:${project.forge_config_api_port_version}"
 
-	// JEI 30.39.0.233, only for the recipe transfer into the backpack crafting grid.
+	// JEI 29.43.0.107, only for the recipe transfer into the backpack crafting grid.
 	compileOnly "maven.modrinth:jei:${project.jei_version}"
 }
 
