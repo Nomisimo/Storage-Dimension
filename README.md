@@ -54,3 +54,10 @@ Die fertige Datei liegt in `storage-dimension/build/libs/`. GitHub Actions baut 
 3. Server starten. Die Dimension `storagedim:storage` wird automatisch angelegt.
 
 Die Daten liegen in `world/storagedim.json`.
+
+### Als Modrinth-Pack
+
+GitHub Actions baut bei jedem Push auch `storage-dimension.mrpack` (im Artifact *storage-dimension*). Das Pack enthält Fabric API (wird von Modrinth geladen) und die Storage-Dimension-Jar. Minecraft 26.1.2 und Fabric Loader 0.19.5 sind darin festgelegt.
+
+- **Server-Hoster mit Modpack-Upload:** Neuen Server mit „Modpack hochladen / .mrpack“ anlegen und die Datei auswählen.
+- **Eigener Server:** `java -jar mrpack-install.jar server storage-dimension.mrpack` oder die Datei mit [mrpack-install](https://github.com/nothub/mrpack-install) entpacken lassen. Alternativ das Pack als Zip öffnen, Fabric-Server 26.1.2 installieren, `overrides/mods/*.jar` und Fabric API in `mods/` legen.
