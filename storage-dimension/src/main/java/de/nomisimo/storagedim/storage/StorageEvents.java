@@ -400,6 +400,10 @@ public final class StorageEvents {
 				}
 
 				drain(level, pos, chest.getValue().owner());
+
+				if (level.getBlockState(pos.below()).is(Blocks.HOPPER)) {
+					restock(level, pos, chest.getValue());
+				}
 			}
 		}
 
@@ -450,6 +454,41 @@ public final class StorageEvents {
 
 		container.setChanged();
 		StorageMenu.refreshAll(network);
+	}
+
+	/**
+	 * Lets a hopper under a filter chest pull the filter items out of ME storage: right after draining, every
+	 * filter slot of the chest gets up to one stack of its item again. Whatever the hopper does not take goes
+	 * back into storage on the next drain.
+	 */
+	private static void restock(ServerLevel level, BlockPos pos, FilterChests.FilterChest chest) {
+		if (!(level.getBlockEntity(pos) instanceof Container container)) {
+			return;
+		}
+
+		StorageNetwork network = StorageData.get().networkFor(chest.owner());
+		boolean changed = false;
+
+		for (int i = 0; i < chest.filters().size() && i < container.getContainerSize(); i++) {
+			ItemStack filter = chest.filters().get(i);
+
+			if (filter.isEmpty()) {
+				continue;
+			}
+
+			for (StorageNetwork.StoredItem entry : network.sorted()) {
+				if (ItemStack.isSameItem(filter, entry.prototype)) {
+					container.setItem(i, network.extract(entry.prototype, entry.prototype.getMaxStackSize()));
+					changed = true;
+					break;
+				}
+			}
+		}
+
+		if (changed) {
+			container.setChanged();
+			StorageMenu.refreshAll(network);
+		}
 	}
 
 	// ---- helpers ----
