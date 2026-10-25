@@ -39,6 +39,11 @@ jobs:
           echo "eula=true" > run/eula.txt
           timeout 900 ./gradlew runServer --args="nogui" 2>&1 | tee server.log
           grep -q "SMOKETEST OK" server.log
+      - name: build modrinth pack
+        if: matrix.mod == 'storage-dimension'
+        run: |
+          jar=$(ls build/libs/storage-dimension-*.jar | grep -v sources)
+          python3 ../tools/build_mrpack.py "$jar" build/libs/storage-dimension.mrpack
       - name: capture build artifacts
         uses: actions/upload-artifact@v7
         with:
