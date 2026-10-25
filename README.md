@@ -4,15 +4,17 @@ Ein Fabric-Server-Mod für **Minecraft 26.1.2**. Spieler brauchen keinen Client-
 
 ## Was der Mod macht
 
-- **Dimensionskiste:** Sieht aus wie eine ganz normale Kiste. Öffnet der Besitzer sie, wird er in seinen eigenen Lagerraum in der Storage Dimension gezogen.
-- **Zuschauen:** Öffnet ein anderer Spieler die Kiste, während der Besitzer drin ist, schaut er für bis zu 30 Sekunden als Zuschauer in den Raum und sieht ihn herumlaufen. Schleichen bringt ihn zurück. Ist niemand drin, zeigt die Kiste nur ein leeres Kisten-Inventar, in dem nichts gelagert werden kann.
+- **Dimensionskiste:** Sieht aus wie eine ganz normale Kiste. Wer sie öffnet und Zugriff auf den Speicher hat, wird in den Lagerraum in der Storage Dimension gezogen. Es können beliebig viele Spieler gleichzeitig drin sein. Wer keinen Zugriff hat, sieht nur ein leeres Kisten-Inventar, in dem nichts gelagert werden kann.
 - **ME-Speicher:** Die Enderkiste im Raum ist das Terminal. Dort liegen alle Items sortiert nach Menge, ohne Stapel- oder Slot-Grenzen.
   - Linksklick nimmt einen Stapel, Rechtsklick einen halben, Shift-Klick schiebt ihn ins Inventar.
   - Item auf dem Cursor in das Terminal klicken oder Shift-Klick im eigenen Inventar lagert ein.
   - Der Trichter-Knopf lagert das ganze Inventar (ohne Hotbar) ein.
+  - **Suche:** Das Schild öffnet ein Eingabefeld. Text eintippen, dann auf das Ergebnisfeld rechts klicken. Rechtsklick auf das Schild löscht die Suche.
+  - **Sortierung:** Der Komparator schaltet zwischen *Menge* und *Alphabet* um.
 - **Hopper-Eingang:** Trichter, die in eine Dimensionskiste zeigen, liefern direkt in den Speicher des Besitzers. Zum Anbauen mit einem Item in der Hand schleichen.
 - **Werkbank und Ofen** stehen im Raum, gecraftet wird direkt in der Dimension.
 - **Gemeinsamer Speicher:** Standardmäßig teilen sich alle Spieler einen Speicher und einen Raum. Mit `"sharedStorage": false` in `config/storagedim.json` bekommt jeder seinen eigenen, der sich per `/storage teilen` freigeben lässt.
+- **Filterkiste:** Eine Kiste, die nur bis zu 7 ausgewählte Items aus dem ME-Speicher zeigt, eins pro Rahmen im Rezept. Schleichen + Rechtsklick mit leerer Hand öffnet die Filter: ein Item auf einen Platz legen setzt den Filter, Klick mit leerer Hand entfernt ihn. Normaler Rechtsklick öffnet die Kiste, dort kann man die gefilterten Items herausnehmen und nur passende einlagern. Trichter liefern auch hier direkt in den Speicher.
 - **ME-Terminal:** Eine extra Enderkiste. Hingestellt öffnet sie per Rechtsklick direkt den ME-Speicher, ohne Dimensionswechsel.
 - **ME-Rucksack:** Ein Rucksack, der mit dem Speicher verbunden ist und ihn von überall öffnet.
   - **Bündel:** ME-Upgrade + Bündel in der Werkbank kombinieren. Rechtsklick öffnet den Speicher.
@@ -35,6 +37,14 @@ A E A      A = Amethystscherbe
 R A R      E = Enderkiste
 ```
 
+Filterkiste:
+
+```
+F F F      F = Rahmen
+F C F      C = Kiste
+F E F      E = Enderauge
+```
+
 ME-Upgrade (formlos): Enderauge, 2× Amethystscherbe, Redstoneblock, Papier.
 ME-Rucksack (formlos): beliebiges Bündel + ME-Upgrade.
 
@@ -52,6 +62,7 @@ ME-Rucksack (formlos): beliebiges Bündel + ME-Upgrade.
 | `/storage me` | Öffnet den ME-Speicher, wenn du einen ME-Rucksack trägst oder dabeihast |
 | `/storage give [spieler]` | (OP) Gibt eine Dimensionskiste |
 | `/storage give terminal` | (OP) Gibt ein ME-Terminal |
+| `/storage give filter` | (OP) Gibt eine Filterkiste |
 
 ## Bauen
 

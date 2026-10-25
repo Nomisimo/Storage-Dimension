@@ -7,7 +7,7 @@ on:
       tag:
         description: 'Release tag'
         required: true
-        default: 'v0.1.0'
+        default: 'v0.2.0'
 
 jobs:
   release:
@@ -21,7 +21,8 @@ jobs:
         run: |
           git fetch --depth 1 origin builds
           mkdir out
-          for f in storage-dimension-0.1.0.jar storagedim-tb-0.1.0.jar storage-dimension.mrpack; do
+          for f in $(git ls-tree --name-only origin/builds); do
+            case "$f" in barden-*) continue ;; esac
             git show "origin/builds:$f" > "out/$f"
           done
           ls -l out

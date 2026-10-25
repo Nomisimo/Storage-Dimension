@@ -46,11 +46,16 @@ public final class StorageData {
 	public final Map<UUID, UUID> memberOf = new HashMap<>();
 	/** Dimension id to (packed block pos to chest owner). */
 	public final Map<String, Map<Long, UUID>> chests = new HashMap<>();
+	/** Dimension id to (packed block pos to filter chest). */
+	public final Map<String, Map<Long, FilterChests.FilterChest>> filterChests = new HashMap<>();
 	/** Dimension id to packed positions of placed ME terminals. */
 	public final Map<String, Set<Long>> terminals = new HashMap<>();
 	/** Where to send a player back to when they leave the storage room. */
 	public final Map<UUID, SavedPos> returns = new HashMap<>();
-	/** Players currently watching through a chest; restored on join if the server stopped meanwhile. */
+	/**
+	 * Players who were watching through a chest in an older version; they get their position and
+	 * game mode back on their next join.
+	 */
 	public final Map<UUID, Viewer> viewers = new HashMap<>();
 	public int nextRoom;
 
@@ -171,6 +176,26 @@ public final class StorageData {
 		}
 	}
 
+	// ---- filter chests ----
+
+	public FilterChests.FilterChest filterChest(String dimension, BlockPos pos) {
+		Map<Long, FilterChests.FilterChest> map = filterChests.get(dimension);
+		return map == null ? null : map.get(pos.asLong());
+	}
+
+	public void setFilterChest(String dimension, BlockPos pos, FilterChests.FilterChest chest) {
+		filterChests.computeIfAbsent(dimension, d -> new HashMap<>()).put(pos.asLong(), chest);
+		markDirty();
+	}
+
+	public void removeFilterChest(String dimension, BlockPos pos) {
+		Map<Long, FilterChests.FilterChest> map = filterChests.get(dimension);
+
+		if (map != null && map.remove(pos.asLong()) != null) {
+			markDirty();
+		}
+	}
+
 	// ---- terminals ----
 
 	public boolean isTerminal(String dimension, BlockPos pos) {
@@ -234,6 +259,35 @@ public final class StorageData {
 			chestObj.add(dim, d);
 		});
 		root.add("chests", chestObj);
+
+		JsonObject filterObj = new JsonObject();
+		filterChests.forEach((dim, map) -> {
+			JsonObject d = new JsonObject();
+			map.forEach((pos, chest) -> {
+				JsonObject c = new JsonObject();
+				c.addProperty("owner", chest.owner().toString());
+				JsonArray slots = new JsonArray();
+
+				for (int i = 0; i < chest.filters().size(); i++) {
+					ItemStack filter = chest.filters().get(i);
+					int slot = i;
+
+					if (!filter.isEmpty()) {
+						ItemStack.CODEC.encodeStart(ops, filter).result().ifPresent(json -> {
+							JsonObject entry = new JsonObject();
+							entry.addProperty("slot", slot);
+							entry.add("stack", json);
+							slots.add(entry);
+						});
+					}
+				}
+
+				c.add("filters", slots);
+				d.add(Long.toString(pos), c);
+			});
+			filterObj.add(dim, d);
+		});
+		root.add("filterChests", filterObj);
 
 		JsonObject terminalObj = new JsonObject();
 		terminals.forEach((dim, set) -> {
@@ -299,6 +353,29 @@ public final class StorageData {
 				dim.getValue().getAsJsonObject().entrySet().forEach(e ->
 						map.put(Long.parseLong(e.getKey()), UUID.fromString(e.getValue().getAsString())));
 				chests.put(dim.getKey(), map);
+			});
+		}
+
+		if (root.has("filterChests")) {
+			root.getAsJsonObject("filterChests").entrySet().forEach(dim -> {
+				Map<Long, FilterChests.FilterChest> map = new HashMap<>();
+				dim.getValue().getAsJsonObject().entrySet().forEach(e -> {
+					JsonObject c = e.getValue().getAsJsonObject();
+					FilterChests.FilterChest chest = FilterChests.FilterChest.empty(UUID.fromString(c.get("owner").getAsString()));
+
+					for (JsonElement el : c.getAsJsonArray("filters")) {
+						JsonObject entry = el.getAsJsonObject();
+						int slot = entry.get("slot").getAsInt();
+
+						if (slot >= 0 && slot < FilterChests.SLOTS) {
+							ItemStack.CODEC.parse(ops, entry.get("stack")).resultOrPartial(StorageDimensionMod.LOGGER::warn)
+									.ifPresent(stack -> chest.filters().set(slot, stack.copyWithCount(1)));
+						}
+					}
+
+					map.put(Long.parseLong(e.getKey()), chest);
+				});
+				filterChests.put(dim.getKey(), map);
 			});
 		}
 

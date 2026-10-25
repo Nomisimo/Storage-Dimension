@@ -2,7 +2,7 @@ Storage Dimension für **Minecraft 26.1.2** (Fabric).
 
 ## Server, in den Ordner `mods`
 
-- `storage-dimension-0.1.0.jar`
+- `storage-dimension-0.2.0.jar`
 - `storagedim-tb-0.1.0.jar`
 - dazu [Fabric API](https://modrinth.com/mod/fabric-api), [Traveler's Backpack](https://modrinth.com/mod/travelersbackpack) und [Forge Config API Port](https://modrinth.com/mod/forge-config-api-port), alle für 26.1.2
 

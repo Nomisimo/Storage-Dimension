@@ -34,13 +34,8 @@ import net.minecraft.world.level.block.ChestBlock;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.properties.ChestType;
-import net.minecraft.world.phys.AABB;
 
 public final class StorageEvents {
-	private static final int VIEW_TICKS = 20 * 30;
-
-	/** Watchers that are online right now, with remaining ticks. */
-	private static final Map<UUID, Integer> ACTIVE_VIEWERS = new HashMap<>();
 	/** Player to the new owner they want to give the next storage chest they click. */
 	static final Map<UUID, UUID> PENDING_OWNER = new HashMap<>();
 	private static int tickCounter;
@@ -50,17 +45,7 @@ public final class StorageEvents {
 
 	public static void register() {
 		ServerLifecycleEvents.SERVER_STARTED.register(StorageData::load);
-		ServerLifecycleEvents.SERVER_STOPPING.register(server -> {
-			for (UUID id : Set.copyOf(ACTIVE_VIEWERS.keySet())) {
-				ServerPlayer player = server.getPlayerList().getPlayer(id);
-
-				if (player != null) {
-					stopViewing(player);
-				}
-			}
-
-			StorageData.unload();
-		});
+		ServerLifecycleEvents.SERVER_STOPPING.register(server -> StorageData.unload());
 		ServerLifecycleEvents.AFTER_SAVE.register((server, flush, force) -> StorageData.save(false));
 		ServerTickEvents.END_SERVER_TICK.register(StorageEvents::tick);
 		UseBlockCallback.EVENT.register((player, level, hand, hit) -> {
@@ -82,11 +67,10 @@ public final class StorageEvents {
 			StorageData data = StorageData.get();
 
 			if (data != null && data.viewers.containsKey(player.getUUID())) {
-				// Logged out or the server stopped while watching: put them back.
+				// Was watching through a chest in an older version: put them back.
 				stopViewing(player);
 			}
 		});
-		ServerPlayerEvents.LEAVE.register(player -> ACTIVE_VIEWERS.remove(player.getUUID()));
 	}
 
 	// ---- placing & breaking ----
@@ -98,11 +82,14 @@ public final class StorageEvents {
 			return;
 		}
 
-		if (level.isClientSide() || !StorageItems.isStorageChest(stack) || !state.is(Blocks.CHEST) || !(placer instanceof ServerPlayer player)) {
+		boolean storageChest = StorageItems.isStorageChest(stack);
+		boolean filterChest = StorageItems.isFilterChest(stack);
+
+		if (level.isClientSide() || !(storageChest || filterChest) || !state.is(Blocks.CHEST) || !(placer instanceof ServerPlayer player)) {
 			return;
 		}
 
-		// Never merge into a double chest; each storage chest stands alone.
+		// Never merge into a double chest; each special chest stands alone.
 		if (state.getValue(ChestBlock.TYPE) != ChestType.SINGLE) {
 			BlockPos other = pos.relative(ChestBlock.getConnectedDirection(state));
 			BlockState otherState = level.getBlockState(other);
@@ -114,8 +101,16 @@ public final class StorageEvents {
 			level.setBlock(pos, state.setValue(ChestBlock.TYPE, ChestType.SINGLE), Block.UPDATE_ALL);
 		}
 
+		if (filterChest) {
+			StorageData.get().setFilterChest(Rooms.id(level), pos, FilterChests.FilterChest.empty(player.getUUID()));
+			player.sendSystemMessage(Component.literal("Filterkiste gesetzt. Schleichen + Rechtsklick mit leerer Hand stellt die Filter ein.")
+					.withStyle(ChatFormatting.DARK_PURPLE));
+			return;
+		}
+
 		StorageData.get().setChest(Rooms.id(level), pos, player.getUUID());
-		player.sendSystemMessage(Component.literal("Dimensionskiste gesetzt. Nur du wirst beim Öffnen hineingezogen.").withStyle(ChatFormatting.DARK_PURPLE));
+		player.sendSystemMessage(Component.literal("Dimensionskiste gesetzt. Wer Zugriff auf den Speicher hat, kommt beim Öffnen hinein.")
+				.withStyle(ChatFormatting.DARK_PURPLE));
 	}
 
 	private static boolean onBreak(Level level, net.minecraft.world.entity.player.Player player, BlockPos pos, BlockState state) {
@@ -143,6 +138,25 @@ public final class StorageEvents {
 			}
 
 			return true;
+		}
+
+		FilterChests.FilterChest filterChest = data.filterChest(Rooms.id(level), pos);
+
+		if (filterChest != null) {
+			data.removeFilterChest(Rooms.id(level), pos);
+
+			if (!state.is(Blocks.CHEST)) {
+				return true;
+			}
+
+			drain((ServerLevel) level, pos, filterChest.owner());
+			level.removeBlock(pos, false);
+
+			if (!player.isCreative()) {
+				Block.popResource(level, pos, StorageItems.filterChest());
+			}
+
+			return false;
 		}
 
 		UUID owner = data.chestOwner(Rooms.id(level), pos);
@@ -205,6 +219,12 @@ public final class StorageEvents {
 			return InteractionResult.PASS;
 		}
 
+		FilterChests.FilterChest filterChest = data.filterChest(Rooms.id(level), pos);
+
+		if (filterChest != null) {
+			return useFilterChest(player, level, pos, data, filterChest);
+		}
+
 		UUID owner = data.chestOwner(Rooms.id(level), pos);
 
 		if (owner == null) {
@@ -234,16 +254,11 @@ public final class StorageEvents {
 			return InteractionResult.PASS;
 		}
 
-		if (owner.equals(player.getUUID())) {
-			enterRoom(player);
-			return InteractionResult.SUCCESS;
-		}
-
-		ServerPlayer ownerPlayer = level.getServer().getPlayerList().getPlayer(owner);
+		// Everybody with access to the chest's storage comes in, any number at once; others see an empty chest.
 		StorageNetwork network = data.networkFor(owner);
 
-		if (ownerPlayer != null && Rooms.isStorage(ownerPlayer.level()) && Rooms.roomAt(ownerPlayer.blockPosition()) == network.room) {
-			startViewing(player, network);
+		if (network.canAccess(player.getUUID())) {
+			enterRoom(player, network);
 		} else {
 			DecoyChestMenu.open(player);
 		}
@@ -251,9 +266,37 @@ public final class StorageEvents {
 		return InteractionResult.SUCCESS;
 	}
 
+	private static InteractionResult useFilterChest(ServerPlayer player, ServerLevel level, BlockPos pos, StorageData data,
+			FilterChests.FilterChest chest) {
+		if (!level.getBlockState(pos).is(Blocks.CHEST)) {
+			data.removeFilterChest(Rooms.id(level), pos);
+			return InteractionResult.PASS;
+		}
+
+		if (player.isSecondaryUseActive()) {
+			// Sneaking with an item in hand places it (e.g. a hopper) instead.
+			if (!player.getMainHandItem().isEmpty()) {
+				return InteractionResult.PASS;
+			}
+
+			FilterMenu.open(player, chest);
+			return InteractionResult.SUCCESS;
+		}
+
+		if (!chest.hasFilters()) {
+			player.connection.send(new ClientboundSetActionBarTextPacket(
+					Component.literal("Noch keine Filter: Schleichen + Rechtsklick mit leerer Hand").withStyle(ChatFormatting.YELLOW)));
+			FilterMenu.open(player, chest);
+			return InteractionResult.SUCCESS;
+		}
+
+		StorageMenu.open(player, data.networkFor(player.getUUID()), chest.active());
+		return InteractionResult.SUCCESS;
+	}
+
 	// ---- entering & leaving ----
 
-	public static void enterRoom(ServerPlayer player) {
+	public static void enterRoom(ServerPlayer player, StorageNetwork network) {
 		StorageData data = StorageData.get();
 
 		if (!Rooms.isStorage(player.level())) {
@@ -261,9 +304,8 @@ public final class StorageEvents {
 			StorageData.markDirty();
 		}
 
-		StorageNetwork network = data.networkFor(player.getUUID());
 		Rooms.teleportIntoRoom(player, network.room);
-		player.sendSystemMessage(Component.literal("Willkommen in deiner Storage Dimension! Enderkiste = ME-Speicher, Leuchtstein = Ausgang.")
+		player.sendSystemMessage(Component.literal("Willkommen in der Storage Dimension! Enderkiste = ME-Speicher, Leuchtstein = Ausgang.")
 				.withStyle(ChatFormatting.DARK_PURPLE));
 	}
 
@@ -279,21 +321,10 @@ public final class StorageEvents {
 		}
 	}
 
-	// ---- watching through a chest ----
+	// ---- old chest watchers ----
 
-	private static void startViewing(ServerPlayer player, StorageNetwork network) {
-		StorageData data = StorageData.get();
-		data.viewers.put(player.getUUID(), new StorageData.Viewer(here(player),
-				Integer.toString(player.gameMode.getGameModeForPlayer().getId()), network.owner));
-		StorageData.markDirty();
-		ACTIVE_VIEWERS.put(player.getUUID(), VIEW_TICKS);
-		player.setGameMode(GameType.SPECTATOR);
-		Rooms.teleportToViewpoint(player, network.room);
-		player.connection.send(new ClientboundSetActionBarTextPacket(Component.literal("Schleichen zum Zurückkehren").withStyle(ChatFormatting.GRAY)));
-	}
-
+	/** Watching through a chest was removed; this only restores players saved while watching in an older version. */
 	private static void stopViewing(ServerPlayer player) {
-		ACTIVE_VIEWERS.remove(player.getUUID());
 		StorageData.Viewer viewer = StorageData.get().viewers.remove(player.getUUID());
 		StorageData.markDirty();
 
@@ -314,8 +345,6 @@ public final class StorageEvents {
 			return;
 		}
 
-		tickViewers(server, data);
-
 		if (++tickCounter % 10 == 0) {
 			drainAll(server, data);
 		}
@@ -325,40 +354,7 @@ public final class StorageEvents {
 		}
 	}
 
-	private static void tickViewers(MinecraftServer server, StorageData data) {
-		Iterator<Map.Entry<UUID, Integer>> it = ACTIVE_VIEWERS.entrySet().iterator();
-
-		while (it.hasNext()) {
-			Map.Entry<UUID, Integer> entry = it.next();
-			ServerPlayer player = server.getPlayerList().getPlayer(entry.getKey());
-			StorageData.Viewer viewer = data.viewers.get(entry.getKey());
-
-			if (player == null || viewer == null) {
-				it.remove();
-				continue;
-			}
-
-			StorageNetwork network = data.networkFor(viewer.network());
-			ServerPlayer owner = server.getPlayerList().getPlayer(viewer.network());
-			boolean ownerInside = owner != null && Rooms.isStorage(owner.level()) && Rooms.roomAt(owner.blockPosition()) == network.room;
-			int left = entry.getValue() - 1;
-
-			if (left <= 0 || player.isShiftKeyDown() || !ownerInside) {
-				it.remove();
-				stopViewing(player);
-				continue;
-			}
-
-			entry.setValue(left);
-			AABB box = Rooms.interior(network.room);
-
-			if (!Rooms.isStorage(player.level()) || !box.contains(player.position())) {
-				Rooms.teleportToViewpoint(player, network.room);
-			}
-		}
-	}
-
-	/** Players in the storage dimension who somehow left their room go back in. */
+	/** Players in the storage dimension who are not inside a room they may use go back to their own. */
 	private static void keepInsideRooms(MinecraftServer server, StorageData data) {
 		ServerLevel level = Rooms.level(server);
 
@@ -367,20 +363,46 @@ public final class StorageEvents {
 		}
 
 		for (ServerPlayer player : level.players()) {
-			if (ACTIVE_VIEWERS.containsKey(player.getUUID())) {
+			int room = Rooms.roomAt(player.blockPosition());
+			StorageNetwork here = room < 0 ? null : data.networkByRoom(room);
+
+			if (here != null && here.canAccess(player.getUUID()) && Rooms.interior(room).inflate(0.5).contains(player.position())) {
 				continue;
 			}
 
-			StorageNetwork network = data.networkFor(player.getUUID());
-
-			if (!Rooms.interior(network.room).inflate(0.5).contains(player.position())) {
-				Rooms.teleportIntoRoom(player, network.room);
-			}
+			Rooms.teleportIntoRoom(player, data.networkFor(player.getUUID()).room);
 		}
 	}
 
-	/** Moves everything hoppers dropped into storage chests into the owner's network. */
+	/** Moves everything hoppers dropped into storage and filter chests into the owner's network. */
 	private static void drainAll(MinecraftServer server, StorageData data) {
+		for (Map.Entry<String, Map<Long, FilterChests.FilterChest>> dim : data.filterChests.entrySet()) {
+			ServerLevel level = Rooms.levelById(server, dim.getKey());
+
+			if (level == null) {
+				continue;
+			}
+
+			Iterator<Map.Entry<Long, FilterChests.FilterChest>> it = dim.getValue().entrySet().iterator();
+
+			while (it.hasNext()) {
+				Map.Entry<Long, FilterChests.FilterChest> chest = it.next();
+				BlockPos pos = BlockPos.of(chest.getKey());
+
+				if (!level.hasChunkAt(pos)) {
+					continue;
+				}
+
+				if (!level.getBlockState(pos).is(Blocks.CHEST)) {
+					it.remove();
+					StorageData.markDirty();
+					continue;
+				}
+
+				drain(level, pos, chest.getValue().owner());
+			}
+		}
+
 		for (Map.Entry<String, Map<Long, UUID>> dim : data.chests.entrySet()) {
 			ServerLevel level = Rooms.levelById(server, dim.getKey());
 

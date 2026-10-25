@@ -73,6 +73,8 @@ public final class StorageCommands {
 						.executes(ctx -> give(ctx.getSource().getPlayerOrException(), StorageItems.storageChest()))
 						.then(Commands.literal("terminal")
 								.executes(ctx -> give(ctx.getSource().getPlayerOrException(), StorageItems.terminal())))
+						.then(Commands.literal("filter")
+								.executes(ctx -> give(ctx.getSource().getPlayerOrException(), StorageItems.filterChest())))
 						.then(Commands.argument("spieler", EntityArgument.player())
 								.executes(ctx -> give(EntityArgument.getPlayer(ctx, "spieler"), StorageItems.storageChest())))));
 	}

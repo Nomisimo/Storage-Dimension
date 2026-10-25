@@ -16,6 +16,7 @@ public final class StorageItems {
 	public static final String TERMINAL_TAG = "storagedim_terminal";
 	public static final String BACKPACK_TAG = "storagedim_backpack";
 	public static final String UPGRADE_TAG = "storagedim_upgrade";
+	public static final String FILTER_TAG = "storagedim_filter";
 
 	private StorageItems() {
 	}
@@ -43,6 +44,23 @@ public final class StorageItems {
 		stack.set(DataComponents.LORE, new ItemLore(List.of(
 				Component.literal("Öffnet den ME-Speicher direkt").withStyle(ChatFormatting.GRAY))));
 		return stack;
+	}
+
+	/** Same result as data/storagedim/recipe/filter_chest.json. */
+	public static ItemStack filterChest() {
+		ItemStack stack = new ItemStack(Items.CHEST);
+		CompoundTag tag = new CompoundTag();
+		tag.putBoolean(FILTER_TAG, true);
+		stack.set(DataComponents.CUSTOM_DATA, CustomData.of(tag));
+		stack.set(DataComponents.ITEM_NAME, Component.literal("Filterkiste"));
+		stack.set(DataComponents.LORE, new ItemLore(List.of(
+				Component.literal("Zeigt bis zu 7 gewählte Items aus dem ME-Speicher").withStyle(ChatFormatting.GRAY),
+				Component.literal("Schleichen + Rechtsklick: Filter einstellen").withStyle(ChatFormatting.GRAY))));
+		return stack;
+	}
+
+	public static boolean isFilterChest(ItemStack stack) {
+		return stack.is(Items.CHEST) && hasTag(stack, FILTER_TAG);
 	}
 
 	public static boolean isStorageChest(ItemStack stack) {
