@@ -3,10 +3,10 @@
 	"minVersion": "0.8",
 	"package": "de.nomisimo.storagedim.tb.mixin",
 	"compatibilityLevel": "JAVA_25",
-	"client": [
-		"JeiTransferMixin"
+	"mixins": [
+		"ResultSlotExtMixin"
 	],
 	"injectors": {
-		"defaultRequire": 0
+		"defaultRequire": 1
 	}
 }

@@ -8,6 +8,7 @@ import com.tiviacz.travelersbackpack.client.screens.widgets.WidgetBase;
 import com.tiviacz.travelersbackpack.inventory.BackpackWrapper;
 import com.tiviacz.travelersbackpack.inventory.UpgradeManager;
 import com.tiviacz.travelersbackpack.inventory.menu.BackpackBaseMenu;
+import com.tiviacz.travelersbackpack.inventory.upgrades.IEnable;
 import com.tiviacz.travelersbackpack.inventory.upgrades.Point;
 import com.tiviacz.travelersbackpack.inventory.upgrades.UpgradeBase;
 
@@ -15,8 +16,11 @@ import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.world.inventory.Slot;
 
-/** The upgrade itself holds no data; its widget opens the shared ME storage. */
-public class MeUpgrade extends UpgradeBase<MeUpgrade> {
+/**
+ * Its widget opens the shared ME storage. The upgrade's on/off switch is the "ME als Quelle" setting for the
+ * crafting upgrade (see {@link MeCrafting}); TB keeps it on the upgrade item.
+ */
+public class MeUpgrade extends UpgradeBase<MeUpgrade> implements IEnable {
 	public MeUpgrade(UpgradeManager manager, int dataHolderSlot) {
 		super(manager, dataHolderSlot, new Point(24, 24));
 	}

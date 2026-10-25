@@ -3,7 +3,7 @@
 	"id": "storagedim_tb",
 	"version": "${version}",
 	"name": "Storage Dimension: Traveler's Backpack",
-	"description": "ME-Upgrade für Traveler's Backpack: öffnet den Speicher der Storage Dimension und liefert Zutaten fürs Rucksack-Crafting (JEI).",
+	"description": "ME-Upgrade für Traveler's Backpack: öffnet den Speicher der Storage Dimension und kann ihn als Quelle fürs Rucksack-Crafting nutzen.",
 	"authors": [
 		"Nomisimo"
 	],
@@ -24,8 +24,5 @@
 	},
 	"mixins": [
 		"storagedim_tb.mixins.json"
-	],
-	"suggests": {
-		"jei": "*"
-	}
+	]
 }
