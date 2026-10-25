@@ -8,6 +8,7 @@ import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.context.CommandContext;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
 
+import de.nomisimo.storagedim.StorageConfig;
 import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback;
 import net.minecraft.ChatFormatting;
 import net.minecraft.commands.CommandSourceStack;
@@ -58,16 +59,18 @@ public final class StorageCommands {
 								}))))
 				.then(Commands.literal("give")
 						.requires(Commands.hasPermission(Commands.LEVEL_GAMEMASTERS))
-						.executes(ctx -> give(ctx.getSource().getPlayerOrException()))
+						.executes(ctx -> give(ctx.getSource().getPlayerOrException(), StorageItems.storageChest()))
+						.then(Commands.literal("terminal")
+								.executes(ctx -> give(ctx.getSource().getPlayerOrException(), StorageItems.terminal())))
 						.then(Commands.argument("spieler", EntityArgument.player())
-								.executes(ctx -> give(EntityArgument.getPlayer(ctx, "spieler"))))));
+								.executes(ctx -> give(EntityArgument.getPlayer(ctx, "spieler"), StorageItems.storageChest())))));
 	}
 
 	private static int info(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException {
 		ServerPlayer player = ctx.getSource().getPlayerOrException();
 		StorageData data = StorageData.get();
 		StorageNetwork network = data.networkFor(player.getUUID());
-		String owner = network.owner.equals(player.getUUID()) ? "dir" : playerName(player, network.owner);
+		String owner = network.owner.equals(StorageData.SHARED) ? "allen" : network.owner.equals(player.getUUID()) ? "dir" : playerName(player, network.owner);
 		send(player, "Speicher von " + owner + ": " + network.typeCount() + " Sorten, " + network.totalCount() + " Items, "
 				+ network.members.size() + " Mitglieder.", ChatFormatting.AQUA);
 		send(player, "/storage teilen <spieler> · annehmen · verlassen · entfernen <spieler> · raus · kiste besitzer <spieler>", ChatFormatting.GRAY);
@@ -76,6 +79,11 @@ public final class StorageCommands {
 
 	private static int invite(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException {
 		ServerPlayer player = ctx.getSource().getPlayerOrException();
+
+		if (StorageConfig.get().sharedStorage) {
+			send(player, "Alle Spieler teilen sich bereits einen gemeinsamen Speicher.", ChatFormatting.YELLOW);
+			return 0;
+		}
 		ServerPlayer target = EntityArgument.getPlayer(ctx, "spieler");
 		StorageNetwork network = StorageData.get().networkFor(player.getUUID());
 
@@ -91,6 +99,11 @@ public final class StorageCommands {
 
 	private static int accept(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException {
 		ServerPlayer player = ctx.getSource().getPlayerOrException();
+
+		if (StorageConfig.get().sharedStorage) {
+			send(player, "Alle Spieler teilen sich bereits einen gemeinsamen Speicher.", ChatFormatting.YELLOW);
+			return 0;
+		}
 		UUID owner = INVITES.remove(player.getUUID());
 		StorageData data = StorageData.get();
 
@@ -115,6 +128,11 @@ public final class StorageCommands {
 
 	private static int leaveNetwork(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException {
 		ServerPlayer player = ctx.getSource().getPlayerOrException();
+
+		if (StorageConfig.get().sharedStorage) {
+			send(player, "Alle Spieler teilen sich bereits einen gemeinsamen Speicher.", ChatFormatting.YELLOW);
+			return 0;
+		}
 		StorageData data = StorageData.get();
 		UUID owner = data.memberOf.remove(player.getUUID());
 
@@ -136,6 +154,11 @@ public final class StorageCommands {
 
 	private static int kick(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException {
 		ServerPlayer player = ctx.getSource().getPlayerOrException();
+
+		if (StorageConfig.get().sharedStorage) {
+			send(player, "Alle Spieler teilen sich bereits einen gemeinsamen Speicher.", ChatFormatting.YELLOW);
+			return 0;
+		}
 		ServerPlayer target = EntityArgument.getPlayer(ctx, "spieler");
 		StorageData data = StorageData.get();
 		StorageNetwork network = data.ownNetwork(player.getUUID());
@@ -151,8 +174,7 @@ public final class StorageCommands {
 		return 1;
 	}
 
-	private static int give(ServerPlayer player) {
-		ItemStack stack = StorageItems.storageChest();
+	private static int give(ServerPlayer player, ItemStack stack) {
 
 		if (!player.getInventory().add(stack)) {
 			player.drop(stack, false);

@@ -12,6 +12,7 @@ import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
 import net.fabricmc.fabric.api.event.player.PlayerBlockBreakEvents;
 import net.fabricmc.fabric.api.event.player.UseBlockCallback;
+import net.fabricmc.fabric.api.event.player.UseItemCallback;
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
@@ -69,6 +70,16 @@ public final class StorageEvents {
 
 			return onUseBlock(serverPlayer, (ServerLevel) level, hit.getBlockPos());
 		});
+		UseItemCallback.EVENT.register((player, level, hand) -> {
+			if (level.isClientSide() || !(player instanceof ServerPlayer serverPlayer) || StorageData.get() == null
+					|| !StorageItems.isBackpack(player.getItemInHand(hand))) {
+				return InteractionResult.PASS;
+			}
+
+			// The ME backpack opens the storage from anywhere instead of emptying the bundle.
+			StorageMenu.open(serverPlayer, StorageData.get().networkFor(player.getUUID()));
+			return InteractionResult.SUCCESS;
+		});
 		PlayerBlockBreakEvents.BEFORE.register((level, player, pos, state, blockEntity) -> onBreak(level, player, pos, state));
 		ServerPlayerEvents.JOIN.register(player -> {
 			StorageData data = StorageData.get();
@@ -85,6 +96,11 @@ public final class StorageEvents {
 
 	/** Called from the BlockItem mixin right after a block was placed from an item. */
 	public static void onPlaced(Level level, BlockPos pos, BlockState state, LivingEntity placer, ItemStack stack) {
+		if (!level.isClientSide() && StorageItems.isTerminal(stack) && state.is(Blocks.ENDER_CHEST)) {
+			StorageData.get().setTerminal(Rooms.id(level), pos, true);
+			return;
+		}
+
 		if (level.isClientSide() || !StorageItems.isStorageChest(stack) || !state.is(Blocks.CHEST) || !(placer instanceof ServerPlayer player)) {
 			return;
 		}
@@ -116,6 +132,22 @@ public final class StorageEvents {
 			return false;
 		}
 
+		if (data.isTerminal(Rooms.id(level), pos)) {
+			data.setTerminal(Rooms.id(level), pos, false);
+
+			if (state.is(Blocks.ENDER_CHEST)) {
+				level.removeBlock(pos, false);
+
+				if (!player.isCreative()) {
+					Block.popResource(level, pos, StorageItems.terminal());
+				}
+
+				return false;
+			}
+
+			return true;
+		}
+
 		UUID owner = data.chestOwner(Rooms.id(level), pos);
 
 		if (owner == null || !state.is(Blocks.CHEST)) {
@@ -140,6 +172,20 @@ public final class StorageEvents {
 
 		if (data == null) {
 			return InteractionResult.PASS;
+		}
+
+		if (data.isTerminal(Rooms.id(level), pos)) {
+			if (!level.getBlockState(pos).is(Blocks.ENDER_CHEST)) {
+				data.setTerminal(Rooms.id(level), pos, false);
+				return InteractionResult.PASS;
+			}
+
+			if (player.isSecondaryUseActive() && !player.getMainHandItem().isEmpty()) {
+				return InteractionResult.PASS;
+			}
+
+			StorageMenu.open(player, data.networkFor(player.getUUID()));
+			return InteractionResult.SUCCESS;
 		}
 
 		if (Rooms.isStorage(level)) {

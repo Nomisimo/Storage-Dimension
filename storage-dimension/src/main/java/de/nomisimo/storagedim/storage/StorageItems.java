@@ -13,6 +13,8 @@ import net.minecraft.world.item.component.ItemLore;
 
 public final class StorageItems {
 	public static final String CHEST_TAG = "storagedim_chest";
+	public static final String TERMINAL_TAG = "storagedim_terminal";
+	public static final String BACKPACK_TAG = "storagedim_backpack";
 
 	private StorageItems() {
 	}
@@ -30,12 +32,33 @@ public final class StorageItems {
 		return stack;
 	}
 
-	public static boolean isStorageChest(ItemStack stack) {
-		if (!stack.is(Items.CHEST)) {
-			return false;
-		}
+	/** Same result as data/storagedim/recipe/me_terminal.json. */
+	public static ItemStack terminal() {
+		ItemStack stack = new ItemStack(Items.ENDER_CHEST);
+		CompoundTag tag = new CompoundTag();
+		tag.putBoolean(TERMINAL_TAG, true);
+		stack.set(DataComponents.CUSTOM_DATA, CustomData.of(tag));
+		stack.set(DataComponents.ITEM_NAME, Component.literal("ME-Terminal"));
+		stack.set(DataComponents.LORE, new ItemLore(List.of(
+				Component.literal("Öffnet den ME-Speicher direkt").withStyle(ChatFormatting.GRAY))));
+		return stack;
+	}
 
+	public static boolean isStorageChest(ItemStack stack) {
+		return stack.is(Items.CHEST) && hasTag(stack, CHEST_TAG);
+	}
+
+	public static boolean isTerminal(ItemStack stack) {
+		return stack.is(Items.ENDER_CHEST) && hasTag(stack, TERMINAL_TAG);
+	}
+
+	/** A bundle with the ME upgrade, see data/storagedim/recipe/me_backpack.json. */
+	public static boolean isBackpack(ItemStack stack) {
+		return hasTag(stack, BACKPACK_TAG);
+	}
+
+	private static boolean hasTag(ItemStack stack, String key) {
 		CustomData data = stack.get(DataComponents.CUSTOM_DATA);
-		return data != null && data.copyTag().contains(CHEST_TAG);
+		return data != null && data.copyTag().contains(key);
 	}
 }

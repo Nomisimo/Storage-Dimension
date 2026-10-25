@@ -8,7 +8,9 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 
 import com.google.gson.Gson;
@@ -19,6 +21,7 @@ import com.google.gson.JsonObject;
 import com.mojang.serialization.DynamicOps;
 import com.mojang.serialization.JsonOps;
 
+import de.nomisimo.storagedim.StorageConfig;
 import de.nomisimo.storagedim.StorageDimensionMod;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.MinecraftServer;
@@ -29,6 +32,8 @@ import net.minecraft.world.level.storage.LevelResource;
  * All persistent state of the mod, stored as storagedim.json in the world folder.
  */
 public final class StorageData {
+	/** Owner id of the one network everybody uses when sharedStorage is on. */
+	public static final UUID SHARED = new UUID(0L, 0L);
 	private static final Gson GSON = new GsonBuilder().create();
 	private static StorageData instance;
 	private static boolean dirty;
@@ -41,6 +46,8 @@ public final class StorageData {
 	public final Map<UUID, UUID> memberOf = new HashMap<>();
 	/** Dimension id to (packed block pos to chest owner). */
 	public final Map<String, Map<Long, UUID>> chests = new HashMap<>();
+	/** Dimension id to packed positions of placed ME terminals. */
+	public final Map<String, Set<Long>> terminals = new HashMap<>();
 	/** Where to send a player back to when they leave the storage room. */
 	public final Map<UUID, SavedPos> returns = new HashMap<>();
 	/** Players currently watching through a chest; restored on join if the server stopped meanwhile. */
@@ -107,6 +114,10 @@ public final class StorageData {
 
 	/** The network a player currently uses (a joined one, or their own). */
 	public StorageNetwork networkFor(UUID player) {
+		if (StorageConfig.get().sharedStorage) {
+			return ownNetwork(SHARED);
+		}
+
 		UUID joined = memberOf.get(player);
 
 		if (joined != null) {
@@ -160,6 +171,21 @@ public final class StorageData {
 		}
 	}
 
+	// ---- terminals ----
+
+	public boolean isTerminal(String dimension, BlockPos pos) {
+		Set<Long> set = terminals.get(dimension);
+		return set != null && set.contains(pos.asLong());
+	}
+
+	public void setTerminal(String dimension, BlockPos pos, boolean present) {
+		Set<Long> set = terminals.computeIfAbsent(dimension, d -> new HashSet<>());
+
+		if (present ? set.add(pos.asLong()) : set.remove(pos.asLong())) {
+			markDirty();
+		}
+	}
+
 	// ---- json ----
 
 	private DynamicOps<JsonElement> ops() {
@@ -208,6 +234,14 @@ public final class StorageData {
 			chestObj.add(dim, d);
 		});
 		root.add("chests", chestObj);
+
+		JsonObject terminalObj = new JsonObject();
+		terminals.forEach((dim, set) -> {
+			JsonArray arr = new JsonArray();
+			set.forEach(arr::add);
+			terminalObj.add(dim, arr);
+		});
+		root.add("terminals", terminalObj);
 
 		JsonObject returnObj = new JsonObject();
 		returns.forEach((player, pos) -> returnObj.add(player.toString(), writePos(pos)));
@@ -265,6 +299,14 @@ public final class StorageData {
 				dim.getValue().getAsJsonObject().entrySet().forEach(e ->
 						map.put(Long.parseLong(e.getKey()), UUID.fromString(e.getValue().getAsString())));
 				chests.put(dim.getKey(), map);
+			});
+		}
+
+		if (root.has("terminals")) {
+			root.getAsJsonObject("terminals").entrySet().forEach(dim -> {
+				Set<Long> set = new HashSet<>();
+				dim.getValue().getAsJsonArray().forEach(e -> set.add(e.getAsLong()));
+				terminals.put(dim.getKey(), set);
 			});
 		}
 

@@ -19,6 +19,7 @@ public class StorageDimensionMod implements ModInitializer {
 
 	@Override
 	public void onInitialize() {
+		StorageConfig.load();
 		StorageEvents.register();
 		StorageCommands.register();
 		SmokeTest.registerIfEnabled();

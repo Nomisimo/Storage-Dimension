@@ -43,7 +43,7 @@ final class SmokeTest {
 				}
 			}
 
-			for (String recipe : List.of("storage_chest")) {
+			for (String recipe : List.of("storage_chest", "me_terminal", "me_upgrade", "me_backpack")) {
 				if (server.getRecipeManager().byKey(ResourceKey.create(Registries.RECIPE, StorageDimensionMod.id(recipe))).isEmpty()) {
 					errors.add("Rezept fehlt: " + recipe);
 				}

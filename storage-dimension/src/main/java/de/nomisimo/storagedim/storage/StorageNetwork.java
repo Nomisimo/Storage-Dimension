@@ -104,6 +104,6 @@ public class StorageNetwork {
 	}
 
 	public boolean canAccess(UUID player) {
-		return owner.equals(player) || members.contains(player);
+		return owner.equals(StorageData.SHARED) || owner.equals(player) || members.contains(player);
 	}
 }

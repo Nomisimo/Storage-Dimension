@@ -12,7 +12,9 @@ Ein Fabric-Server-Mod für **Minecraft 26.1.2**. Spieler brauchen keinen Client-
   - Der Trichter-Knopf lagert das ganze Inventar (ohne Hotbar) ein.
 - **Hopper-Eingang:** Trichter, die in eine Dimensionskiste zeigen, liefern direkt in den Speicher des Besitzers. Zum Anbauen mit einem Item in der Hand schleichen.
 - **Werkbank und Ofen** stehen im Raum, gecraftet wird direkt in der Dimension.
-- **Teilen:** Mehrere Spieler können einen gemeinsamen Speicher und Raum nutzen.
+- **Gemeinsamer Speicher:** Standardmäßig teilen sich alle Spieler einen Speicher und einen Raum. Mit `"sharedStorage": false` in `config/storagedim.json` bekommt jeder seinen eigenen, der sich per `/storage teilen` freigeben lässt.
+- **ME-Terminal:** Eine extra Enderkiste. Hingestellt öffnet sie per Rechtsklick direkt den ME-Speicher, ohne Dimensionswechsel.
+- **ME-Rucksack:** Ein ME-Upgrade mit einem beliebigen Bündel kombinieren. Rechtsklick mit dem Rucksack öffnet den Speicher von überall.
 - **Ausgang:** Rechtsklick auf den Leuchtstein im Raum oder `/storage raus`.
 
 ## Rezept
@@ -23,18 +25,30 @@ P C P      P = Enderperle
 A P A      C = Kiste
 ```
 
+ME-Terminal:
+
+```
+R A R      R = Redstone
+A E A      A = Amethystscherbe
+R A R      E = Enderkiste
+```
+
+ME-Upgrade (formlos): Enderauge, 2× Amethystscherbe, Redstoneblock, Papier.
+ME-Rucksack (formlos): beliebiges Bündel + ME-Upgrade.
+
 ## Befehle
 
 | Befehl | Wirkung |
 | --- | --- |
 | `/storage` | Infos zum eigenen Speicher |
-| `/storage teilen <spieler>` | Lädt jemanden in deinen Speicher ein |
+| `/storage teilen <spieler>` | Lädt jemanden in deinen Speicher ein (nur ohne gemeinsamen Speicher) |
 | `/storage annehmen` | Nimmt eine Einladung an. Dein eigener Speicher bleibt erhalten. |
 | `/storage verlassen` | Zurück zum eigenen Speicher |
 | `/storage entfernen <spieler>` | Wirft ein Mitglied raus |
 | `/storage kiste besitzer <spieler>` | Danach eine eigene Dimensionskiste anklicken, um sie jemandem zu übertragen |
 | `/storage raus` | Verlässt den Lagerraum |
 | `/storage give [spieler]` | (OP) Gibt eine Dimensionskiste |
+| `/storage give terminal` | (OP) Gibt ein ME-Terminal |
 
 ## Bauen
 
