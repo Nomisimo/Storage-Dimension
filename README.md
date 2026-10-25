@@ -1,11 +1,13 @@
 # Storage Dimension
 
-Ein Fabric-Server-Mod für **Minecraft 26.1.2**. Spieler brauchen keinen Client-Mod, alles läuft auf dem Server.
+Ein Fabric-Server-Mod für **Minecraft 26.1.2**. Spieler brauchen keinen Client-Mod, alles läuft auf dem Server (nur das optionale Traveler's-Backpack-Add-on muss auch bei den Spielern installiert sein).
+
+**Download:** Die fertigen Dateien gibt es unter [Releases](https://github.com/Nomisimo/Storage-Dimension/releases). Dort steht auch, welche Datei wohin gehört.
 
 ## Was der Mod macht
 
 - **Dimensionskiste:** Sieht aus wie eine ganz normale Kiste. Wer sie öffnet und Zugriff auf den Speicher hat, wird in den Lagerraum in der Storage Dimension gezogen. Es können beliebig viele Spieler gleichzeitig drin sein. Wer keinen Zugriff hat, sieht nur ein leeres Kisten-Inventar, in dem nichts gelagert werden kann.
-- **ME-Speicher:** Die Enderkiste im Raum ist das Terminal. Dort liegen alle Items sortiert nach Menge, ohne Stapel- oder Slot-Grenzen.
+- **ME-Speicher:** Die Enderkiste im Raum ist das Terminal. Dort liegen alle Items ohne Stapel- oder Slot-Grenzen. Die genaue Menge steht im Namen jedes Items (z. B. „Bruchstein × 1.234“), die Zahl auf dem Symbol geht bis 99.
   - Linksklick nimmt einen Stapel, Rechtsklick einen halben, Shift-Klick schiebt ihn ins Inventar.
   - Item auf dem Cursor in das Terminal klicken oder Shift-Klick im eigenen Inventar lagert ein.
   - Der Trichter-Knopf lagert das ganze Inventar (ohne Hotbar) ein.
@@ -73,7 +75,7 @@ cd storage-dimension
 ./gradlew build
 ```
 
-Die fertige Datei liegt in `storage-dimension/build/libs/`. GitHub Actions baut bei jedem Push automatisch, die .jar gibt es dann unter *Actions → Artifacts*.
+Die fertige Datei liegt in `storage-dimension/build/libs/`. GitHub Actions baut bei jedem Push automatisch und legt die Jars auf den Branch `builds`. Ein Release mit Anleitung entsteht per Hand unter *Actions → release → Run workflow*.
 
 ## Installation
 
@@ -89,13 +91,14 @@ Im Ordner `storagedim-tb/` liegt ein kleiner Zusatz-Mod. Er fügt ein echtes **M
 
 - Rezept (formlos): Leeres Upgrade (Traveler's Backpack), Enderauge, 2× Amethystscherbe, Redstoneblock.
 - Upgrade in einen Upgrade-Slot des Rucksacks legen. Linksklick auf das ME-Symbol im Rucksack-Fenster öffnet den ME-Speicher, Rechtsklick nimmt das Upgrade wieder heraus.
+- Der Rucksack muss nicht in der Hand sein: auf dem Rücken tragen und mit der Rucksack-Taste von Traveler's Backpack (Standard **B**) öffnen reicht.
 - **Crafting aus dem ME-Speicher:** Hat der Rucksack zusätzlich das Crafting-Upgrade, holt der „+“-Knopf von [JEI](https://modrinth.com/mod/jei) fehlende Zutaten auch aus dem ME-Speicher, genauso wie aus Inventar und Rucksack. Shift + „+“ füllt das Raster für so viele Durchgänge wie möglich (bis zu einem Stapel). Was vorher im Raster lag, kommt zurück ins Inventar oder, wenn das voll ist, in den Speicher.
   - Der kleine Schalter neben dem ME-Symbol stellt zwischen *ME als Quelle* (Standard) und *nur Inventar* um. Auf *nur Inventar* arbeitet „+“ wie ohne Upgrade.
 - Installation: `storagedim-tb-*.jar` **auf dem Server und bei allen Spielern**, zusammen mit Traveler's Backpack (und dessen Abhängigkeiten) und Fabric API. Storage Dimension selbst muss auf dem Server laufen. JEI wird nur für „+“ gebraucht und reicht bei den Spielern.
 
 ### Als Modrinth-Pack
 
-GitHub Actions baut bei jedem Push auch `storage-dimension.mrpack` (im Artifact *storage-dimension*). Das Pack enthält Fabric API (wird von Modrinth geladen) und die Storage-Dimension-Jar. Minecraft 26.1.2 und Fabric Loader 0.19.5 sind darin festgelegt.
+`storage-dimension.mrpack` liegt in jedem [Release](https://github.com/Nomisimo/Storage-Dimension/releases). Das Pack enthält Fabric API (wird von Modrinth geladen) und die Storage-Dimension-Jar. Minecraft 26.1.2 und Fabric Loader 0.19.5 sind darin festgelegt.
 
 - **Server-Hoster mit Modpack-Upload:** Neuen Server mit „Modpack hochladen / .mrpack“ anlegen und die Datei auswählen.
 - **Eigener Server:** Mit [mrpack-install](https://github.com/nothub/mrpack-install): `mrpack-install storage-dimension.mrpack --server-dir server`. Das lädt Fabric-Server, Fabric API und legt die Mod ab.
