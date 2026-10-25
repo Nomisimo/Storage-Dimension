@@ -1,6 +1,6 @@
 # Storage Dimension
 
-Ein Fabric-Server-Mod für **Minecraft 26.1.2**. Spieler brauchen keinen Client-Mod, alles läuft auf dem Server.
+Ein Fabric-Server-Mod für **Minecraft 26.2**. Spieler brauchen keinen Client-Mod, alles läuft auf dem Server.
 
 ## Was der Mod macht
 
@@ -66,7 +66,7 @@ Die fertige Datei liegt in `storage-dimension/build/libs/`. GitHub Actions baut 
 
 ## Installation
 
-1. Fabric Loader 0.19.5 oder neuer und Fabric API für 26.1.2 auf dem Server installieren.
+1. Fabric Loader 0.20.1 oder neuer und Fabric API für 26.2 auf dem Server installieren.
 2. Die `storage-dimension-*.jar` (nicht die `-sources.jar`) in den `mods`-Ordner legen.
 3. Server starten. Die Dimension `storagedim:storage` wird automatisch angelegt.
 
@@ -84,7 +84,7 @@ Im Ordner `storagedim-tb/` liegt ein kleiner Zusatz-Mod. Er fügt ein echtes **M
 
 ### Als Modrinth-Pack
 
-GitHub Actions baut bei jedem Push auch `storage-dimension.mrpack` (im Artifact *storage-dimension*). Das Pack enthält Fabric API (wird von Modrinth geladen) und die Storage-Dimension-Jar. Minecraft 26.1.2 und Fabric Loader 0.19.5 sind darin festgelegt.
+GitHub Actions baut bei jedem Push auch `storage-dimension.mrpack` (im Artifact *storage-dimension*). Das Pack enthält Fabric API (wird von Modrinth geladen) und die Storage-Dimension-Jar. Minecraft 26.2 und Fabric Loader 0.20.1 sind darin festgelegt.
 
 - **Server-Hoster mit Modpack-Upload:** Neuen Server mit „Modpack hochladen / .mrpack“ anlegen und die Datei auswählen.
 - **Eigener Server:** Mit [mrpack-install](https://github.com/nothub/mrpack-install): `mrpack-install storage-dimension.mrpack --server-dir server`. Das lädt Fabric-Server, Fabric API und legt die Mod ab.

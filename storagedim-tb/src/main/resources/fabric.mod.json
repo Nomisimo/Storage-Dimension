@@ -15,12 +15,12 @@
 		]
 	},
 	"depends": {
-		"fabricloader": ">=0.19.5",
-		"minecraft": "~26.1.2",
+		"fabricloader": ">=0.20.1",
+		"minecraft": "~26.2",
 		"java": ">=25",
 		"fabric-api": "*",
 		"storagedim": "*",
-		"travelersbackpack": ">=11.2.10"
+		"travelersbackpack": ">=11.3.0"
 	},
 	"mixins": [
 		"storagedim_tb.mixins.json"

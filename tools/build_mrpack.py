@@ -12,9 +12,9 @@ import urllib.request
 import zipfile
 from pathlib import Path
 
-MINECRAFT = "26.1.2"
-FABRIC_LOADER = "0.19.5"
-FABRIC_API = "0.155.3+26.1.2"
+MINECRAFT = "26.2"
+FABRIC_LOADER = "0.20.1"
+FABRIC_API = "0.161.0+26.2"
 
 
 def fabric_api_file():
