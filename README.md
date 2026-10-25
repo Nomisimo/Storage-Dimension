@@ -14,7 +14,9 @@ Ein Fabric-Server-Mod für **Minecraft 26.1.2**. Spieler brauchen keinen Client-
 - **Werkbank und Ofen** stehen im Raum, gecraftet wird direkt in der Dimension.
 - **Gemeinsamer Speicher:** Standardmäßig teilen sich alle Spieler einen Speicher und einen Raum. Mit `"sharedStorage": false` in `config/storagedim.json` bekommt jeder seinen eigenen, der sich per `/storage teilen` freigeben lässt.
 - **ME-Terminal:** Eine extra Enderkiste. Hingestellt öffnet sie per Rechtsklick direkt den ME-Speicher, ohne Dimensionswechsel.
-- **ME-Rucksack:** Ein ME-Upgrade mit einem beliebigen Bündel kombinieren. Rechtsklick mit dem Rucksack öffnet den Speicher von überall.
+- **ME-Rucksack:** Ein Rucksack, der mit dem Speicher verbunden ist und ihn von überall öffnet.
+  - **Bündel:** ME-Upgrade + Bündel in der Werkbank kombinieren. Rechtsklick öffnet den Speicher.
+  - **[Traveler's Backpack](https://www.curseforge.com/minecraft/mc-mods/travelers-backpack-fabric) (optional):** ME-Upgrade in die Zweithand, den Rucksack in die Haupthand, schleichen und rechtsklicken. Danach öffnet Schleichen + Rechtsklick mit dem Rucksack den ME-Speicher, normaler Rechtsklick weiterhin den Rucksack. Trägst du ihn auf dem Rücken, öffnet `/storage me` den Speicher. Traveler's Backpack muss dafür auf Server und Clients installiert sein, Storage Dimension selbst bleibt rein serverseitig.
 - **Ausgang:** Rechtsklick auf den Leuchtstein im Raum oder `/storage raus`.
 
 ## Rezept
@@ -47,6 +49,7 @@ ME-Rucksack (formlos): beliebiges Bündel + ME-Upgrade.
 | `/storage entfernen <spieler>` | Wirft ein Mitglied raus |
 | `/storage kiste besitzer <spieler>` | Danach eine eigene Dimensionskiste anklicken, um sie jemandem zu übertragen |
 | `/storage raus` | Verlässt den Lagerraum |
+| `/storage me` | Öffnet den ME-Speicher, wenn du einen ME-Rucksack trägst oder dabeihast |
 | `/storage give [spieler]` | (OP) Gibt eine Dimensionskiste |
 | `/storage give terminal` | (OP) Gibt ein ME-Terminal |
 

@@ -71,14 +71,11 @@ public final class StorageEvents {
 			return onUseBlock(serverPlayer, (ServerLevel) level, hit.getBlockPos());
 		});
 		UseItemCallback.EVENT.register((player, level, hand) -> {
-			if (level.isClientSide() || !(player instanceof ServerPlayer serverPlayer) || StorageData.get() == null
-					|| !StorageItems.isBackpack(player.getItemInHand(hand))) {
+			if (level.isClientSide() || !(player instanceof ServerPlayer serverPlayer) || StorageData.get() == null) {
 				return InteractionResult.PASS;
 			}
 
-			// The ME backpack opens the storage from anywhere instead of emptying the bundle.
-			StorageMenu.open(serverPlayer, StorageData.get().networkFor(player.getUUID()));
-			return InteractionResult.SUCCESS;
+			return Backpacks.onUseItem(serverPlayer, hand);
 		});
 		PlayerBlockBreakEvents.BEFORE.register((level, player, pos, state, blockEntity) -> onBreak(level, player, pos, state));
 		ServerPlayerEvents.JOIN.register(player -> {

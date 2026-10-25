@@ -15,6 +15,7 @@ public final class StorageItems {
 	public static final String CHEST_TAG = "storagedim_chest";
 	public static final String TERMINAL_TAG = "storagedim_terminal";
 	public static final String BACKPACK_TAG = "storagedim_backpack";
+	public static final String UPGRADE_TAG = "storagedim_upgrade";
 
 	private StorageItems() {
 	}
@@ -55,6 +56,10 @@ public final class StorageItems {
 	/** A bundle with the ME upgrade, see data/storagedim/recipe/me_backpack.json. */
 	public static boolean isBackpack(ItemStack stack) {
 		return hasTag(stack, BACKPACK_TAG);
+	}
+
+	public static boolean isUpgrade(ItemStack stack) {
+		return hasTag(stack, UPGRADE_TAG);
 	}
 
 	private static boolean hasTag(ItemStack stack, String key) {

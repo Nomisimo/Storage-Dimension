@@ -42,6 +42,17 @@ public final class StorageCommands {
 
 					return 1;
 				}))
+				.then(Commands.literal("me").executes(ctx -> {
+					ServerPlayer player = ctx.getSource().getPlayerOrException();
+
+					if (!Backpacks.hasLinkedBackpack(player)) {
+						send(player, "Du brauchst einen ME-Rucksack (auf dem Rücken oder im Inventar).", ChatFormatting.RED);
+						return 0;
+					}
+
+					StorageMenu.open(player, StorageData.get().networkFor(player.getUUID()));
+					return 1;
+				}))
 				.then(Commands.literal("teilen")
 						.then(Commands.argument("spieler", EntityArgument.player()).executes(StorageCommands::invite)))
 				.then(Commands.literal("annehmen").executes(StorageCommands::accept))
