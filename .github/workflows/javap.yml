@@ -23,5 +23,5 @@ jobs:
           while read -r flags cls; do
             [ -z "$cls" ] && continue
             echo "=================== $cls"
-            javap $flags -cp "$CP" "$cls" 2>&1 | head -400
+            javap $flags -cp "$CP" "$cls" 2>&1 | head -4000
           done < ../tools/javap-classes.txt
