@@ -34,4 +34,10 @@ jobs:
         run: |
           JAR=$(find ~/.gradle -iname "travelersbackpack*.jar" | grep -v sources | head -1)
           mkdir /tmp/tb && cd /tmp/tb && unzip -q "$JAR"
-          ls data/travelersbackpack/recipe | head -80
+          MC=".:$(find ~/.gradle /home/runner/work -name '*.jar' \( -path '*minecraft*' -o -path '*fabric*' -o -path '*modrinth*' \) | tr '\n' ':')"
+          for m in rebuildSlots addSlots updateSlotsPosition updateModifiableSlotsPosition rebuildModifiableSlots addModifiableSlots addBackpackStorageSlots doClick; do
+            for c in com.tiviacz.travelersbackpack.inventory.menu.BackpackBaseMenu com.tiviacz.travelersbackpack.inventory.menu.AbstractBackpackMenu; do
+              echo "=== $c.$m"; javap -c -p -cp "$MC" $c | sed -n "/ $m(/,/^$/p" | grep -E "invoke|getfield|putfield|Code|$m" | head -60
+            done
+          done
+          grep -o '"[a-z_]*accesswidener[^"]*"' fabric.mod.json; cat travelersbackpack.accesswidener | head -60

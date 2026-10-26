@@ -1,9 +1,7 @@
--p com.tiviacz.travelersbackpack.init.ModDataComponents
--p com.tiviacz.travelersbackpack.init.ModItems
--p com.tiviacz.travelersbackpack.blockentity.BackpackBlockEntity
--c com.tiviacz.travelersbackpack.compat.jei.ItemTransferHandler
--c com.tiviacz.travelersbackpack.compat.jei.TravelersBackpackPlugin
--p com.tiviacz.travelersbackpack.inventory.upgrades.crafting.CraftingContainerImproved
--p com.tiviacz.travelersbackpack.inventory.UpgradeManager
--p net.fabricmc.fabric.api.client.gametest.v1.world.TestWorldBuilder
--p net.minecraft.world.item.crafting.RecipeHolder
+-p mezz.jei.api.recipe.transfer.IRecipeTransferHandlerHelper
+-p mezz.jei.api.recipe.transfer.IRecipeTransferError
+-p mezz.jei.api.registration.IRecipeTransferRegistration
+-p net.minecraft.world.inventory.Slot
+-p net.minecraft.world.inventory.AbstractContainerMenu
+-p com.tiviacz.travelersbackpack.inventory.handler.ItemStackHandler
+-p com.tiviacz.travelersbackpack.inventory.menu.BackpackItemMenu
