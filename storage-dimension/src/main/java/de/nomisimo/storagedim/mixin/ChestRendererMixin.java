@@ -16,7 +16,7 @@ import net.minecraft.world.level.block.state.properties.ChestType;
 /** Draws dimension chests, filter chests and ME terminals with their own textures. */
 @Mixin(ChestRenderer.class)
 public class ChestRendererMixin {
-	@WrapOperation(method = "submit(Lnet/minecraft/client/renderer/blockentity/state/ChestRenderState;Lcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/SubmitNodeCollector;Lnet/minecraft/client/renderer/state/level/CameraRenderState;)V",
+	@WrapOperation(require = 0, method = "submit(Lnet/minecraft/client/renderer/blockentity/state/ChestRenderState;Lcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/SubmitNodeCollector;Lnet/minecraft/client/renderer/state/level/CameraRenderState;)V",
 			at = @At(value = "INVOKE", target = "Lnet/minecraft/client/renderer/Sheets;chooseSprite(Lnet/minecraft/client/renderer/blockentity/state/ChestRenderState$ChestMaterialType;Lnet/minecraft/world/level/block/state/properties/ChestType;)Lnet/minecraft/client/resources/model/sprite/SpriteId;"))
 	private SpriteId storagedim$chooseSprite(ChestRenderState.ChestMaterialType material, ChestType type, Operation<SpriteId> original,
 			@Local(argsOnly = true) ChestRenderState state) {

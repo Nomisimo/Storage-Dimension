@@ -1,27 +1,32 @@
 # Storage Dimension
 
-Ein Fabric-Server-Mod für **Minecraft 26.1.2**. Spieler brauchen keinen Client-Mod, alles läuft auf dem Server. Optional: dieselbe Jar beim Spieler bringt ein Suchfeld ins ME-Terminal, und das Traveler's-Backpack-Add-on muss bei den Spielern installiert sein.
+Ein Fabric-Mod für **Minecraft 26.1.2**. Seit Version 0.4.0 (Sammelroboter, eigene Texturen) muss `storage-dimension-*.jar` **auf dem Server und bei allen Spielern** liegen.
 
 **Download:** Die fertigen Dateien gibt es unter [Releases](https://github.com/Nomisimo/Storage-Dimension/releases). Dort steht auch, welche Datei wohin gehört.
 
 ## Was der Mod macht
 
-- **Dimensionskiste:** Sieht aus wie eine ganz normale Kiste. Wer sie öffnet und Zugriff auf den Speicher hat, wird in den Lagerraum in der Storage Dimension gezogen. Es können beliebig viele Spieler gleichzeitig drin sein. Wer keinen Zugriff hat, sieht nur ein leeres Kisten-Inventar, in dem nichts gelagert werden kann.
+- **Dimensionskiste:** Eine violette Kiste mit Endsternen. Wer sie öffnet und Zugriff auf den Speicher hat, wird in den Lagerraum in der Storage Dimension gezogen. Es können beliebig viele Spieler gleichzeitig drin sein. Wer keinen Zugriff hat, sieht nur ein leeres Kisten-Inventar, in dem nichts gelagert werden kann.
 - **ME-Speicher:** Die Enderkiste im Raum ist das Terminal. Dort liegen alle Items ohne Stapel- oder Slot-Grenzen. Die genaue Menge steht im Namen jedes Items (z. B. „Bruchstein × 1.234“), die Zahl auf dem Symbol geht bis 99.
   - Linksklick nimmt einen Stapel, Rechtsklick einen halben, Shift-Klick schiebt ihn ins Inventar.
   - Item auf dem Cursor in das Terminal klicken oder Shift-Klick im eigenen Inventar lagert ein.
   - Der Trichter-Knopf lagert das ganze Inventar (ohne Hotbar) ein.
-  - **Suche und Sortierung:** Wer `storage-dimension-*.jar` auch auf dem eigenen Client hat, bekommt oben links im Fenster ein echtes Suchfeld und rechts daneben den Sortier-Knopf (*Menge* / *A–Z*). Gesucht wird beim Tippen.
-  - Ohne den Mod auf dem Client gibt es stattdessen unten ein Schild (öffnet ein Eingabefeld im Amboss, kostet keine Level: Text eintippen, dann rechts aufs Ergebnis klicken; Rechtsklick löscht) und einen Komparator für die Sortierung.
+  - **Suche und Sortierung:** Oben links im Fenster sitzt ein Suchfeld, rechts daneben der Sortier-Knopf (*Menge* / *A–Z*). Gesucht wird beim Tippen.
   - Die Suche ist beim nächsten Öffnen wieder leer, die Sortierung bleibt.
 - **Hopper-Eingang:** Trichter, die in eine Dimensionskiste oder Filterkiste zeigen, liefern direkt in den Speicher. Zum Anbauen mit einem Item in der Hand schleichen.
+- **Maschinen anderer Mods (z. B. Tech Reborn, Advanced Reborn):** Dimensions- und Filterkisten sind über die Fabric-Transfer-API angebunden. Was eine Maschine hineinschiebt, landet direkt im ME-Speicher, und aus einer Filterkiste können Maschinen die Filter-Items herausziehen.
+- **Sammelroboter:** Ein kleiner Roboter mit Schnabel. Mit dem Roboter-Item auf einen Block klicken stellt ihn hin, die Stelle ist sein Zuhause. Er sammelt im Umkreis von 160 Blöcken (10 Chunks) herumliegende Items ein, immer einen Stapel im Schnabel, und bringt ihn zur nächsten Dimensionskiste, zum ME-Terminal oder zu einer passenden Filterkiste. Er läuft Stufen hoch und runter. Ohne Arbeit setzt er sich hin.
+  - Farbstoff auf den Roboter färbt Schnabel und Füße.
+  - Schleichen + Rechtsklick mit leerer Hand nimmt ihn wieder auf, samt dem Item im Schnabel.
+  - Nur Spieler können ihm schaden.
+  - Er arbeitet nur in geladenen Chunks.
 - **Werkbank und Ofen** stehen im Raum, gecraftet wird direkt in der Dimension.
 - **Gemeinsamer Speicher:** Standardmäßig teilen sich alle Spieler einen Speicher und einen Raum. Mit `"sharedStorage": false` in `config/storagedim.json` bekommt jeder seinen eigenen, der sich per `/storage teilen` freigeben lässt.
 - **Filterkiste:** Eine Kiste, die nur bis zu 7 ausgewählte Items aus dem ME-Speicher zeigt, eins pro Rahmen im Rezept. Zwei Filterkisten nebeneinander werden eine Doppelkiste mit 14 Filter-Plätzen (eine normale Kiste verbindet sich nie mit einer Filterkiste). Wird eine Hälfte abgebaut, behält die andere die ersten 7 Filter. Schleichen + Rechtsklick mit leerer Hand öffnet die Filter: ein Item auf einen Platz legen setzt den Filter, Klick mit leerer Hand entfernt ihn. Normaler Rechtsklick öffnet die Kiste, dort kann man die gefilterten Items herausnehmen und nur passende einlagern. Trichter, die hineinzeigen, liefern auch hier direkt in den Speicher. Ein Trichter **unter** der Filterkiste zieht die Filter-Items aus dem ME-Speicher heraus (bis zu ein Stapel pro Filter liegt dafür bereit und geht zurück in den Speicher, wenn ihn keiner abholt).
-- **ME-Terminal:** Eine extra Enderkiste. Hingestellt öffnet sie per Rechtsklick direkt den ME-Speicher, ohne Dimensionswechsel.
+- **ME-Terminal:** Eine uralte Kiste aus Tiefenschiefer mit Sculk-Rune. Hingestellt öffnet sie per Rechtsklick direkt den ME-Speicher, ohne Dimensionswechsel.
 - **ME-Rucksack:** Ein Rucksack, der mit dem Speicher verbunden ist und ihn von überall öffnet.
   - **Bündel:** ME-Upgrade + Bündel in der Werkbank kombinieren. Rechtsklick öffnet den Speicher.
-  - **[Traveler's Backpack](https://www.curseforge.com/minecraft/mc-mods/travelers-backpack-fabric) (optional):** ME-Upgrade in die Zweithand, den Rucksack in die Haupthand, schleichen und rechtsklicken. Danach öffnet Schleichen + Rechtsklick mit dem Rucksack den ME-Speicher, normaler Rechtsklick weiterhin den Rucksack. Trägst du ihn auf dem Rücken, öffnet `/storage me` den Speicher. Traveler's Backpack muss dafür auf Server und Clients installiert sein, Storage Dimension selbst bleibt rein serverseitig.
+  - **[Traveler's Backpack](https://www.curseforge.com/minecraft/mc-mods/travelers-backpack-fabric) (optional):** ME-Upgrade in die Zweithand, den Rucksack in die Haupthand, schleichen und rechtsklicken. Danach öffnet Schleichen + Rechtsklick mit dem Rucksack den ME-Speicher, normaler Rechtsklick weiterhin den Rucksack. Trägst du ihn auf dem Rücken, öffnet `/storage me` den Speicher. Traveler's Backpack muss dafür auf Server und Clients installiert sein.
 - **Ausgang:** Rechtsklick auf den Leuchtstein im Raum oder `/storage raus`.
 
 ## Rezept
@@ -48,8 +53,18 @@ F C F      C = Kiste
 F E F      E = Enderauge
 ```
 
+Sammelroboter:
+
+```
+I K I      I = Eisenbarren, K = Kürbis
+R T R      R = Redstone, T = Trichter
+N   N      N = Eisennugget
+```
+
 ME-Upgrade (formlos): Enderauge, 2× Amethystscherbe, Redstoneblock, Papier.
 ME-Rucksack (formlos): beliebiges Bündel + ME-Upgrade.
+
+Alle Rezepte stehen auch in [JEI](https://modrinth.com/mod/jei).
 
 ## Befehle
 
@@ -66,6 +81,7 @@ ME-Rucksack (formlos): beliebiges Bündel + ME-Upgrade.
 | `/storage give [spieler]` | (OP) Gibt eine Dimensionskiste |
 | `/storage give terminal` | (OP) Gibt ein ME-Terminal |
 | `/storage give filter` | (OP) Gibt eine Filterkiste |
+| `/storage give robot` | (OP) Gibt einen Sammelroboter |
 
 ## Bauen
 
@@ -80,8 +96,8 @@ Die fertige Datei liegt in `storage-dimension/build/libs/`. GitHub Actions baut 
 
 ## Installation
 
-1. Fabric Loader 0.19.5 oder neuer und Fabric API für 26.1.2 auf dem Server installieren.
-2. Die `storage-dimension-*.jar` (nicht die `-sources.jar`) in den `mods`-Ordner legen.
+1. Fabric Loader 0.19.5 oder neuer und Fabric API für 26.1.2 auf dem Server und bei allen Spielern installieren.
+2. Die `storage-dimension-*.jar` (nicht die `-sources.jar`) auf dem Server und bei allen Spielern in den `mods`-Ordner legen.
 3. Server starten. Die Dimension `storagedim:storage` wird automatisch angelegt.
 
 Die Daten liegen in `world/storagedim.json`.
@@ -95,11 +111,11 @@ Im Ordner `storagedim-tb/` liegt ein kleiner Zusatz-Mod. Er fügt ein echtes **M
 - Der Rucksack muss nicht in der Hand sein: auf dem Rücken tragen und mit der Rucksack-Taste von Traveler's Backpack (Standard **B**) öffnen reicht.
 - **Crafting aus dem ME-Speicher:** Hat der Rucksack zusätzlich das Crafting-Upgrade, holt der „+“-Knopf von [JEI](https://modrinth.com/mod/jei) fehlende Zutaten auch aus dem ME-Speicher, genauso wie aus Inventar und Rucksack. Shift + „+“ füllt das Raster für so viele Durchgänge wie möglich (bis zu einem Stapel). Was vorher im Raster lag, kommt zurück ins Inventar oder, wenn das voll ist, in den Speicher.
   - Der kleine Schalter neben dem ME-Symbol stellt zwischen *ME als Quelle* (Standard) und *nur Inventar* um. Auf *nur Inventar* arbeitet „+“ wie ohne Upgrade.
-- Installation: `storagedim-tb-*.jar` und `storage-dimension-*.jar` **auf dem Server und bei allen Spielern**, zusammen mit Traveler's Backpack (und dessen Abhängigkeiten) und Fabric API. Storage Dimension selbst muss auf dem Server laufen. JEI wird nur für „+“ gebraucht und reicht bei den Spielern.
+- Installation: `storagedim-tb-*.jar` und `storage-dimension-*.jar` **auf dem Server und bei allen Spielern**, zusammen mit Traveler's Backpack (und dessen Abhängigkeiten) und Fabric API. JEI wird nur für „+“ und die Rezeptanzeige gebraucht und reicht bei den Spielern.
 
 ### Als Modrinth-Pack
 
-`storage-dimension.mrpack` liegt in jedem [Release](https://github.com/Nomisimo/Storage-Dimension/releases). Das Pack enthält Fabric API (wird von Modrinth geladen) und die Storage-Dimension-Jar. Minecraft 26.1.2 und Fabric Loader 0.19.5 sind darin festgelegt.
+`storage-dimension.mrpack` liegt in jedem [Release](https://github.com/Nomisimo/Storage-Dimension/releases). Das Pack enthält Fabric API (wird von Modrinth geladen) und die Storage-Dimension-Jar. Minecraft 26.1.2 und Fabric Loader 0.19.5 sind darin festgelegt. Spieler können dasselbe Pack in der Modrinth-App installieren.
 
 - **Server-Hoster mit Modpack-Upload:** Neuen Server mit „Modpack hochladen / .mrpack“ anlegen und die Datei auswählen.
 - **Eigener Server:** Mit [mrpack-install](https://github.com/nothub/mrpack-install): `mrpack-install storage-dimension.mrpack --server-dir server`. Das lädt Fabric-Server, Fabric API und legt die Mod ab.
