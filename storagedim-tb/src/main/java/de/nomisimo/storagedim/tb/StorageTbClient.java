@@ -71,6 +71,9 @@ public class StorageTbClient implements ClientModInitializer {
 	private static int rowY;
 	private static int rowWidth;
 	private static boolean hasRow;
+	/** The corner of the title row where the backpack's buttons sit, covered in the ME view. */
+	private static int cornerX;
+	private static int cornerY;
 
 	@Override
 	public void onInitializeClient() {
@@ -222,17 +225,20 @@ public class StorageTbClient implements ClientModInitializer {
 		int left = Integer.MAX_VALUE;
 		int right = Integer.MIN_VALUE;
 		int bottom = Integer.MIN_VALUE;
+		int top = Integer.MAX_VALUE;
 
 		for (Slot slot : slots) {
 			left = Math.min(left, slot.x);
 			right = Math.max(right, slot.x + 16);
 			bottom = Math.max(bottom, slot.y);
+			top = Math.min(top, slot.y);
 		}
 
 		if (slots.isEmpty()) {
 			left = 8;
 			right = 170;
 			bottom = 18;
+			top = 18;
 		}
 
 		barWidth = right - left + 14;
@@ -242,6 +248,8 @@ public class StorageTbClient implements ClientModInitializer {
 		rowX = screen.getGuiLeft() + left - 1;
 		rowY = screen.getGuiTop() + bottom - 1;
 		rowWidth = right - left + 2;
+		cornerX = screen.getGuiLeft() + right - 60;
+		cornerY = screen.getGuiTop() + top - 15;
 
 		int sortX = barX + barWidth - 6 - SORT.getWidth();
 		SORT.setPosition(sortX, barY + 4);
@@ -294,6 +302,9 @@ public class StorageTbClient implements ClientModInitializer {
 		graphics.fill(x + 3, y + 3, x + w - 3, y + h - 3, 0xFFC6C6C6);
 		searchBox.extractRenderState(graphics, mouseX, mouseY, partialTick);
 
+		// the backpack's own buttons in the title row (sorting, equip) belong to the backpack, not to ME storage
+		graphics.fill(cornerX, cornerY, cornerX + 61, cornerY + 13, 0xFFC6C6C6);
+
 		// the bottom slot row turns into the button row of the ME terminal
 		if (hasRow) {
 			graphics.fill(rowX, rowY, rowX + rowWidth, rowY + 18, 0xFFC6C6C6);
@@ -314,6 +325,10 @@ public class StorageTbClient implements ClientModInitializer {
 
 	/** A click on the search field or one of the buttons; true when it was one of them. */
 	private static boolean click(Screen screen, MouseButtonEvent event) {
+		if (event.x() >= cornerX && event.x() < cornerX + 61 && event.y() >= cornerY && event.y() < cornerY + 13) {
+			return true;
+		}
+
 		for (Button button : buttons()) {
 			if (button.visible && button.isMouseOver(event.x(), event.y())) {
 				if (button.active) {
