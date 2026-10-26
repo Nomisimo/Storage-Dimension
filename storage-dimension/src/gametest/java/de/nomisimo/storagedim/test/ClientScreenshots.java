@@ -23,6 +23,50 @@ import net.minecraft.world.level.block.state.properties.ChestType;
 
 /** Builds a small scene with every special chest and a robot, and takes screenshots of it. */
 public class ClientScreenshots implements FabricClientGameTest {
+	private static ItemStack upgrade = ItemStack.EMPTY;
+
+	/** Opens a crafting table for the player with this grid (row by row, null = empty) and photographs it. */
+	private static void recipe(ClientGameTestContext context, TestSingleplayerContext world, String name, ItemStack... grid) {
+		world.getServer().runOnServer(server -> {
+			ServerPlayer player = server.getPlayerList().getPlayers().get(0);
+			BlockPos table = player.blockPosition().offset(0, 0, 1);
+			player.level().setBlockAndUpdate(table, Blocks.CRAFTING_TABLE.defaultBlockState());
+			player.openMenu(new net.minecraft.world.SimpleMenuProvider((id, inventory, p) -> new net.minecraft.world.inventory.CraftingMenu(id, inventory,
+					net.minecraft.world.inventory.ContainerLevelAccess.create(player.level(), table)), net.minecraft.network.chat.Component.translatable("container.crafting")));
+
+			for (int i = 0; i < grid.length; i++) {
+				if (grid[i] != null) {
+					player.containerMenu.getSlot(1 + i).set(grid[i].copy());
+				}
+			}
+
+			player.containerMenu.broadcastChanges();
+		});
+		context.waitTicks(10);
+		world.getServer().runOnServer(server -> {
+			ServerPlayer player = server.getPlayerList().getPlayers().get(0);
+
+			if ("me_upgrade".equals(name)) {
+				upgrade = player.containerMenu.getSlot(0).getItem().copy();
+			}
+		});
+		context.takeScreenshot("recipe-" + name);
+		world.getServer().runOnServer(server -> {
+			ServerPlayer player = server.getPlayerList().getPlayers().get(0);
+
+			for (int i = 1; i <= 9; i++) {
+				player.containerMenu.getSlot(i).set(ItemStack.EMPTY);
+			}
+
+			player.closeContainer();
+		});
+		context.waitTicks(5);
+	}
+
+	private static ItemStack of(net.minecraft.world.item.Item item) {
+		return new ItemStack(item);
+	}
+
 	private static void logRobots(TestSingleplayerContext world) {
 		world.getServer().runOnServer(server -> {
 			for (ServerLevel level : server.getAllLevels()) {
@@ -96,7 +140,16 @@ public class ClientScreenshots implements FabricClientGameTest {
 			context.waitTicks(10);
 			context.takeScreenshot("storagedim-inventory");
 			context.setScreen(() -> null);
-			context.waitTicks(260);
+
+			ItemStack a = of(Items.AMETHYST_SHARD), r = of(Items.REDSTONE), f = of(Items.ITEM_FRAME), i = of(Items.IRON_INGOT), n = of(Items.IRON_NUGGET);
+			recipe(context, world, "storage_chest", a, of(Items.ENDER_PEARL), a, of(Items.ENDER_PEARL), of(Items.CHEST), of(Items.ENDER_PEARL), a, of(Items.ENDER_PEARL), a);
+			recipe(context, world, "me_terminal", r, a, r, a, of(Items.ENDER_CHEST), a, r, a, r);
+			recipe(context, world, "filter_chest", f, f, f, f, of(Items.CHEST), f, f, of(Items.ENDER_EYE), f);
+			recipe(context, world, "robot", i, of(Items.PUMPKIN), i, r, of(Items.HOPPER), r, n, null, n);
+			recipe(context, world, "me_upgrade", of(Items.ENDER_EYE), a, a, of(Items.REDSTONE_BLOCK), of(Items.PAPER));
+			recipe(context, world, "me_backpack", of(Items.BUNDLE), upgrade);
+
+			context.waitTicks(200);
 			context.takeScreenshot("storagedim-idle");
 			logRobots(world);
 		}
