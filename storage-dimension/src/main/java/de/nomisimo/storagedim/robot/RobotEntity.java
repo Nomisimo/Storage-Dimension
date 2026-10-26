@@ -619,7 +619,10 @@ public class RobotEntity extends PathfinderMob {
 				ignoredChests.put(delivery, until);
 				delivery = planDelivery();
 			} else if (goalKey == home) {
-				homeUnreachableUntil = level().getGameTime() + RETRY_HOME_TICKS;
+				// crowded by the other robots right at the station is fine; really stuck further away is not
+				if (distance > HOME_RADIUS + 3) {
+					homeUnreachableUntil = level().getGameTime() + RETRY_HOME_TICKS;
+				}
 			} else if (goalKey == target) {
 				ignoredItems.put(target.getUUID(), until);
 				release();
@@ -702,7 +705,9 @@ public class RobotEntity extends PathfinderMob {
 			} else if (getNavigation().isDone() && goalKey == home) {
 				Path path = getNavigation().createPath(home, 2);
 
-				if (path == null || !path.canReach()) {
+				if (path == null) {
+					// no way can be worked out in mid-air; try again next tick
+				} else if (!path.canReach()) {
 					// cannot get back to its station: sits down sadly and tries again later
 					homeUnreachableUntil = level().getGameTime() + RETRY_HOME_TICKS;
 					getNavigation().stop();
@@ -774,6 +779,11 @@ public class RobotEntity extends PathfinderMob {
 		// Sits down when there is nothing to do: happily looking around at its station, sadly staring at the ground
 		// when it cannot work (no chest in range, station broken or out of reach).
 		boolean idle = getAction() == 0 && getNavigation().isDone() && getCarried().isEmpty() && target == null;
+
+		if (nearHome()) {
+			homeUnreachableUntil = 0;
+		}
+
 		boolean sad = noChest || stationMissing() || level().getGameTime() < homeUnreachableUntil;
 
 		if (idle && (sad || nearHome())) {
