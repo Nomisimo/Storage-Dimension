@@ -9,19 +9,23 @@ jobs:
     runs-on: ubuntu-24.04
     defaults:
       run:
-        working-directory: storage-dimension
+        working-directory: storagedim-tb
     steps:
       - uses: actions/checkout@v6
+        with:
+          ref: main
       - uses: actions/setup-java@v5
         with:
           java-version: '25'
           distribution: 'microsoft'
       - run: chmod +x ./gradlew && ./gradlew compileJava
-      - name: javap
+      - name: TB jar contents
         run: |
-          CP=$(find ~/.gradle /home/runner/work -name "*.jar" \( -path "*minecraft*" -o -path "*fabric-api*" -o -path "*net.fabricmc*" \) 2>/dev/null | tr '\n' ':')
-          while read -r flags cls; do
-            [ -z "$cls" ] && continue
-            echo "=================== $cls"
-            javap $flags -cp "$CP" "$cls" 2>&1 | head -4000
-          done < ../tools/javap-classes.txt
+          JAR=$(find ~/.gradle -iname "*travelersbackpack*.jar" | grep -v sources | head -1)
+          echo "JAR=$JAR"
+          unzip -l "$JAR" | grep -iE "recipe/.*upgrade|blank|lang/en_us" | head -80
+          unzip -p "$JAR" fabric.mod.json | head -40
+          unzip -p "$JAR" $(unzip -l "$JAR" | grep -o "assets/travelersbackpack/lang/en_us.json") | tr ',' '\n' | grep -i upgrade | head -60
+          for f in $(unzip -l "$JAR" | grep -oE "data/travelersbackpack/recipe/[a-z_]*upgrade[a-z_]*\.json" | head -6); do echo "== $f"; unzip -p "$JAR" "$f"; done
+          unzip -p "$JAR" $(unzip -l "$JAR" | grep -oE "data/travelersbackpack/tags/item/[a-z_/]*upgrade[a-z_]*\.json" | head -3) || true
+          unzip -l "$JAR" | grep -i "tags/item" | head -40
