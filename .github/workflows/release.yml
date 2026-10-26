@@ -30,7 +30,12 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          gh release create "${{ inputs.tag }}" out/* \
-            --target "$GITHUB_SHA" \
-            --title "Storage Dimension ${{ inputs.tag }} (MC 26.1.2)" \
-            --notes-file .github/release-notes.md
+          TAG="${{ inputs.tag }}"
+          TITLE="Storage Dimension $TAG (MC 26.1.2)"
+          # Running it again for the same tag refreshes that release with the newest jars instead of failing.
+          if gh release view "$TAG" > /dev/null 2>&1; then
+            gh release upload "$TAG" out/* --clobber
+            gh release edit "$TAG" --title "$TITLE" --notes-file .github/release-notes.md
+          else
+            gh release create "$TAG" out/* --target "$GITHUB_SHA" --title "$TITLE" --notes-file .github/release-notes.md
+          fi

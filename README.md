@@ -4,6 +4,8 @@ Ein Fabric-Mod für **Minecraft 26.1.2**. Seit Version 0.4.0 (Sammelroboter, eig
 
 **Download:** Die fertigen Dateien gibt es unter [Releases](https://github.com/Nomisimo/Storage-Dimension/releases). Dort steht auch, welche Datei wohin gehört.
 
+![Dimensionskiste, Filterkiste, doppelte Filterkiste und ME-Terminal, davor der Sammelroboter](docs/screenshots/kisten-und-roboter.png)
+
 ## Was der Mod macht
 
 - **Dimensionskiste:** Eine violette Kiste mit Endsternen. Wer sie öffnet und Zugriff auf den Speicher hat, wird in den Lagerraum in der Storage Dimension gezogen. Es können beliebig viele Spieler gleichzeitig drin sein. Wer keinen Zugriff hat, sieht nur ein leeres Kisten-Inventar, in dem nichts gelagert werden kann.
@@ -20,6 +22,9 @@ Ein Fabric-Mod für **Minecraft 26.1.2**. Seit Version 0.4.0 (Sammelroboter, eig
   - Schleichen + Rechtsklick mit leerer Hand nimmt ihn wieder auf, samt dem Item im Schnabel.
   - Nur Spieler können ihm schaden.
   - Er arbeitet nur in geladenen Chunks.
+
+  ![Der Sammelroboter holt Items und bringt sie zu den Kisten](docs/screenshots/roboter-bei-der-arbeit.png)
+
 - **Werkbank und Ofen** stehen im Raum, gecraftet wird direkt in der Dimension.
 - **Gemeinsamer Speicher:** Standardmäßig teilen sich alle Spieler einen Speicher und einen Raum. Mit `"sharedStorage": false` in `config/storagedim.json` bekommt jeder seinen eigenen, der sich per `/storage teilen` freigeben lässt.
 - **Filterkiste:** Eine Kiste, die nur bis zu 7 ausgewählte Items aus dem ME-Speicher zeigt, eins pro Rahmen im Rezept. Zwei Filterkisten nebeneinander werden eine Doppelkiste mit 14 Filter-Plätzen (eine normale Kiste verbindet sich nie mit einer Filterkiste). Wird eine Hälfte abgebaut, behält die andere die ersten 7 Filter. Schleichen + Rechtsklick mit leerer Hand öffnet die Filter: ein Item auf einen Platz legen setzt den Filter, Klick mit leerer Hand entfernt ihn. Normaler Rechtsklick öffnet die Kiste, dort kann man die gefilterten Items herausnehmen und nur passende einlagern. Trichter, die hineinzeigen, liefern auch hier direkt in den Speicher. Ein Trichter **unter** der Filterkiste zieht die Filter-Items aus dem ME-Speicher heraus (bis zu ein Stapel pro Filter liegt dafür bereit und geht zurück in den Speicher, wenn ihn keiner abholt).
@@ -28,6 +33,8 @@ Ein Fabric-Mod für **Minecraft 26.1.2**. Seit Version 0.4.0 (Sammelroboter, eig
   - **Bündel:** ME-Upgrade + Bündel in der Werkbank kombinieren. Rechtsklick öffnet den Speicher.
   - **[Traveler's Backpack](https://www.curseforge.com/minecraft/mc-mods/travelers-backpack-fabric) (optional):** ME-Upgrade in die Zweithand, den Rucksack in die Haupthand, schleichen und rechtsklicken. Danach öffnet Schleichen + Rechtsklick mit dem Rucksack den ME-Speicher, normaler Rechtsklick weiterhin den Rucksack. Trägst du ihn auf dem Rücken, öffnet `/storage me` den Speicher. Traveler's Backpack muss dafür auf Server und Clients installiert sein.
 - **Ausgang:** Rechtsklick auf den Leuchtstein im Raum oder `/storage raus`.
+
+![Dimensionskiste, Filterkiste, ME-Terminal und Sammelroboter im Inventar](docs/screenshots/items.png)
 
 ## Rezept
 
