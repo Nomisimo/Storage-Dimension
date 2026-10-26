@@ -4,7 +4,10 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
+import net.minecraft.core.component.DataComponentType;
+import net.minecraft.core.component.DataComponents;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.enchantment.ItemEnchantments;
 
 /**
  * Filter chests: placed chests that open the ME terminal limited to up to {@link #SLOTS} chosen items,
@@ -53,18 +56,28 @@ public final class FilterChests {
 		}
 	}
 
-	/** Matches by item type, so e.g. damaged tools or enchanted books of one kind all count. */
+	/**
+	 * Matches by item type, so e.g. damaged tools of one kind all count. An enchanted filter item (or enchanted book)
+	 * only matches items with exactly the same enchantments.
+	 */
 	public static boolean matches(List<ItemStack> filters, ItemStack stack) {
 		if (stack.isEmpty()) {
 			return false;
 		}
 
 		for (ItemStack filter : filters) {
-			if (!filter.isEmpty() && ItemStack.isSameItem(filter, stack)) {
+			if (!filter.isEmpty() && ItemStack.isSameItem(filter, stack)
+					&& sameEnchantments(filter, stack, DataComponents.ENCHANTMENTS)
+					&& sameEnchantments(filter, stack, DataComponents.STORED_ENCHANTMENTS)) {
 				return true;
 			}
 		}
 
 		return false;
+	}
+
+	private static boolean sameEnchantments(ItemStack filter, ItemStack stack, DataComponentType<ItemEnchantments> type) {
+		ItemEnchantments wanted = filter.getOrDefault(type, ItemEnchantments.EMPTY);
+		return wanted.isEmpty() || wanted.equals(stack.getOrDefault(type, ItemEnchantments.EMPTY));
 	}
 }

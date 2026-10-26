@@ -412,7 +412,7 @@ public class RobotEntity extends PathfinderMob {
 
 		if (recallPhase == RECALL_WAITING) {
 			long seconds = Math.max(0, (recallUntil - level().getGameTime()) / 20);
-			return Component.literal("Rückruf: wartet noch " + seconds + " s").withStyle(ChatFormatting.AQUA);
+			return Component.literal("Rückruf: Pause " + seconds + " s").withStyle(ChatFormatting.AQUA);
 		}
 
 		if (stationMissing()) {

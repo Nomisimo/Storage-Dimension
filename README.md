@@ -12,30 +12,42 @@ Ein Fabric-Mod für **Minecraft 26.1.2**. Seit Version 0.4.0 (Sammelroboter, eig
 - **ME-Speicher:** Die Enderkiste im Raum ist das Terminal. Dort liegen alle Items ohne Stapel- oder Slot-Grenzen. Die genaue Menge steht im Namen jedes Items (z. B. „Bruchstein × 1.234“) und in kleiner Schrift auf dem Symbol, ohne Obergrenze (ab 1.000 abgekürzt, z. B. 1k, 1.2k, 45k oder 1.2M).
   - Linksklick nimmt einen Stapel, Rechtsklick einen halben, Shift-Klick schiebt ihn ins Inventar.
   - Item auf dem Cursor in das Terminal klicken oder Shift-Klick im eigenen Inventar lagert ein.
-  - Der Trichter-Knopf lagert das ganze Inventar (ohne Hotbar) ein.
+  - Unten im Fenster: **◀ / ▶** blättern, **Einlagern** lagert das ganze Inventar (ohne Hotbar) ein, daneben stehen Seite, Sorten und Gesamtmenge. Ohne die Mod auf dem Client sind es Item-Knöpfe (Pfeile, Trichter).
   - **Suche und Sortierung:** Oben links im Fenster sitzt ein Suchfeld, rechts daneben der Sortier-Knopf (*Menge* / *A–Z*). Gesucht wird beim Tippen.
   - Die Suche ist beim nächsten Öffnen wieder leer, die Sortierung bleibt.
   - Mit [JEI](https://modrinth.com/mod/jei) sitzt zwischen Suchfeld und Sortier-Knopf ein kleiner Schalter **J**. Ist er grün, sind die Suche im Terminal und die JEI-Suchleiste gekoppelt: was in einer steht, steht auch in der anderen. Die Einstellung bleibt gespeichert (`jeiSearchSync` in `config/storagedim.json` beim Spieler).
 - **Hopper-Eingang:** Trichter, die in eine Dimensionskiste oder Filterkiste zeigen, liefern direkt in den Speicher. Zum Anbauen mit einem Item in der Hand schleichen.
 - **Maschinen anderer Mods (z. B. Tech Reborn, Advanced Reborn):** Dimensions- und Filterkisten sind über die Fabric-Transfer-API angebunden. Was eine Maschine hineinschiebt, landet direkt im ME-Speicher, und aus einer Filterkiste können Maschinen die Filter-Items herausziehen.
-- **Sammelroboter:** Ein kleiner Roboter mit Schnabel. Mit dem Roboter-Item auf einen Block klicken stellt ihn hin. Er sammelt herumliegende Items ein, immer einen Stapel im Schnabel, und bringt ihn zur nächsten Dimensionskiste, zum ME-Terminal oder zu einer passenden Filterkiste. Er hüpft bis zu zwei Blöcke hoch, auch über Zäune und Mauern, und stellt sich zum Aufheben direkt auf das Item. Roboter-Barrieren überspringt er nicht. Aus Booten und Loren steigt er sofort wieder aus.
-  - **Ohne Station** ist die Stelle, an der er steht, sein Zuhause. Rechtsklick mit leerer Hand stellt die Reichweite um (1, 2, 4, 6, 8 oder 10 Chunks), Farbstoff färbt Schnabel und Füße, Schleichen + Rechtsklick mit einem Item setzt es auf seinen Filter oder nimmt es wieder herunter (bis zu 9 Items). Mit Filter sammelt er nur diese Items, ohne Filter alles.
-  - **Mit Roboter-Station** (siehe unten) bekommt er Reichweite, Filter, Farbe und Namen von der Station. Die Reichweite zählt dann ab der Station.
+- **Sammelroboter:** Ein kleiner Roboter mit Schnabel. Er sammelt herumliegende Items ein, immer einen Stapel im Schnabel, und bringt ihn zur nächsten Dimensionskiste, zum ME-Terminal oder zu einer passenden Filterkiste. Er hüpft bis zu zwei Blöcke hoch, auch über Zäune und Mauern, und stellt sich zum Aufheben direkt auf das Item. Roboter-Barrieren überspringt er nicht. Aus Booten und Loren steigt er sofort wieder aus.
+  - **Nur mit Station:** Ein Roboter lässt sich erst hinstellen, wenn er in einer Roboter-Station eingestellt wurde (siehe unten). Danach folgt er immer den Einstellungen seiner Station; was dort geändert wird, gilt sofort für alle ihre Roboter. Am Roboter selbst lässt sich nichts mehr umstellen.
   - **Schwarm:** Mehrere Roboter stimmen sich ab. Jeder holt ein anderes Item, es rennen nie alle zum selben.
-  - **Stimmung:** Ohne Arbeit laufen Stations-Roboter zu ihrer Station, setzen sich hin und schauen sich fröhlich um, bis ein Item auftaucht. Erreicht ein Roboter seine Station nicht oder steht in seiner Reichweite keine Kiste, setzt er sich hin und schaut traurig auf den Boden.
+  - **Stimmung:** Ohne Arbeit laufen die Roboter zu ihrer Station, setzen sich hin und schauen sich fröhlich um, jeder in seinem eigenen Takt. Erreicht ein Roboter seine Station nicht oder steht in seiner Reichweite keine Kiste, setzt er sich hin und schaut traurig auf den Boden.
+  - **Wasser:** Roboter tauchen. Unter Wasser laufen sie am Grund entlang und tragen eine kleine Taucherbrille aus Glas, an der Oberfläche schwimmen sie schnell und ziehen eine Spritzspur hinter sich her. Ertrinken können sie nicht.
+  - **Regen:** Draußen ohne Dach über sich spannen sie einen kleinen Regenschirm in ihrer Farbe auf.
   - Bevor er losläuft, plant er den ganzen Weg und folgt ihm. Gibt es keinen Weg (eingemauert, hinter einer Roboter-Barriere, über Lava), lässt er das Item sofort für eine Minute in Ruhe und nimmt das nächste. Bleibt er unterwegs trotzdem hängen, gibt er nach 5 Sekunden auf. Kisten erreicht er bis etwa drei Blöcke über dem Boden.
+  - Will er zu seiner Station und kommt 3 Minuten lang nicht näher, teleportiert er sich hin.
   - Neu fallengelassene Items bemerkt er nach spätestens einer halben Sekunde.
-  - Schleichen + Rechtsklick mit leerer Hand nimmt ihn wieder auf, samt dem Item im Schnabel und seinen Einstellungen.
+  - Schleichen + Rechtsklick mit leerer Hand nimmt ihn wieder auf, samt dem Item im Schnabel.
   - Nur Spieler können ihm schaden. Er arbeitet nur in geladenen Chunks.
-- **Roboter-Station:** Ein Block, der Sammelroboter einstellt. Rechtsklick öffnet das Menü:
-  - obere Reihe: bis zu 9 Filter-Items (Item draufklicken setzt, leere Hand entfernt),
-  - Trichter/Barriere: Filter-Modus. Trichter heißt „nur diese sammeln“, Barriere heißt „diese NICHT sammeln“ (alles andere schon). Klick schaltet um.
-  - Kompass: Reichweite (Linksklick größer, Rechtsklick kleiner), Farbstoff: Farbe (Klick schaltet weiter), Namensschild: Name (Linksklick eingeben, Rechtsklick löschen),
-  - Roboter in den Eingang (links vom Pfeil) legen, er kommt rechts im Ausgang eingestellt wieder heraus. Die Einstellungen stehen im Tooltip des Roboter-Items.
-  - Ein eingestellter Roboter, der außerhalb der Reichweite seiner Station hingestellt wird, läuft zuerst zur Station und arbeitet dann los.
-  - Ein vergebener Name schwebt wie ein Namensschild über dem Roboter. Ohne Namen steht dort nichts.
+  - Mit [Jade](https://modrinth.com/mod/jade) zeigt der Blick auf einen Roboter seine Station, Reichweite, Filter und was er gerade tut (oder warum er traurig ist). Mit [Xaero's Minimap](https://modrinth.com/mod/xaeros-minimap) erscheinen die Roboter mit ihrem Gesicht auf der Karte.
 
-  ![Menü der Roboter-Station](docs/screenshots/roboter-station-menu.png)
+  ![Jade zeigt Station, Filter und Zustand eines Roboters](docs/screenshots/roboter-jade.png)
+
+  ![Bei Regen spannen die Roboter ihren Schirm auf](docs/screenshots/roboter-regenschirm.png)
+
+  ![Ein Roboter taucht mit Taucherbrille](docs/screenshots/roboter-tauchen.png)
+
+- **Roboter-Station:** Ein Block, der Sammelroboter einstellt. Rechtsklick öffnet ein eigenes Fenster mit Knöpfen und Textfeldern:
+  - oben der **Name der Station** (erscheint auch in Jade und im Tooltip der Roboter),
+  - darunter bis zu 9 **Filter-Items** (Item draufklicken setzt, leere Hand entfernt) und der Knopf, ob die Roboter **nur den Filter** oder **alles außer dem Filter** sammeln,
+  - **Reichweite** mit − und + (1 bis 10 Chunks, gemessen ab der Station), **Farbe** (Klick schaltet weiter) und **Zurückrufen**,
+  - der **Robotername**: Bekommen mehrere Roboter denselben Namen, werden sie durchnummeriert (Quak1, Quak2 …). Das Benennen kostet keine Level.
+  - Roboter in den Eingang (links vom Pfeil) legen, er kommt rechts eingestellt wieder heraus. Die Einstellungen stehen im Tooltip des Roboter-Items.
+  - Rechts daneben steht die **Liste aller Roboter** der Station (höchstens 32) mit Entfernung und dem, was jeder gerade tut. Mausrad blättert.
+  - **Zurückrufen:** Alle Roboter der Station kommen zurück. Wer 10 Sekunden lang nicht näher kommt, teleportiert sich zur Station. Danach sitzen alle eine Minute an der Station und arbeiten dann normal weiter.
+  - Ein eingestellter Roboter, der außerhalb der Reichweite seiner Station hingestellt wird, läuft zuerst zur Station und arbeitet dann los.
+
+  ![Fenster der Roboter-Station mit Roboterliste](docs/screenshots/roboter-station-menu.png)
 
   ![Roboter warten fröhlich an ihrer Station](docs/screenshots/roboter-station.png)
 
@@ -49,7 +61,7 @@ Ein Fabric-Mod für **Minecraft 26.1.2**. Seit Version 0.4.0 (Sammelroboter, eig
 
 - **Werkbank und Ofen** stehen im Raum, gecraftet wird direkt in der Dimension.
 - **Gemeinsamer Speicher:** Standardmäßig teilen sich alle Spieler einen Speicher und einen Raum. Mit `"sharedStorage": false` in `config/storagedim.json` bekommt jeder seinen eigenen, der sich per `/storage teilen` freigeben lässt.
-- **Filterkiste:** Eine Kiste, die nur bis zu 7 ausgewählte Items aus dem ME-Speicher zeigt, eins pro Rahmen im Rezept. Zwei Filterkisten nebeneinander werden eine Doppelkiste mit 14 Filter-Plätzen (eine normale Kiste verbindet sich nie mit einer Filterkiste). Wird eine Hälfte abgebaut, behält die andere die ersten 7 Filter. Schleichen + Rechtsklick mit leerer Hand öffnet die Filter: ein Item auf einen Platz legen setzt den Filter, Klick mit leerer Hand entfernt ihn. Normaler Rechtsklick öffnet die Kiste, dort kann man die gefilterten Items herausnehmen und nur passende einlagern. Trichter, die hineinzeigen, liefern auch hier direkt in den Speicher. Ein Trichter **unter** der Filterkiste zieht die Filter-Items aus dem ME-Speicher heraus (bis zu ein Stapel pro Filter liegt dafür bereit und geht zurück in den Speicher, wenn ihn keiner abholt).
+- **Filterkiste:** Eine Kiste, die nur bis zu 7 ausgewählte Items aus dem ME-Speicher zeigt, eins pro Rahmen im Rezept. Ist ein Filter-Item verzaubert (auch ein Verzauberungsbuch), zählen nur Items mit genau denselben Verzauberungen. Zwei Filterkisten nebeneinander werden eine Doppelkiste mit 14 Filter-Plätzen (eine normale Kiste verbindet sich nie mit einer Filterkiste). Wird eine Hälfte abgebaut, behält die andere die ersten 7 Filter. Schleichen + Rechtsklick mit leerer Hand öffnet die Filter: ein Item auf einen Platz legen setzt den Filter, Klick mit leerer Hand entfernt ihn. Normaler Rechtsklick öffnet die Kiste, dort kann man die gefilterten Items herausnehmen und nur passende einlagern. Trichter, die hineinzeigen, liefern auch hier direkt in den Speicher. Ein Trichter **unter** der Filterkiste zieht die Filter-Items aus dem ME-Speicher heraus (bis zu ein Stapel pro Filter liegt dafür bereit und geht zurück in den Speicher, wenn ihn keiner abholt).
 - **ME-Terminal:** Eine uralte Kiste aus Tiefenschiefer mit Sculk-Rune. Hingestellt öffnet sie per Rechtsklick direkt den ME-Speicher, ohne Dimensionswechsel.
 - **ME-Rucksack:** Ein Rucksack, der mit dem Speicher verbunden ist und ihn von überall öffnet.
   - **Bündel:** ME-Upgrade + Bündel in der Werkbank kombinieren. Rechtsklick öffnet den Speicher.
@@ -143,6 +155,8 @@ Im Ordner `storagedim-tb/` liegt ein kleiner Zusatz-Mod. Er fügt ein echtes **M
 - Rezept (formlos): Leeres Upgrade (Traveler's Backpack), Enderauge, 2× Amethystscherbe, Redstoneblock. Mit dem Zusatz-Mod ergibt auch das normale ME-Upgrade-Rezept (mit Papier) dieses Upgrade. Es gibt dann nur noch ein ME-Upgrade: Es passt in den Upgrade-Slot und macht mit einem Bündel auch einen ME-Rucksack.
 - Upgrade in einen Upgrade-Slot des Rucksacks legen. Linksklick auf das ME-Symbol im Rucksack-Fenster zeigt den ME-Speicher **direkt im Rucksack-Fenster**, an Stelle des Rucksack-Inhalts. Crafting, die anderen Upgrades und die Einstellungen bleiben daneben sichtbar. Ein zweiter Linksklick zeigt wieder den Rucksack. Rechtsklick nimmt das Upgrade heraus.
   - In der ME-Ansicht: Linksklick nimmt einen Stapel, Rechtsklick einen halben, Shift-Klick schiebt ihn ins Inventar. Ein Item vom Cursor oder Shift-Klick im eigenen Inventar lagert ein. Bei mehr Items als Plätzen blättern die beiden Pfeile unten rechts. Über dem Fenster steht ein Suchfeld (mit dem „J“-Schalter des ME-Terminals auch an die JEI-Suche gekoppelt).
+
+  ![Suchfeld über dem Rucksack-Fenster in der ME-Ansicht](docs/screenshots/rucksack-me-suche.png)
 
   ![ME-Speicher im Rucksack-Fenster, daneben das Crafting-Upgrade](docs/screenshots/rucksack-me-ansicht.png)
 

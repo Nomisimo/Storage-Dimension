@@ -2,6 +2,7 @@ package de.nomisimo.storagedim.storage;
 
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
@@ -559,7 +560,7 @@ public final class StorageEvents {
 			}
 
 			for (StorageNetwork.StoredItem entry : network.sorted()) {
-				if (ItemStack.isSameItem(filter, entry.prototype)) {
+				if (FilterChests.matches(List.of(filter), entry.prototype)) {
 					container.setItem(i, network.extract(entry.prototype, entry.prototype.getMaxStackSize()));
 					changed = true;
 					break;
