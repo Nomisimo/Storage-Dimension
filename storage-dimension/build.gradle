@@ -28,6 +28,17 @@ loom {
 	}
 }
 
+fabricApi {
+	// Client game test (CI only): starts the game, builds a small scene and takes screenshots.
+	configureTests {
+		createSourceSet = true
+		modId = "storagedim-test"
+		enableGameTests = false
+		enableClientGameTests = true
+		eula = true
+	}
+}
+
 dependencies {
 	// To change the versions see the gradle.properties file
 	minecraft "com.mojang:minecraft:${project.minecraft_version}"

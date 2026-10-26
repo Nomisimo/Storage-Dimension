@@ -85,7 +85,7 @@ public class RobotEntity extends PathfinderMob {
 				.add(Attributes.SAFE_FALL_DISTANCE, 24);
 	}
 
-	void setup(UUID owner, BlockPos home) {
+	public void setup(UUID owner, BlockPos home) {
 		this.owner = owner;
 		this.home = home;
 	}
