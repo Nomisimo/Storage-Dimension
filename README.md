@@ -28,6 +28,8 @@ Ein Fabric-Mod für **Minecraft 26.1.2**. Seit Version 0.4.0 (Sammelroboter, eig
   - Er arbeitet nur in geladenen Chunks.
 - **Roboter-Barriere:** Ein durchsichtiger Plasma-Schild. Spieler, Tiere und Items gehen einfach hindurch, Sammelroboter nicht, und sie planen auch keinen Weg hindurch oder darüber. Gut für Türen und Bereiche, aus denen die Roboter nichts holen sollen. Rezept: 8 Glas um eine Amethystscherbe ergibt 8 Barrieren.
 
+  ![Roboter-Barriere als Wand hinter den Kisten](docs/screenshots/roboter-barriere.png)
+
   ![Der Sammelroboter holt Items und bringt sie zu den Kisten](docs/screenshots/roboter-bei-der-arbeit.png)
 
 - **Werkbank und Ofen** stehen im Raum, gecraftet wird direkt in der Dimension.
