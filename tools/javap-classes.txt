@@ -1,19 +1,13 @@
--p net.minecraft.world.inventory.MenuType
--p net.minecraft.client.gui.screens.MenuScreens
-net.minecraft.client.gui.GuiGraphicsExtractor
--p net.minecraft.client.gui.screens.inventory.AbstractContainerScreen
-net.minecraft.client.gui.components.Button
-net.minecraft.client.gui.components.Button$Builder
-net.minecraft.client.gui.components.AbstractWidget
-net.minecraft.client.gui.components.AbstractButton
-net.minecraft.client.gui.components.EditBox
-net.minecraft.client.gui.components.Tooltip
-net.minecraft.client.gui.components.CycleButton
-net.minecraft.client.input.MouseButtonEvent
-net.minecraft.client.input.KeyEvent
-net.minecraft.client.input.CharacterEvent
-net.minecraft.world.inventory.AbstractContainerMenu
-net.fabricmc.fabric.api.screenhandler.v1.ExtendedMenuType
-net.fabricmc.fabric.api.screenhandler.v1.ExtendedScreenHandlerType
-net.fabricmc.fabric.api.menu.v1.ExtendedMenuType
-net.minecraft.core.particles.ParticleTypes
+-public net.minecraft.client.gui.GuiGraphicsExtractor
+-public net.minecraft.client.gui.components.Button
+-public net.minecraft.client.gui.components.Button$Builder
+-public net.minecraft.client.gui.components.AbstractWidget
+-public net.minecraft.client.gui.components.AbstractButton
+-public net.minecraft.client.gui.components.EditBox
+-public net.minecraft.client.gui.components.Tooltip
+-public net.minecraft.client.input.MouseButtonEvent
+-public net.minecraft.client.input.KeyEvent
+-public net.minecraft.world.inventory.AbstractContainerMenu
+-p net.minecraft.client.gui.screens.MenuScreens$ScreenConstructor
+-public net.minecraft.world.inventory.MenuType$MenuSupplier
+-public net.minecraft.world.entity.player.Player

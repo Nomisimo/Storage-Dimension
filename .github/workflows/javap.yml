@@ -30,18 +30,15 @@ jobs:
             echo "=================== $cls"
             javap $flags -cp "$CP" "$cls" 2>&1 | head -4000
           done < ../jp/tools/javap-classes.txt
-      - name: Jade
+      - name: Fabric menu classes
         run: |
-          for p in jade wthit; do
-            echo "== $p"; curl -s "https://api.modrinth.com/v2/project/$p/version?game_versions=%5B%2226.1.2%22%5D&loaders=%5B%22fabric%22%5D" | python3 -c "import json,sys; [print(v['version_number'], v['id'], v['date_published'][:10], v['files'][0]['url']) for v in json.load(sys.stdin)[:4]]"
-          done
-          URL=$(curl -s "https://api.modrinth.com/v2/project/jade/version?game_versions=%5B%2226.1.2%22%5D&loaders=%5B%22fabric%22%5D" | python3 -c "import json,sys; print(json.load(sys.stdin)[0]['files'][0]['url'])")
-          curl -sL -o /tmp/jade.jar "$URL"
-          MC="/tmp/jade.jar:$(find ~/.gradle /home/runner/work -name '*.jar' \( -path '*minecraft*' -o -path '*fabric*' \) | tr '\n' ':')"
-          unzip -p /tmp/jade.jar fabric.mod.json | head -60
-          for c in snownee.jade.api.IWailaPlugin snownee.jade.api.IWailaClientRegistration snownee.jade.api.IWailaCommonRegistration snownee.jade.api.IEntityComponentProvider snownee.jade.api.IServerDataProvider snownee.jade.api.IComponentProvider snownee.jade.api.IToggleableProvider snownee.jade.api.EntityAccessor snownee.jade.api.Accessor snownee.jade.api.ITooltip snownee.jade.api.config.IPluginConfig snownee.jade.api.WailaPlugin snownee.jade.api.StreamServerDataProvider; do
-            echo "=================== $c"; javap -cp "$MC" $c 2>&1 | head -80
-          done
+          for j in $(find ~/.gradle -name "*.jar" -path "*fabric*" | grep -v sources); do unzip -l "$j" 2>/dev/null | grep -iE "MenuType|ScreenHandler|MenuScreen|menu/v1|screenhandler" | awk -v j="$(basename $j)" '{print j": "$4}'; done | sort -u | head -60
+          unzip -p $(find ~/.gradle -name "*.jar" -path "*fabric*" | grep -i "transitive\|fabric-api-base\|fabric-screen-handler\|fabric-menu" | head -3 | tr '\n' ' ') "*.accesswidener" "*.classtweaker" 2>/dev/null | grep -i "MenuScreens\|MenuType" | head
+          for j in $(find ~/.gradle -name "*.jar" -path "*fabric*" | grep -v sources); do unzip -l "$j" 2>/dev/null | grep -iE "accesswidener|classtweaker" | awk -v j="$j" '{print j" "$4}'; done | head -30
+          JADE="/tmp/jade.jar"
+          curl -sL -o $JADE "https://cdn.modrinth.com/data/nvQzSEkH/versions/Yo9xOce3/Jade-mc26.1-Fabric-26.1.11.jar"
+          MC="$JADE:$(find ~/.gradle /home/runner/work -name '*.jar' \( -path '*minecraft*' -o -path '*fabric*' \) | tr '\n' ':')"
+          for c in snownee.jade.api.IJadeProvider snownee.jade.api.BlockAccessor snownee.jade.api.IBlockComponentProvider; do echo "=================== $c"; javap -cp "$MC" $c 2>&1 | head -60; done
       - name: TB screen render
         run: |
           JAR=$(find ~/.gradle -iname "travelersbackpack*.jar" | grep -v sources | head -1)
