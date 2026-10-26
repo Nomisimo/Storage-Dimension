@@ -7,7 +7,36 @@ on:
 jobs:
   javap:
     runs-on: ubuntu-24.04
+    defaults:
+      run:
+        working-directory: storagedim-tb
     steps:
-      - name: modrinth versions
+      - uses: actions/checkout@v6
+        with:
+          ref: main
+      - uses: actions/checkout@v6
+        with:
+          path: jp
+      - uses: actions/setup-java@v5
+        with:
+          java-version: '25'
+          distribution: 'microsoft'
+      - run: chmod +x ./gradlew && ./gradlew compileJava
+      - name: javap
         run: |
-          curl -s 'https://api.modrinth.com/v2/project/jei/version?game_versions=%5B%2226.1.2%22%5D&loaders=%5B%22fabric%22%5D' | jq -r '.[] | "\(.id) \(.version_number) \(.files[0].filename)"' | head -20
+          CP=$(find ~/.gradle /home/runner/work -name "*.jar" \( -path "*minecraft*" -o -path "*fabric-api*" -o -path "*net.fabricmc*" -o -path "*maven.modrinth*" \) 2>/dev/null | tr '\n' ':')
+          while read -r flags cls; do
+            [ -z "$cls" ] && continue
+            echo "=================== $cls"
+            javap $flags -cp "$CP" "$cls" 2>&1 | head -4000
+          done < ../jp/tools/javap-classes.txt
+      - name: TB screen render
+        run: |
+          JAR=$(find ~/.gradle -iname "travelersbackpack*.jar" | grep -v sources | head -1)
+          mkdir /tmp/tb && cd /tmp/tb && unzip -q "$JAR"
+          MC=".:$(find ~/.gradle /home/runner/work -name '*.jar' \( -path '*minecraft*' -o -path '*fabric*' -o -path '*modrinth*' \) | tr '\n' ':')"
+          for c in com.tiviacz.travelersbackpack.client.screens.BackpackScreen; do
+            for m in extractRenderState extractBackground extractLabels init mouseClicked keyPressed charTyped; do
+              echo "=== $c.$m"; javap -c -p -cp "$MC" $c | sed -n "/ $m(/,/^$/p" | grep -E "invoke|Code|$m" | head -60
+            done
+          done

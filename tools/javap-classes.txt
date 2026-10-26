@@ -1,7 +1,6 @@
--p mezz.jei.api.recipe.transfer.IRecipeTransferHandlerHelper
--p mezz.jei.api.recipe.transfer.IRecipeTransferError
--p mezz.jei.api.registration.IRecipeTransferRegistration
--p net.minecraft.world.inventory.Slot
--p net.minecraft.world.inventory.AbstractContainerMenu
--p com.tiviacz.travelersbackpack.inventory.handler.ItemStackHandler
--p com.tiviacz.travelersbackpack.inventory.menu.BackpackItemMenu
+-p com.tiviacz.travelersbackpack.client.screens.BackpackScreen
+-p net.fabricmc.fabric.api.client.screen.v1.ScreenEvents
+-p net.fabricmc.fabric.api.client.screen.v1.ScreenEvents$AfterExtract
+-p net.fabricmc.fabric.api.client.screen.v1.ScreenEvents$AfterRender
+-p net.minecraft.client.gui.components.Renderable
+-p net.minecraft.client.gui.screens.Screen
