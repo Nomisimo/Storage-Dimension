@@ -2,6 +2,8 @@ package de.nomisimo.storagedim.client;
 
 import de.nomisimo.storagedim.StorageConfig;
 import de.nomisimo.storagedim.robot.Robots;
+import de.nomisimo.storagedim.robot.StationMenu;
+import de.nomisimo.storagedim.robot.StationNetworking;
 import de.nomisimo.storagedim.storage.StorageMenu;
 import de.nomisimo.storagedim.storage.TerminalNetworking;
 import net.fabricmc.api.ClientModInitializer;
@@ -18,6 +20,7 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.Tooltip;
 import net.minecraft.client.gui.components.EditBox;
+import net.minecraft.client.gui.screens.MenuScreens;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.gui.screens.inventory.MenuAccess;
 import net.minecraft.client.input.KeyEvent;
@@ -41,6 +44,11 @@ public class StorageDimensionClient implements ClientModInitializer {
 	private static Button sortButton;
 	private static Button syncButton;
 	private static SearchBox searchBox;
+	private static Button prevButton;
+	private static Button nextButton;
+	private static Button depositButton;
+	private static BottomRow bottomRow;
+	private static TerminalNetworking.PagePayload pageInfo;
 	private static final boolean JEI = FabricLoader.getInstance().isModLoaded("jei");
 
 	@Override
@@ -48,6 +56,8 @@ public class StorageDimensionClient implements ClientModInitializer {
 		ModelLayerRegistry.registerModelLayer(RobotModel.LAYER, RobotModel::createBodyLayer);
 		EntityRendererRegistry.register(Robots.ROBOT, RobotRenderer::new);
 		ClientChestMarks.register();
+		MenuScreens.register(StationMenu.TYPE, StationScreen::new);
+		ClientPlayNetworking.registerGlobalReceiver(StationNetworking.SyncPayload.TYPE, (payload, context) -> StationScreen.receive(payload));
 		ClientPlayNetworking.registerGlobalReceiver(TerminalNetworking.OpenedPayload.TYPE, (payload, context) -> {
 			terminalId = payload.containerId();
 			sort = parse(payload.sort());
@@ -64,6 +74,10 @@ public class StorageDimensionClient implements ClientModInitializer {
 			if (sortButton != null) {
 				sortButton.setMessage(label(sort));
 			}
+		});
+		ClientPlayNetworking.registerGlobalReceiver(TerminalNetworking.PagePayload.TYPE, (payload, context) -> {
+			pageInfo = payload;
+			updatePageButtons();
 		});
 		ScreenEvents.AFTER_INIT.register((client, screen, width, height) -> {
 			if (isTerminal(screen)) {
@@ -92,7 +106,22 @@ public class StorageDimensionClient implements ClientModInitializer {
 		int top = (screen.height - IMAGE_HEIGHT) / 2;
 
 		// re-initialising (e.g. after resizing) must not add a second set
-		Screens.getWidgets(screen).removeIf(widget -> widget instanceof SearchBox || widget == sortButton || widget == syncButton);
+		Screens.getWidgets(screen).removeIf(widget -> widget instanceof SearchBox || widget == sortButton || widget == syncButton
+				|| widget instanceof BottomRow || widget == prevButton || widget == nextButton || widget == depositButton);
+
+		// bottom row: real buttons for the pages and for depositing, with the page and stock info in between
+		bottomRow = new BottomRow(left + 7, top + 107, 162, 18);
+		Screens.getWidgets(screen).add(bottomRow);
+		prevButton = Button.builder(Component.literal("◀"), button -> ClientPlayNetworking.send(new TerminalNetworking.ButtonPayload(TerminalNetworking.BUTTON_PREV)))
+				.bounds(left + 7, top + 108, 16, 16).tooltip(Tooltip.create(Component.literal("Vorherige Seite"))).build();
+		nextButton = Button.builder(Component.literal("▶"), button -> ClientPlayNetworking.send(new TerminalNetworking.ButtonPayload(TerminalNetworking.BUTTON_NEXT)))
+				.bounds(left + 153, top + 108, 16, 16).tooltip(Tooltip.create(Component.literal("Nächste Seite"))).build();
+		depositButton = Button.builder(Component.literal("Einlagern"), button -> ClientPlayNetworking.send(new TerminalNetworking.ButtonPayload(TerminalNetworking.BUTTON_DEPOSIT)))
+				.bounds(left + 25, top + 108, 50, 16).tooltip(Tooltip.create(Component.literal("Das ganze Inventar ohne Hotbar einlagern"))).build();
+		Screens.getWidgets(screen).add(prevButton);
+		Screens.getWidgets(screen).add(nextButton);
+		Screens.getWidgets(screen).add(depositButton);
+		updatePageButtons();
 
 		// with JEI there is a small switch between search field and sort button
 		SearchBox search = new SearchBox(Minecraft.getInstance(), left + 7, top + 4, JEI ? 94 : 108, 12);
@@ -140,6 +169,48 @@ public class StorageDimensionClient implements ClientModInitializer {
 				.bounds(left + 118, top + 4, 51, 12)
 				.build();
 		Screens.getWidgets(screen).add(sortButton);
+	}
+
+	private static void updatePageButtons() {
+		if (prevButton == null) {
+			return;
+		}
+
+		TerminalNetworking.PagePayload info = pageInfo;
+		boolean current = info != null && info.containerId() == terminalId;
+		prevButton.active = current && info.page() > 0;
+		nextButton.active = current && info.page() < info.pages() - 1;
+	}
+
+	/** Covers the bottom slot row of the chest picture and shows page and stock info next to the buttons. */
+	private static final class BottomRow extends net.minecraft.client.gui.components.AbstractWidget {
+		BottomRow(int x, int y, int width, int height) {
+			super(x, y, width, height, Component.empty());
+			active = false;
+		}
+
+		@Override
+		protected void extractWidgetRenderState(net.minecraft.client.gui.GuiGraphicsExtractor graphics, int mouseX, int mouseY, float partialTick) {
+			graphics.fill(getX(), getY(), getX() + getWidth(), getY() + getHeight(), 0xFFC6C6C6);
+			TerminalNetworking.PagePayload info = pageInfo;
+
+			if (info != null && info.containerId() == terminalId) {
+				var font = Minecraft.getInstance().font;
+				String page = "Seite " + (info.page() + 1) + "/" + info.pages();
+				String stock = info.kinds() + " Sorten · " + TerminalCounts.format(info.total());
+				graphics.text(font, page, getX() + 72, getY() + 1, 0xFF404040, false);
+				graphics.text(font, stock, getX() + 72, getY() + 10, 0xFF404040, false);
+			}
+		}
+
+		@Override
+		protected void updateWidgetNarration(net.minecraft.client.gui.narration.NarrationElementOutput output) {
+		}
+
+		@Override
+		public boolean isMouseOver(double mouseX, double mouseY) {
+			return false;
+		}
 	}
 
 	private static Component syncLabel() {

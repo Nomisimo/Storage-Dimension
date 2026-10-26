@@ -50,6 +50,13 @@ dependencies {
 	// JEI 29.47.0.111, only to show our recipes, which the server no longer sends to clients.
 	compileOnly "maven.modrinth:jei:${project.jei_version}"
 
+	// Jade 26.1.11, only for the look-at tooltip of robots and robot stations.
+	compileOnly "maven.modrinth:jade:${project.jade_version}"
+	gametestRuntimeOnly "maven.modrinth:jade:${project.jade_version}"
+
+	// Client test only: Xaero's Minimap 26.6.2, for the robot icon on the minimap.
+	gametestRuntimeOnly "maven.modrinth:xaeros-minimap:DVSdniw4"
+
 	// Client test only: Traveler's Backpack and our add-on (built by the workflow before the test), for the add-on's recipe picture.
 	gametestRuntimeOnly "maven.modrinth:travelersbackpack:NUbnGgy9"
 	gametestRuntimeOnly "maven.modrinth:forge-config-api-port:RXbL43Lt"

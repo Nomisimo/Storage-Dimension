@@ -76,6 +76,11 @@ public class StorageTbClient implements ClientModInitializer {
 
 				// with the search sync on, text typed into JEI's search bar also searches ME storage
 				ScreenEvents.afterTick(screen).register(current -> {
+					// Traveler's Backpack rebuilds its widgets now and then without telling anybody; the field comes back
+					if (MeView.isOpen(backpack.getMenu()) && (searchBox == null || !Screens.getWidgets(current).contains(searchBox))) {
+						updateSearch(backpack, true);
+					}
+
 					if (searchBox != null && Screens.getWidgets(current).contains(searchBox) && jeiSync()) {
 						String jei = TbJeiPlugin.searchText();
 

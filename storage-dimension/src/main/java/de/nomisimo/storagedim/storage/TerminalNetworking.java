@@ -69,7 +69,48 @@ public final class TerminalNetworking {
 		}
 	}
 
+	public static final int BUTTON_PREV = 0;
+	public static final int BUTTON_NEXT = 1;
+	public static final int BUTTON_DEPOSIT = 2;
+
+	/** Server to client: which page the terminal shows and what is stored, for the client's bottom row. */
+	public record PagePayload(int containerId, int page, int pages, int kinds, long total) implements CustomPacketPayload {
+		public static final Type<PagePayload> TYPE = new Type<>(StorageDimensionMod.id("terminal_page"));
+		public static final StreamCodec<RegistryFriendlyByteBuf, PagePayload> CODEC = StreamCodec.composite(
+				ByteBufCodecs.VAR_INT, PagePayload::containerId,
+				ByteBufCodecs.VAR_INT, PagePayload::page,
+				ByteBufCodecs.VAR_INT, PagePayload::pages,
+				ByteBufCodecs.VAR_INT, PagePayload::kinds,
+				ByteBufCodecs.VAR_LONG, PagePayload::total,
+				PagePayload::new);
+
+		@Override
+		public Type<? extends CustomPacketPayload> type() {
+			return TYPE;
+		}
+	}
+
+	/** Client to server: a button of the bottom row ({@link #BUTTON_PREV}, {@link #BUTTON_NEXT}, {@link #BUTTON_DEPOSIT}). */
+	public record ButtonPayload(int button) implements CustomPacketPayload {
+		public static final Type<ButtonPayload> TYPE = new Type<>(StorageDimensionMod.id("terminal_button"));
+		public static final StreamCodec<RegistryFriendlyByteBuf, ButtonPayload> CODEC = StreamCodec.composite(
+				ByteBufCodecs.VAR_INT, ButtonPayload::button,
+				ButtonPayload::new);
+
+		@Override
+		public Type<? extends CustomPacketPayload> type() {
+			return TYPE;
+		}
+	}
+
 	public static void register() {
+		PayloadTypeRegistry.clientboundPlay().register(PagePayload.TYPE, PagePayload.CODEC);
+		PayloadTypeRegistry.serverboundPlay().register(ButtonPayload.TYPE, ButtonPayload.CODEC);
+		ServerPlayNetworking.registerGlobalReceiver(ButtonPayload.TYPE, (payload, context) -> {
+			if (context.player().containerMenu instanceof StorageMenu menu) {
+				menu.pressButton(payload.button());
+			}
+		});
 		PayloadTypeRegistry.clientboundPlay().register(OpenedPayload.TYPE, OpenedPayload.CODEC);
 		PayloadTypeRegistry.clientboundPlay().register(SortedPayload.TYPE, SortedPayload.CODEC);
 		PayloadTypeRegistry.serverboundPlay().register(SearchPayload.TYPE, SearchPayload.CODEC);
@@ -91,6 +132,10 @@ public final class TerminalNetworking {
 	/** True when the player's client has this mod and can draw the search field. */
 	public static boolean hasClientUi(ServerPlayer player) {
 		return ServerPlayNetworking.canSend(player, OpenedPayload.TYPE);
+	}
+
+	static void sendPage(ServerPlayer player, int containerId, int page, int pages, int kinds, long total) {
+		ServerPlayNetworking.send(player, new PagePayload(containerId, page, pages, kinds, total));
 	}
 
 	static void sendOpened(ServerPlayer player, int containerId, StorageMenu.Sort sort) {

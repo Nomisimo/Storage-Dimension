@@ -1,8 +1,10 @@
 {
-  "item.storagedim.robot": "Sammelroboter",
-  "entity.storagedim.robot": "Sammelroboter",
-  "block.storagedim.robot_barrier": "Roboter-Barriere",
-  "item.storagedim.robot_barrier": "Roboter-Barriere",
-  "block.storagedim.robot_station": "Roboter-Station",
-  "item.storagedim.robot_station": "Roboter-Station"
+	"item.storagedim.robot": "Sammelroboter",
+	"entity.storagedim.robot": "Sammelroboter",
+	"block.storagedim.robot_barrier": "Roboter-Barriere",
+	"item.storagedim.robot_barrier": "Roboter-Barriere",
+	"block.storagedim.robot_station": "Roboter-Station",
+	"item.storagedim.robot_station": "Roboter-Station",
+	"config.jade.plugin_storagedim.robot": "Roboter",
+	"config.jade.plugin_storagedim.robot_station": "Roboter-Station"
 }

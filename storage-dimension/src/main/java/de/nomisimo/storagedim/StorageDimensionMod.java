@@ -28,6 +28,7 @@ public class StorageDimensionMod implements ModInitializer {
 		StorageEvents.register();
 		StorageCommands.register();
 		TerminalNetworking.register();
+		de.nomisimo.storagedim.robot.StationNetworking.register();
 		SmokeTest.registerIfEnabled();
 		LOGGER.info("Storage Dimension geladen");
 	}

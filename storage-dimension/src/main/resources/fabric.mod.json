@@ -21,6 +21,9 @@
 		],
 		"jei_mod_plugin": [
 			"de.nomisimo.storagedim.client.StorageJeiPlugin"
+		],
+		"jade": [
+			"de.nomisimo.storagedim.compat.StorageJadePlugin"
 		]
 	},
 	"mixins": [

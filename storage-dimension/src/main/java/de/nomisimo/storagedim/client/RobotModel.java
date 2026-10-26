@@ -29,6 +29,8 @@ public class RobotModel extends EntityModel<RobotRenderState> {
 	private final ModelPart leftLeg;
 	private final ModelPart leftShin;
 	private final ModelPart leftFoot;
+	private final ModelPart goggles;
+	private final ModelPart umbrella;
 
 	public RobotModel(ModelPart root) {
 		super(root);
@@ -36,6 +38,8 @@ public class RobotModel extends EntityModel<RobotRenderState> {
 		neck = body.getChild("neck");
 		head = neck.getChild("head");
 		jaw = head.getChild("jaw");
+		goggles = head.getChild("goggles");
+		umbrella = body.getChild("umbrella");
 		rightLeg = root.getChild("right_leg");
 		rightShin = rightLeg.getChild("shin");
 		rightFoot = rightShin.getChild("foot");
@@ -50,6 +54,13 @@ public class RobotModel extends EntityModel<RobotRenderState> {
 		PartDefinition body = root.addOrReplaceChild("body", CubeListBuilder.create()
 				.texOffs(0, 0).addBox(-3, -2, -3.5F, 6, 5, 7)
 				.texOffs(0, 12).addBox(-2.5F, -1, 3.5F, 5, 4, 1), PartPose.offset(0, 14, 0));
+		// a little umbrella in the robot's colour (accent texture), held up behind the head when it rains
+		body.addOrReplaceChild("umbrella", CubeListBuilder.create()
+				.texOffs(48, 78).addBox(-0.5F, -23, 3, 1, 21, 1)
+				.texOffs(0, 64).addBox(-6, -23, -7, 12, 1, 12)
+				.texOffs(0, 78).addBox(-4, -24, -5, 8, 1, 8)
+				.texOffs(32, 78).addBox(-2, -25, -3, 4, 1, 4)
+				.texOffs(56, 78).addBox(-0.5F, -26, -1.5F, 1, 1, 1), PartPose.ZERO);
 		PartDefinition neck = body.addOrReplaceChild("neck", CubeListBuilder.create()
 				.texOffs(26, 0).addBox(-1, -6, -1, 2, 6, 2), PartPose.offset(0, -2, -2));
 		PartDefinition head = neck.addOrReplaceChild("head", CubeListBuilder.create()
@@ -57,6 +68,11 @@ public class RobotModel extends EntityModel<RobotRenderState> {
 				.texOffs(28, 30).addBox(-3, -2, -6, 6, 1, 1)
 				.texOffs(36, 0).addBox(-3.5F, -4.5F, -3.5F, 1, 3, 3)
 				.texOffs(36, 6).addBox(2.5F, -4.5F, -3.5F, 1, 3, 3), PartPose.offset(0, -6, 0));
+		// diving goggles over both eyes with a rubber strap, only worn under water
+		head.addOrReplaceChild("goggles", CubeListBuilder.create()
+				.texOffs(0, 40).addBox(-4.2F, -5, -4, 1, 4, 4)
+				.texOffs(10, 40).addBox(3.2F, -5, -4, 1, 4, 4)
+				.texOffs(0, 48).addBox(-4, -4, -5.5F, 8, 1, 9), PartPose.ZERO);
 		head.addOrReplaceChild("jaw", CubeListBuilder.create()
 				.texOffs(0, 30).addBox(-3, 0, -6, 6, 1, 7), PartPose.offset(0, -1, 0.5F));
 
@@ -69,7 +85,7 @@ public class RobotModel extends EntityModel<RobotRenderState> {
 					.texOffs(44, 6).addBox(-1.5F, 0, -2.5F, 3, 1, 4), PartPose.offset(0, 3, 0));
 		}
 
-		return LayerDefinition.create(mesh, 64, 64);
+		return LayerDefinition.create(mesh, 64, 128);
 	}
 
 	@Override
@@ -77,7 +93,10 @@ public class RobotModel extends EntityModel<RobotRenderState> {
 		super.setupAnim(state);
 		float pos = state.walkAnimationPos * 0.9F;
 		float speed = Math.min(state.walkAnimationSpeed * 1.4F, 1);
-		float age = state.ageInTicks;
+		// each robot has its own offset and pace for the idle animations
+		float age = state.ageInTicks * state.idlePace + state.idlePhase;
+		goggles.visible = state.diving;
+		umbrella.visible = state.umbrella;
 
 		// marching: high knees, feet kept flat, a little waddle and a bobbing head
 		float swing = Mth.cos(pos) * 0.9F * speed;

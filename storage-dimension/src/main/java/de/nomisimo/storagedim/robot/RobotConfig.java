@@ -28,8 +28,8 @@ import net.minecraft.world.item.component.ItemLore;
  * Stored on the station, copied onto robot items and from there onto the placed robot.
  */
 public record RobotConfig(int range, int color, String name, List<ItemStack> filter, Optional<String> stationDim, Optional<BlockPos> station,
-		boolean exclude) {
-	public static final RobotConfig DEFAULT = new RobotConfig(RobotEntity.RANGE, RobotEntity.DEFAULT_COLOR, "", List.of(), Optional.empty(), Optional.empty(), false);
+		boolean exclude, String stationName) {
+	public static final RobotConfig DEFAULT = new RobotConfig(RobotEntity.RANGE, RobotEntity.DEFAULT_COLOR, "", List.of(), Optional.empty(), Optional.empty(), false, "");
 	public static final Codec<RobotConfig> CODEC = RecordCodecBuilder.create(i -> i.group(
 			Codec.INT.optionalFieldOf("range", RobotEntity.RANGE).forGetter(RobotConfig::range),
 			Codec.INT.optionalFieldOf("color", RobotEntity.DEFAULT_COLOR).forGetter(RobotConfig::color),
@@ -37,7 +37,8 @@ public record RobotConfig(int range, int color, String name, List<ItemStack> fil
 			ItemStack.CODEC.listOf().optionalFieldOf("filter", List.of()).forGetter(RobotConfig::filter),
 			Codec.STRING.optionalFieldOf("stationDim").forGetter(RobotConfig::stationDim),
 			BlockPos.CODEC.optionalFieldOf("station").forGetter(RobotConfig::station),
-			Codec.BOOL.optionalFieldOf("exclude", false).forGetter(RobotConfig::exclude)
+			Codec.BOOL.optionalFieldOf("exclude", false).forGetter(RobotConfig::exclude),
+			Codec.STRING.optionalFieldOf("stationName", "").forGetter(RobotConfig::stationName)
 	).apply(i, RobotConfig::new));
 	private static final String KEY = "storagedim_robot";
 	private static final Map<String, String> COLOR_NAMES = Map.ofEntries(
@@ -49,28 +50,33 @@ public record RobotConfig(int range, int color, String name, List<ItemStack> fil
 			Map.entry("black", "Schwarz"));
 
 	public RobotConfig withRange(int range) {
-		return new RobotConfig(range, color, name, filter, stationDim, station, exclude);
+		return new RobotConfig(range, color, name, filter, stationDim, station, exclude, stationName);
 	}
 
 	public RobotConfig withColor(int color) {
-		return new RobotConfig(range, color, name, filter, stationDim, station, exclude);
+		return new RobotConfig(range, color, name, filter, stationDim, station, exclude, stationName);
 	}
 
 	public RobotConfig withName(String name) {
-		return new RobotConfig(range, color, name, filter, stationDim, station, exclude);
+		return new RobotConfig(range, color, name, filter, stationDim, station, exclude, stationName);
 	}
 
 	public RobotConfig withFilter(List<ItemStack> filter) {
-		return new RobotConfig(range, color, name, List.copyOf(filter), stationDim, station, exclude);
+		return new RobotConfig(range, color, name, List.copyOf(filter), stationDim, station, exclude, stationName);
 	}
 
 	/** true: the filter lists what the robots leave lying; false: the only things they collect. */
 	public RobotConfig withExclude(boolean exclude) {
-		return new RobotConfig(range, color, name, filter, stationDim, station, exclude);
+		return new RobotConfig(range, color, name, filter, stationDim, station, exclude, stationName);
+	}
+
+	/** The station's own name, shown in its screen and in the look-at tooltip of its robots. */
+	public RobotConfig withStationName(String stationName) {
+		return new RobotConfig(range, color, name, filter, stationDim, station, exclude, stationName);
 	}
 
 	public RobotConfig withStation(String dim, BlockPos pos) {
-		return new RobotConfig(range, color, name, filter, Optional.of(dim), Optional.of(pos), exclude);
+		return new RobotConfig(range, color, name, filter, Optional.of(dim), Optional.of(pos), exclude, stationName);
 	}
 
 	/** The config written on a robot item, or null for a plain one. */
@@ -101,12 +107,22 @@ public record RobotConfig(int range, int color, String name, List<ItemStack> fil
 			lore.add(line("Name: ", Component.literal(name).withStyle(ChatFormatting.WHITE)));
 		}
 
-		lore.add(line("Station: ", Component.literal(station.map(p -> p.getX() + " " + p.getY() + " " + p.getZ()).orElse("keine"))
-				.withStyle(ChatFormatting.WHITE)));
+		lore.add(line("Station: ", Component.literal(stationLabel()).withStyle(ChatFormatting.WHITE)));
 		lore.add(line("Reichweite: ", Component.literal(rangeText(range)).withStyle(ChatFormatting.WHITE)));
 		lore.add(line("Farbe: ", Component.literal(colorName(color)).withStyle(s -> s.withColor(color))));
 		lore.add(line("Sammelt: ", describeFilter(filter, exclude).withStyle(ChatFormatting.WHITE)));
 		stack.set(DataComponents.LORE, new ItemLore(lore));
+	}
+
+	/** The station's name, else its position, or "keine". */
+	public String stationLabel() {
+		if (station.isEmpty()) {
+			return "keine";
+		}
+
+		BlockPos p = station.get();
+		String pos = p.getX() + " " + p.getY() + " " + p.getZ();
+		return stationName.isEmpty() ? pos : stationName + " (" + pos + ")";
 	}
 
 	/** "alles", "Bruchstein, Erde" or "alles außer Bruchstein, Erde". */

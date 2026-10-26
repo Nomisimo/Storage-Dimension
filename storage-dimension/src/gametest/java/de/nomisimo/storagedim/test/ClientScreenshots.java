@@ -21,6 +21,12 @@ import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.EntitySpawnReason;
+import java.util.List;
+import net.minecraft.core.Direction;
+import net.minecraft.world.phys.Vec3;
+import net.minecraft.world.phys.BlockHitResult;
+import net.minecraft.world.item.context.UseOnContext;
+import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.inventory.ContainerInput;
@@ -88,9 +94,10 @@ public class ClientScreenshots implements FabricClientGameTest {
 	}
 
 	/**
-	 * A robot station in front of the camera, set up through its screen; two robots configured there, one placed far away.
-	 * They should walk to the station, split the dropped items between them, then sit at the station looking around.
-	 * A third robot belongs to a station without any chest in range and should sit sadly.
+	 * A robot station in front of the camera, set up through its screen; two robots set up there and placed with the item,
+	 * one far away. They should walk to the station, split the dropped items between them, then sit at the station.
+	 * A third robot belongs to a station without any chest in range and should sit sadly. Then: the robot list in the
+	 * station screen, the recall button (a walled-in robot teleports), rain (umbrellas), diving and the Jade tooltip.
 	 */
 	private static void stationTest(ClientGameTestContext context, TestSingleplayerContext world) {
 		world.getServer().runOnServer(server -> {
@@ -99,13 +106,21 @@ public class ClientScreenshots implements FabricClientGameTest {
 			BlockPos base = player.blockPosition();
 			BlockPos station = base.offset(0, 0, -2);
 			level.setBlockAndUpdate(station, RobotStationBlock.BLOCK.defaultBlockState());
-			StorageData.get().setStation(Rooms.id(level), station, StorageData.get().station(Rooms.id(level), station).withName("Quak"));
 			StationMenu.open(player, station);
-			AbstractContainerMenu menu = player.containerMenu;
-			menu.clicked(9, 1, ContainerInput.PICKUP, player);   // range one step smaller: 8 chunks
-			menu.clicked(10, 0, ContainerInput.PICKUP, player);  // colour: white
-			menu.setCarried(new ItemStack(Robots.ROBOT_ITEM, 2));
-			menu.clicked(13, 0, ContainerInput.PICKUP, player);  // two robots in
+			StationMenu menu = (StationMenu) player.containerMenu;
+			menu.action(StationMenu.ACTION_STATION_NAME, 0, "Nordlager");
+			menu.action(StationMenu.ACTION_ROBOT_NAME, 0, "Quak");
+			menu.action(StationMenu.ACTION_RANGE, -1, "");  // one step smaller: 8 chunks
+			menu.action(StationMenu.ACTION_COLOR, 1, "");   // white
+			menu.setCarried(new ItemStack(Robots.ROBOT_ITEM, 3));
+			menu.clicked(StationMenu.SLOT_INPUT, 0, ContainerInput.PICKUP, player);  // three robots in
+
+			// a plain robot cannot be placed
+			ItemStack plain = new ItemStack(Robots.ROBOT_ITEM);
+			player.setItemInHand(InteractionHand.OFF_HAND, plain);
+			System.out.println("STORAGEDIM PLACE plain=" + plain.useOn(new UseOnContext(player, InteractionHand.OFF_HAND,
+					new BlockHitResult(Vec3.atCenterOf(base.offset(2, -1, 2)), Direction.UP, base.offset(2, -1, 2), false))) + " left=" + plain.getCount());
+			player.setItemInHand(InteractionHand.OFF_HAND, ItemStack.EMPTY);
 		});
 		context.waitTicks(10);
 		context.takeScreenshot("station-menu");
@@ -113,32 +128,45 @@ public class ClientScreenshots implements FabricClientGameTest {
 			ServerPlayer player = server.getPlayerList().getPlayers().get(0);
 			ServerLevel level = player.level();
 			BlockPos base = player.blockPosition();
-			ItemStack configured = player.containerMenu.getSlot(15).getItem().copy();
-			player.containerMenu.getSlot(15).set(ItemStack.EMPTY);
+			ItemStack configured = player.containerMenu.getSlot(StationMenu.SLOT_OUTPUT).getItem().copy();
+			player.containerMenu.getSlot(StationMenu.SLOT_OUTPUT).set(ItemStack.EMPTY);
 			player.closeContainer();
 			RobotConfig config = RobotConfig.read(configured, level.registryAccess());
 			System.out.println("STORAGEDIM STATION item=" + configured + " config=" + config + " lore="
 					+ configured.get(net.minecraft.core.component.DataComponents.LORE).lines().stream().map(Component::getString).toList());
 
-			// one next to the scene, one 30 blocks away: that one walks to the station first
-			for (int i = 0; i < 2; i++) {
-				RobotEntity robot = Robots.ROBOT.create(level, EntitySpawnReason.SPAWN_ITEM_USE);
-				double x = i == 0 ? base.getX() + 3.5 : base.getX() + 30.5;
-				robot.snapTo(x, base.getY(), base.getZ() + 2.5, 0, 0);
-				robot.setup(player.getUUID(), BlockPos.containing(x, base.getY(), base.getZ() + 2.5));
-				robot.applyConfig(i == 0 ? config : config.withName("Watschel"));
-				level.addFreshEntity(robot);
+			// placed like a player does: one next to the scene, one 30 blocks away (walks to the station first),
+			// and one walled in with glass far away, for the recall
+			player.setItemInHand(InteractionHand.OFF_HAND, configured);
+
+			for (BlockPos ground : List.of(base.offset(3, -1, 2), base.offset(30, -1, 2), base.offset(20, -1, -10))) {
+				System.out.println("STORAGEDIM PLACE configured=" + configured.useOn(new UseOnContext(player, InteractionHand.OFF_HAND,
+						new BlockHitResult(Vec3.atCenterOf(ground), Direction.UP, ground, false))));
+			}
+
+			player.setItemInHand(InteractionHand.OFF_HAND, ItemStack.EMPTY);
+			BlockPos cage = base.offset(20, 0, -10);
+
+			for (int dx = -1; dx <= 1; dx++) {
+				for (int dz = -1; dz <= 1; dz++) {
+					for (int dy = 0; dy <= 2; dy++) {
+						if (dx != 0 || dz != 0 || dy == 2) {
+							level.setBlockAndUpdate(cage.offset(dx, dy, dz), Blocks.GLASS.defaultBlockState());
+						}
+					}
+				}
 			}
 
 			// a lonely station far away with no chest in its range
 			BlockPos lonely = base.offset(40, 0, 0);
 			level.setBlockAndUpdate(lonely.below(), Blocks.STONE.defaultBlockState());
 			level.setBlockAndUpdate(lonely, RobotStationBlock.BLOCK.defaultBlockState());
-			RobotConfig sad = StorageData.get().station(Rooms.id(level), lonely).withRange(16).withName("Traurig");
+			String dim = Rooms.id(level);
+			StorageData.get().setStation(dim, lonely, StorageData.get().station(dim, lonely).withRange(16).withName("Traurig").withStationName("Einsam"));
 			RobotEntity robot = Robots.ROBOT.create(level, EntitySpawnReason.SPAWN_ITEM_USE);
 			robot.snapTo(lonely.getX() + 2.5, lonely.getY(), lonely.getZ() + 0.5, 0, 0);
 			robot.setup(player.getUUID(), lonely);
-			robot.applyConfig(sad);
+			robot.applyConfig(StorageData.get().station(dim, lonely));
 			level.addFreshEntity(robot);
 
 			for (int i = 0; i < 4; i++) {
@@ -157,12 +185,107 @@ public class ClientScreenshots implements FabricClientGameTest {
 			BlockPos base = player.blockPosition();
 			System.out.println("STORAGEDIM PLANKS left " + player.level().getEntitiesOfClass(ItemEntity.class, new net.minecraft.world.phys.AABB(base).inflate(20),
 					item -> item.getItem().is(Items.OAK_PLANKS)).size());
+			System.out.println("STORAGEDIM STATION robots=" + StorageData.get().stationRobots(Rooms.id(player.level()), base.offset(0, 0, -2)));
+			// the station screen with its robot list
+			StationMenu.open(player, base.offset(0, 0, -2));
+		});
+		context.waitTicks(30);
+		context.takeScreenshot("station-list");
+
+		// recall: everybody comes back, the walled-in robot teleports after 10 seconds without getting closer
+		world.getServer().runOnServer(server -> {
+			ServerPlayer player = server.getPlayerList().getPlayers().get(0);
+			BlockPos base = player.blockPosition();
+			drop(player.level(), base.getX() - 6.5, base.getY() + 0.2, base.getZ() + 6.5, new ItemStack(Items.OAK_PLANKS, 8));
+			((StationMenu) player.containerMenu).action(StationMenu.ACTION_RECALL, 0, "");
+		});
+
+		for (int t = 0; t < 6; t++) {
+			context.waitTicks(60);
+			logRobots(world);
+		}
+
+		context.takeScreenshot("station-recall");
+		world.getServer().runOnServer(server -> server.getPlayerList().getPlayers().get(0).closeContainer());
+
+		// Jade tooltip of a robot at the station, then rain: umbrellas out in the open
+		world.getServer().runOnServer(server -> {
+			ServerPlayer player = server.getPlayerList().getPlayers().get(0);
+			RobotEntity robot = player.level().getEntities(Robots.ROBOT, r -> "Quak1".equals(r.getCustomName() == null ? null : r.getCustomName().getString()))
+					.stream().findFirst().orElse(null);
+
+			if (robot != null) {
+				lookAt(player, robot.position().add(0, 0.3, 0), 2.2);
+			}
+		});
+		context.waitTicks(10);
+		context.takeScreenshot("robot-jade");
+		world.getServer().runOnServer(server -> {
+			server.getCommands().performPrefixedCommand(server.createCommandSourceStack(), "weather rain");
+			ServerPlayer player = server.getPlayerList().getPlayers().get(0);
+			RobotEntity robot = player.level().getEntities(Robots.ROBOT, r -> r.station() != null).stream().findFirst().orElse(null);
+
+			if (robot != null) {
+				lookAt(player, robot.position().add(0, 0.4, 0), 3.5);
+			}
+		});
+		context.waitTicks(40);
+		context.takeScreenshot("robot-umbrella");
+		world.getServer().runOnServer(server -> server.getCommands().performPrefixedCommand(server.createCommandSourceStack(), "weather clear"));
+
+		// diving: a pool with a robot walking along the bottom
+		world.getServer().runOnServer(server -> {
+			ServerPlayer player = server.getPlayerList().getPlayers().get(0);
+			ServerLevel level = player.level();
+			BlockPos station = player.blockPosition().offset(0, 0, -2);
+			BlockPos pool = station.offset(-8, 0, 6);
+
+			for (int dx = -2; dx <= 2; dx++) {
+				for (int dz = -2; dz <= 2; dz++) {
+					for (int dy = -2; dy <= 0; dy++) {
+						level.setBlockAndUpdate(pool.offset(dx, dy, dz), Blocks.WATER.defaultBlockState());
+					}
+
+					level.setBlockAndUpdate(pool.offset(dx, -3, dz), Blocks.SAND.defaultBlockState());
+				}
+			}
+
+			RobotEntity robot = player.level().getEntities(Robots.ROBOT, r -> r.station() != null).stream().findFirst().orElse(null);
+
+			if (robot != null) {
+				robot.teleportTo(pool.getX() + 1.5, pool.getY() - 2, pool.getZ() + 1.5);
+			}
+
+			drop(level, pool.getX() - 1.5, pool.getY() - 1.5, pool.getZ() - 1.5, new ItemStack(Items.KELP, 3));
+			lookAt(player, Vec3.atCenterOf(pool.below(2)), 4.5);
+		});
+
+		for (int t = 0; t < 4; t++) {
+			context.waitTicks(10);
+			context.takeScreenshot("robot-diving-" + t);
+		}
+
+		logRobots(world);
+		world.getServer().runOnServer(server -> {
+			ServerPlayer player = server.getPlayerList().getPlayers().get(0);
 			// look at the sad robot
+			BlockPos base = player.blockPosition();
 			player.teleportTo(player.level(), base.getX() + 42.5, base.getY(), base.getZ() + 4.5, java.util.Set.of(), 180, 30, true);
 		});
 		context.waitTicks(40);
 		context.takeScreenshot("robot-sad");
 		logRobots(world);
+	}
+
+	/** Puts the player {@code distance} blocks south-east of the point and turns them to look at it. */
+	private static void lookAt(ServerPlayer player, Vec3 target, double distance) {
+		Vec3 eye = target.add(distance * 0.6, distance * 0.45, distance * 0.65);
+		double dx = target.x - eye.x;
+		double dy = target.y - eye.y;
+		double dz = target.z - eye.z;
+		float yaw = (float) Math.toDegrees(Math.atan2(-dx, dz));
+		float pitch = (float) -Math.toDegrees(Math.atan2(dy, Math.sqrt(dx * dx + dz * dz)));
+		player.teleportTo(player.level(), eye.x, eye.y - player.getEyeHeight(), eye.z, java.util.Set.of(), yaw, pitch, true);
 	}
 
 	private static void drop(ServerLevel level, double x, double y, double z, ItemStack stack) {

@@ -59,6 +59,9 @@ public class StorageMenu extends ChestMenu {
 	/** The player has the mod on the client, which draws a search field and sort button instead of the bottom buttons. */
 	private final boolean clientUi;
 	private String search;
+	private int pages = 1;
+	private int kinds;
+	private long total;
 	private List<StorageNetwork.StoredItem> shown = new ArrayList<>();
 	private int page;
 
@@ -190,6 +193,15 @@ public class StorageMenu extends ChestMenu {
 			display.setItem(i, icon(entry.prototype, entry.count));
 		}
 
+		this.pages = pages;
+		kinds = all.size();
+		total = all.stream().mapToLong(e -> e.count).sum();
+
+		// the client mod draws real buttons in the bottom row instead
+		if (clientUi) {
+			return;
+		}
+
 		ItemStack filler = button(Items.GRAY_STAINED_GLASS_PANE, " ");
 
 		for (int i = ITEM_SLOTS; i < 54; i++) {
@@ -204,7 +216,7 @@ public class StorageMenu extends ChestMenu {
 			display.setItem(SLOT_NEXT, button(Items.ARROW, "Nächste Seite"));
 		}
 
-		if (!clientUi) {
+		{
 			ItemStack searchButton = button(Items.OAK_SIGN, search.isEmpty() ? "Suchen" : "Suche: " + search);
 			searchButton.set(DataComponents.LORE, new ItemLore(List.of(
 					Component.literal("Linksklick: Suchbegriff eingeben").withStyle(ChatFormatting.GRAY),
@@ -367,8 +379,28 @@ public class StorageMenu extends ChestMenu {
 	}
 
 	private void sync() {
-		if (viewer instanceof ServerPlayer) {
+		if (viewer instanceof ServerPlayer player) {
 			sendAllDataToRemote();
+
+			if (clientUi) {
+				TerminalNetworking.sendPage(player, containerId, page, pages, kinds, total);
+			}
+		}
+	}
+
+	/** A button of the client mod's bottom row: previous page, next page, deposit the inventory. */
+	public void pressButton(int button) {
+		int slot = switch (button) {
+			case TerminalNetworking.BUTTON_PREV -> SLOT_PREV;
+			case TerminalNetworking.BUTTON_NEXT -> SLOT_NEXT;
+			case TerminalNetworking.BUTTON_DEPOSIT -> SLOT_DEPOSIT;
+			default -> -1;
+		};
+
+		if (slot >= 0) {
+			clickTop(slot, 0, ContainerInput.PICKUP, viewer);
+			refreshAll(network);
+			sync();
 		}
 	}
 

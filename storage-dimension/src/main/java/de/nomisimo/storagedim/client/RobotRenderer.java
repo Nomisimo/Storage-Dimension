@@ -40,6 +40,11 @@ public class RobotRenderer extends MobRenderer<RobotEntity, RobotRenderState, Ro
 		state.sitting = robot.isSitting();
 		state.mood = robot.getMood();
 		state.carrying = !robot.getCarried().isEmpty();
+		int hash = robot.getUUID().hashCode() * 0x9E3779B9;
+		state.idlePhase = (hash >>> 16 & 0xFF) / 255F * 100;
+		state.idlePace = 0.8F + (hash >>> 8 & 0xFF) / 255F * 0.4F;
+		state.diving = robot.isUnderWater();
+		state.umbrella = !robot.isInWater() && robot.level().isRainingAt(robot.blockPosition().above());
 	}
 
 	@Override

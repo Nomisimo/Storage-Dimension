@@ -9,6 +9,7 @@ import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
@@ -53,6 +54,8 @@ public final class StorageData {
 	public final Map<String, Set<Long>> terminals = new HashMap<>();
 	/** Settings of each robot station per dimension, applied to robots configured there. */
 	public final Map<String, Map<Long, RobotConfig>> stations = new HashMap<>();
+	/** Robots placed for each station per dimension: robot id to its name, in the order they were placed. */
+	public final Map<String, Map<Long, Map<UUID, String>>> stationRobots = new HashMap<>();
 	/** Where to send a player back to when they leave the storage room. */
 	public final Map<UUID, SavedPos> returns = new HashMap<>();
 	/**
@@ -215,6 +218,11 @@ public final class StorageData {
 		markDirty();
 	}
 
+	/** The robots placed for the station at {@code pos} (id to name); changes must be followed by {@link #markDirty()}. */
+	public Map<UUID, String> stationRobots(String dimension, BlockPos pos) {
+		return stationRobots.computeIfAbsent(dimension, d -> new HashMap<>()).computeIfAbsent(pos.asLong(), p -> new LinkedHashMap<>());
+	}
+
 	public boolean isTerminal(String dimension, BlockPos pos) {
 		Set<Long> set = terminals.get(dimension);
 		return set != null && set.contains(pos.asLong());
@@ -323,6 +331,18 @@ public final class StorageData {
 		});
 		root.add("stations", stationObj);
 
+		JsonObject stationRobotObj = new JsonObject();
+		stationRobots.forEach((dim, map) -> {
+			JsonObject d = new JsonObject();
+			map.forEach((pos, robots) -> {
+				JsonObject r = new JsonObject();
+				robots.forEach((id, name) -> r.addProperty(id.toString(), name));
+				d.add(Long.toString(pos), r);
+			});
+			stationRobotObj.add(dim, d);
+		});
+		root.add("stationRobots", stationRobotObj);
+
 		JsonObject returnObj = new JsonObject();
 		returns.forEach((player, pos) -> returnObj.add(player.toString(), writePos(pos)));
 		root.add("returns", returnObj);
@@ -423,6 +443,18 @@ public final class StorageData {
 				dim.getValue().getAsJsonObject().entrySet().forEach(e -> RobotConfig.CODEC.parse(ops, e.getValue())
 						.resultOrPartial(StorageDimensionMod.LOGGER::warn).ifPresent(config -> map.put(Long.parseLong(e.getKey()), config)));
 				stations.put(dim.getKey(), map);
+			});
+		}
+
+		if (root.has("stationRobots")) {
+			root.getAsJsonObject("stationRobots").entrySet().forEach(dim -> {
+				Map<Long, Map<UUID, String>> map = new HashMap<>();
+				dim.getValue().getAsJsonObject().entrySet().forEach(e -> {
+					Map<UUID, String> robots = new LinkedHashMap<>();
+					e.getValue().getAsJsonObject().entrySet().forEach(r -> robots.put(UUID.fromString(r.getKey()), r.getValue().getAsString()));
+					map.put(Long.parseLong(e.getKey()), robots);
+				});
+				stationRobots.put(dim.getKey(), map);
 			});
 		}
 
