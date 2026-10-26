@@ -1,9 +1,8 @@
--p net.fabricmc.fabric.api.client.gametest.v1.FabricClientGameTest
--p net.fabricmc.fabric.api.client.gametest.v1.context.ClientGameTestContext
--p net.fabricmc.fabric.api.client.gametest.v1.context.TestSingleplayerContext
--p net.fabricmc.fabric.api.client.gametest.v1.context.TestServerContext
--p net.fabricmc.fabric.api.client.gametest.v1.context.TestClientLevelContext
--p net.fabricmc.fabric.api.client.gametest.v1.context.TestClientWorldContext
--p net.fabricmc.fabric.api.client.gametest.v1.world.TestWorldBuilder
--p net.fabricmc.fabric.api.client.gametest.v1.screenshot.TestScreenshotOptions
--p net.fabricmc.fabric.api.client.gametest.v1.context.TestDedicatedServerContext
+-p net.fabricmc.fabric.api.client.screen.v1.ScreenEvents
+-p net.fabricmc.fabric.api.client.screen.v1.ScreenEvents$AfterExtract
+-p net.fabricmc.fabric.api.client.screen.v1.ScreenEvents$AfterRender
+-p net.minecraft.client.gui.GuiGraphicsExtractor
+-p net.minecraft.client.gui.screens.inventory.AbstractContainerScreen
+-p net.minecraft.world.entity.ai.util.DefaultRandomPos
+-p net.minecraft.world.level.storage.ValueOutput
+-p net.minecraft.world.level.storage.ValueInput
