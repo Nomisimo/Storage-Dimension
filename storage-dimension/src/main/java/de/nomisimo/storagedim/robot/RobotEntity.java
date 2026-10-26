@@ -110,7 +110,7 @@ public class RobotEntity extends PathfinderMob {
 	/** It cannot work (station gone, no chest, no way home): its name tag gets error icons. */
 	private static final EntityDataAccessor<Boolean> ERROR = SynchedEntityData.defineId(RobotEntity.class, EntityDataSerializers.BOOLEAN);
 	/** The icon on both sides of the name while it has an error. */
-	public static final String ERROR_ICON = "⛔";
+	public static final String ERROR_ICON = "\ue5d0";
 	public static final int MOOD_NONE = 0;
 	public static final int MOOD_HAPPY = 1;
 	public static final int MOOD_SAD = 2;
@@ -499,8 +499,8 @@ public class RobotEntity extends PathfinderMob {
 
 	/** The name with an error icon on each side while it cannot work; shown on the name tag, in Jade and in the station's list. */
 	public static Component withErrorIcons(Component name) {
-		return Component.empty().append(Component.literal(ERROR_ICON + " ").withStyle(ChatFormatting.RED)).append(name)
-				.append(Component.literal(" " + ERROR_ICON).withStyle(ChatFormatting.RED));
+		// the icon is a red "no entry" sign from the mod's font glyph; uncoloured so it keeps its own colours
+		return Component.literal(ERROR_ICON + " ").append(name).append(" " + ERROR_ICON);
 	}
 
 	@Override

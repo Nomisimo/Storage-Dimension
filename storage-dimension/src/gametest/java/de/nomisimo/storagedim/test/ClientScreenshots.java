@@ -261,12 +261,15 @@ public class ClientScreenshots implements FabricClientGameTest {
 			RobotEntity robot = player.level().getEntities(Robots.ROBOT, r -> r.station() != null).stream().findFirst().orElse(null);
 
 			if (robot != null) {
-				robot.teleportTo(pool.getX() + 0.5, pool.getY(), pool.getZ() + 0.5);
+				robot.teleportTo(pool.getX() + 0.5, pool.getY(), pool.getZ() + 1.2);
+				// facing the camera, so the goggles can be seen
+				robot.setYRot(0);
+				robot.setYHeadRot(0);
 			}
 
 			drop(level, pool.getX() - 0.5, pool.getY() + 0.5, pool.getZ() - 0.5, new ItemStack(Items.KELP, 3));
 			// in front of the tank's south wall, looking north through the glass
-			player.teleportTo(level, pool.getX() + 0.5, pool.getY(), pool.getZ() + 4.5, java.util.Set.of(), 180, 20, true);
+			player.teleportTo(level, pool.getX() + 0.5, pool.getY(), pool.getZ() + 3.3, java.util.Set.of(), 180, 35, true);
 		});
 
 		for (int t = 0; t < 4; t++) {

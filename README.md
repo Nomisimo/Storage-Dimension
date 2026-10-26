@@ -23,7 +23,7 @@ Ein Fabric-Mod für **Minecraft 26.1.2**. Seit Version 0.4.0 (Sammelroboter, eig
 - **Sammelroboter:** Ein kleiner Roboter mit Schnabel. Er sammelt herumliegende Items ein, immer einen Stapel im Schnabel, und bringt ihn zur nächsten Dimensionskiste, zum ME-Terminal oder zu einer passenden Filterkiste. Er hüpft bis zu zwei Blöcke hoch, auch über Zäune und Mauern, und stellt sich zum Aufheben direkt auf das Item. Roboter-Barrieren überspringt er nicht. Aus Booten und Loren steigt er sofort wieder aus.
   - **Nur mit Station:** Ein Roboter lässt sich erst hinstellen, wenn er in einer Roboter-Station eingestellt wurde (siehe unten). Danach folgt er immer den Einstellungen seiner Station; was dort geändert wird, gilt sofort für alle ihre Roboter. Am Roboter selbst lässt sich nichts mehr umstellen.
   - **Schwarm:** Mehrere Roboter stimmen sich ab. Jeder holt ein anderes Item, es rennen nie alle zum selben.
-  - **Stimmung:** Ohne Arbeit laufen die Roboter zu ihrer Station, setzen sich hin und schauen sich fröhlich um, jeder in seinem eigenen Takt. Erreicht ein Roboter seine Station nicht oder steht in seiner Reichweite keine Kiste, setzt er sich hin und schaut auf den Boden, und links und rechts von seinem Namen erscheint ein rotes ⛔ (Fehler).
+  - **Stimmung:** Ohne Arbeit laufen die Roboter zu ihrer Station, setzen sich hin und schauen sich fröhlich um, jeder in seinem eigenen Takt. Erreicht ein Roboter seine Station nicht oder steht in seiner Reichweite keine Kiste, setzt er sich hin und schaut auf den Boden, und links und rechts von seinem Namen erscheint ein rotes 🚫 (Fehler).
   - **Wasser:** Roboter tauchen. Unter Wasser laufen sie am Grund entlang und tragen eine kleine Taucherbrille aus Glas, an der Oberfläche schwimmen sie schnell und ziehen eine Spritzspur hinter sich her. Ertrinken können sie nicht.
   - **Regen:** Draußen ohne Dach über sich spannen sie einen kleinen Regenschirm in ihrer Farbe auf.
   - Bevor er losläuft, plant er den ganzen Weg und folgt ihm. Gibt es keinen Weg (eingemauert, hinter einer Roboter-Barriere, über Lava), lässt er das Item sofort für eine Minute in Ruhe und nimmt das nächste. Bleibt er unterwegs trotzdem hängen, gibt er nach 5 Sekunden auf. Kisten erreicht er bis etwa drei Blöcke über dem Boden.
@@ -57,7 +57,7 @@ Ein Fabric-Mod für **Minecraft 26.1.2**. Seit Version 0.4.0 (Sammelroboter, eig
 
   ![Roboter warten fröhlich an ihrer Station](docs/screenshots/roboter-station.png)
 
-  ![Ein Roboter ohne Kiste in Reichweite zeigt ⛔ neben seinem Namen](docs/screenshots/roboter-traurig.png)
+  ![Ein Roboter ohne Kiste in Reichweite zeigt 🚫 neben seinem Namen](docs/screenshots/roboter-traurig.png)
 
 - **Roboter-Barriere:** Ein durchsichtiger Plasma-Schild. Spieler, Tiere und Items gehen einfach hindurch, Sammelroboter nicht, und sie planen auch keinen Weg hindurch oder darüber. Gut für Türen und Bereiche, aus denen die Roboter nichts holen sollen. Rezept: 8 Glas um eine Amethystscherbe ergibt 8 Barrieren.
 

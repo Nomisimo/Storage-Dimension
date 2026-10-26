@@ -3,7 +3,6 @@ package de.nomisimo.storagedim.client;
 import java.util.List;
 
 import de.nomisimo.storagedim.robot.RobotConfig;
-import de.nomisimo.storagedim.robot.RobotEntity;
 import de.nomisimo.storagedim.robot.StationMenu;
 import de.nomisimo.storagedim.robot.StationNetworking;
 import net.fabricmc.api.EnvType;
@@ -20,7 +19,6 @@ import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.client.renderer.Rect2i;
 import net.minecraft.client.input.KeyEvent;
 import net.minecraft.network.chat.Component;
-import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.world.entity.player.Inventory;
 import org.lwjgl.glfw.GLFW;
 
@@ -181,22 +179,6 @@ public class StationScreen extends AbstractContainerScreen<StationMenu> {
 		if (names.size() > visible) {
 			graphics.text(font, "↕", x + LIST_WIDTH - 14, 6, TEXT, false);
 		}
-	}
-
-	/** A robot's list entry with its error icons in red. */
-	private static Component errorIconsRed(String name) {
-		MutableComponent text = Component.empty();
-		String[] parts = name.split(RobotEntity.ERROR_ICON, -1);
-
-		for (int i = 0; i < parts.length; i++) {
-			if (i > 0) {
-				text.append(Component.literal(RobotEntity.ERROR_ICON).withStyle(ChatFormatting.RED));
-			}
-
-			text.append(parts[i]);
-		}
-
-		return text;
 	}
 
 	/** Where the robot list is on screen, for JEI to keep its item list away from it. */
