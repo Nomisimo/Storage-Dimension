@@ -3,12 +3,14 @@ package de.nomisimo.storagedim.tb;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.WeakHashMap;
 
 import com.tiviacz.travelersbackpack.inventory.menu.BackpackBaseMenu;
 
 import net.minecraft.core.component.DataComponents;
+import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.SimpleContainer;
@@ -27,6 +29,7 @@ import net.minecraft.world.item.Items;
  * the same. The server fills them page by page with icons of the stored items and handles every click on them.
  */
 final class MeView {
+	static final int MAX_SEARCH = 50;
 	private static final Map<AbstractContainerMenu, MeView> VIEWS = Collections.synchronizedMap(new WeakHashMap<>());
 
 	private final BackpackBaseMenu menu;
@@ -37,6 +40,7 @@ final class MeView {
 	private List<ItemStack> shown = List.of();
 	private int page;
 	private boolean hasNext;
+	private String search = "";
 
 	private MeView(BackpackBaseMenu menu, boolean client) {
 		this.menu = menu;
@@ -128,6 +132,20 @@ final class MeView {
 		List<Long> counts = new ArrayList<>();
 		MeBridge.stored(player, prototypes, counts);
 
+		if (!search.isBlank()) {
+			String query = search.trim().toLowerCase(Locale.ROOT);
+
+			for (int i = prototypes.size() - 1; i >= 0; i--) {
+				ItemStack stack = prototypes.get(i);
+
+				if (!stack.getHoverName().getString().toLowerCase(Locale.ROOT).contains(query)
+						&& !BuiltInRegistries.ITEM.getKey(stack.getItem()).getPath().contains(query)) {
+					prototypes.remove(i);
+					counts.remove(i);
+				}
+			}
+		}
+
 		int size = display.getContainerSize();
 		// with more items than slots the last two slots turn the pages
 		int perPage = prototypes.size() <= size ? size : Math.max(1, size - 2);
@@ -147,6 +165,18 @@ final class MeView {
 			String where = " (Seite " + (page + 1) + "/" + pages + ")";
 			display.setItem(size - 2, page > 0 ? button("Vorherige Seite" + where) : ItemStack.EMPTY);
 			display.setItem(size - 1, hasNext ? button("Nächste Seite" + where) : ItemStack.EMPTY);
+		}
+	}
+
+	/** Text typed into the search field above the window. Server only. */
+	void setSearch(ServerPlayer player, String text) {
+		String clean = text.length() > MAX_SEARCH ? text.substring(0, MAX_SEARCH) : text;
+
+		if (!clean.equals(search)) {
+			search = clean;
+			page = 0;
+			refresh(player);
+			menu.sendAllDataToRemote();
 		}
 	}
 

@@ -43,6 +43,19 @@ final class MeNetworking {
 		}
 	}
 
+	/** Client to server: the text in the search field of the ME view changed. */
+	record SearchPayload(String text) implements CustomPacketPayload {
+		static final Type<SearchPayload> TYPE = new Type<>(StorageTbMod.id("me_view_search"));
+		static final StreamCodec<RegistryFriendlyByteBuf, SearchPayload> CODEC = StreamCodec.composite(
+				ByteBufCodecs.stringUtf8(64), SearchPayload::text,
+				SearchPayload::new);
+
+		@Override
+		public Type<? extends CustomPacketPayload> type() {
+			return TYPE;
+		}
+	}
+
 	/** Server to client: the backpack window with this id now shows ME storage (or the backpack again). */
 	record ViewPayload(int containerId, boolean on) implements CustomPacketPayload {
 		static final Type<ViewPayload> TYPE = new Type<>(StorageTbMod.id("me_view"));
@@ -75,7 +88,15 @@ final class MeNetworking {
 		PayloadTypeRegistry.serverboundPlay().register(TogglePayload.TYPE, TogglePayload.CODEC);
 		PayloadTypeRegistry.clientboundPlay().register(ViewPayload.TYPE, ViewPayload.CODEC);
 		PayloadTypeRegistry.clientboundPlay().register(StockPayload.TYPE, StockPayload.CODEC);
+		PayloadTypeRegistry.serverboundPlay().register(SearchPayload.TYPE, SearchPayload.CODEC);
 		ServerPlayNetworking.registerGlobalReceiver(TogglePayload.TYPE, (payload, context) -> toggle(context.player()));
+		ServerPlayNetworking.registerGlobalReceiver(SearchPayload.TYPE, (payload, context) -> {
+			MeView view = MeView.of(context.player().containerMenu);
+
+			if (view != null) {
+				view.setSearch(context.player(), payload.text());
+			}
+		});
 		ServerTickEvents.END_SERVER_TICK.register(MeNetworking::tick);
 	}
 

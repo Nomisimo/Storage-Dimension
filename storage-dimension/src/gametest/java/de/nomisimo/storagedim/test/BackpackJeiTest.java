@@ -5,12 +5,14 @@ import java.util.List;
 import java.util.Optional;
 
 import com.tiviacz.travelersbackpack.client.screens.BackpackScreen;
+import com.tiviacz.travelersbackpack.common.ServerActions;
 import com.tiviacz.travelersbackpack.init.ModDataComponents;
 import com.tiviacz.travelersbackpack.init.ModItems;
 import com.tiviacz.travelersbackpack.inventory.BackpackContainer;
 import com.tiviacz.travelersbackpack.inventory.BackpackWrapper;
 import com.tiviacz.travelersbackpack.inventory.menu.BackpackBaseMenu;
 import com.tiviacz.travelersbackpack.inventory.upgrades.crafting.CraftingUpgrade;
+import com.tiviacz.travelersbackpack.network.ServerboundActionTagPacket;
 import com.tiviacz.travelersbackpack.util.Reference;
 
 import de.nomisimo.storagedim.StorageConfig;
@@ -161,10 +163,43 @@ public class BackpackJeiTest implements FabricClientGameTest {
 		logState(world, "view on, after shift-click on first ME slot");
 		context.takeScreenshot("backpack-me-view-2");
 
+		// closing the crafting tab must hide the grid, with and without the ME view
+		setCraftingTab(context, false);
+		context.waitTicks(10);
+		logClientSlots(context, "view on, tab closed");
+		context.takeScreenshot("backpack-me-view-tab-closed");
+		setCraftingTab(context, true);
+		context.waitTicks(10);
+
+		// search above the window
+		world.getServer().runOnServer(server -> {
+			ServerPlayer player = server.getPlayerList().getPlayers().get(0);
+			Object view = null;
+
+			try {
+				Class<?> type = Class.forName("de.nomisimo.storagedim.tb.MeView");
+				java.lang.reflect.Method of = type.getDeclaredMethod("of", AbstractContainerMenu.class);
+				of.setAccessible(true);
+				view = of.invoke(null, player.containerMenu);
+				java.lang.reflect.Method set = type.getDeclaredMethod("setSearch", ServerPlayer.class, String.class);
+				set.setAccessible(true);
+				set.invoke(view, player, "redst");
+			} catch (ReflectiveOperationException e) {
+				log("search failed: " + e);
+			}
+		});
+		context.waitTicks(5);
+		logClientSlots(context, "view on, search redst");
+		context.takeScreenshot("backpack-me-view-search");
+
 		context.runOnClient(client -> toggleView());
 		context.waitTicks(10);
 		logClientSlots(context, "view off");
 		logState(world, "view off");
+		setCraftingTab(context, false);
+		context.waitTicks(10);
+		logClientSlots(context, "view off, tab closed");
+		context.takeScreenshot("backpack-tab-closed");
 		context.runOnClient(client -> client.player.closeContainer());
 		context.waitTicks(5);
 
@@ -185,6 +220,16 @@ public class BackpackJeiTest implements FabricClientGameTest {
 			client.player.closeContainer();
 		});
 		context.waitTicks(5);
+	}
+
+	/** Opens or closes the crafting upgrade's tab, as clicking its icon does. */
+	private static void setCraftingTab(ClientGameTestContext context, boolean open) {
+		context.runOnClient(client -> {
+			BackpackBaseMenu menu = (BackpackBaseMenu) client.player.containerMenu;
+			menu.getWrapper().getUpgradeManager().getUpgrade(CraftingUpgrade.class).ifPresent(crafting ->
+					ServerboundActionTagPacket.create(ServerboundActionTagPacket.UPGRADE_TAB, crafting.getDataHolderSlot(), open, ServerActions.TAB_OPEN));
+			log("crafting tab " + (open ? "open" : "close") + ", client slots " + menu.slots.size());
+		});
 	}
 
 	/** A click as the server gets it from the client. */
@@ -250,6 +295,14 @@ public class BackpackJeiTest implements FabricClientGameTest {
 
 			for (int i = menu.BACKPACK_INV_START; i < Math.min(menu.BACKPACK_INV_START + 4, menu.BACKPACK_INV_END); i++) {
 				text.append(menu.getSlot(i).getClass().getSimpleName()).append('=').append(menu.getSlot(i).getItem()).append(' ');
+			}
+
+			text.append("| ").append(menu.slots.size()).append(" slots, after the player inventory:");
+
+			for (int i = menu.PLAYER_HOT_END; i < menu.slots.size(); i++) {
+				var slot = menu.getSlot(i);
+				text.append(' ').append(slot.getClass().getSimpleName()).append('@').append(slot.x).append(',').append(slot.y)
+						.append(slot.isActive() ? "" : "(inactive)").append('=').append(slot.getItem().getCount());
 			}
 
 			log("client slots " + label + ": " + text);
