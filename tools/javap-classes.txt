@@ -1,5 +1,2 @@
--public net.fabricmc.fabric.api.client.screen.v1.ScreenMouseEvents
--public net.fabricmc.fabric.api.client.screen.v1.ScreenMouseEvents$AllowMouseClick
--public net.fabricmc.fabric.api.client.screen.v1.ScreenMouseEvents$AllowMouseScroll
--public com.tiviacz.travelersbackpack.client.screens.BackpackScreen
--p com.tiviacz.travelersbackpack.inventory.menu.BackpackBaseMenu
+-p com.tiviacz.travelersbackpack.client.screens.BackpackScreen
+-p com.tiviacz.travelersbackpack.client.screens.AbstractBackpackScreen
