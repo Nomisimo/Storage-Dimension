@@ -23,6 +23,16 @@ import net.minecraft.world.level.block.state.properties.ChestType;
 
 /** Builds a small scene with every special chest and a robot, and takes screenshots of it. */
 public class ClientScreenshots implements FabricClientGameTest {
+	private static void logRobots(TestSingleplayerContext world) {
+		world.getServer().runOnServer(server -> {
+			for (ServerLevel level : server.getAllLevels()) {
+				for (RobotEntity robot : level.getEntities(Robots.ROBOT, entity -> true)) {
+					System.out.println("STORAGEDIM ROBOT " + robot.describe());
+				}
+			}
+		});
+	}
+
 	@Override
 	public void runTest(ClientGameTestContext context) {
 		try (TestSingleplayerContext world = context.worldBuilder().create()) {
@@ -57,12 +67,12 @@ public class ClientScreenshots implements FabricClientGameTest {
 				data.setTerminal(dim, terminal, true);
 
 				RobotEntity robot = Robots.ROBOT.create(level, EntitySpawnReason.SPAWN_ITEM_USE);
-				robot.snapTo(base.getX() + 0.5, base.getY(), base.getZ() - 2, 30, 0);
+				robot.snapTo(base.getX() - 1.5, base.getY(), base.getZ() - 1.5, 30, 0);
 				robot.setup(player.getUUID(), base.offset(0, 0, -2));
 				level.addFreshEntity(robot);
 
 				for (int i = 0; i < 4; i++) {
-					ItemEntity item = new ItemEntity(level, base.getX() - 4 + i * 2.5, base.getY() + 0.2, base.getZ() - 7, new ItemStack(i % 2 == 0 ? Items.COBBLESTONE : Items.OAK_LOG, 16));
+					ItemEntity item = new ItemEntity(level, base.getX() - 3 + i * 2, base.getY() + 0.2, base.getZ() - 2.5, new ItemStack(i % 2 == 0 ? Items.COBBLESTONE : Items.OAK_LOG, 16));
 					item.setNoPickUpDelay();
 					level.addFreshEntity(item);
 				}
@@ -73,20 +83,22 @@ public class ClientScreenshots implements FabricClientGameTest {
 				player.getInventory().add(new ItemStack(Robots.ROBOT_ITEM));
 			});
 			world.getClientLevel().waitForChunksRender();
-			context.waitTicks(30);
+			context.waitTicks(10);
 			context.takeScreenshot("storagedim-1-scene");
-			context.waitTicks(15);
-			context.takeScreenshot("storagedim-2-walking");
-			context.waitTicks(40);
-			context.takeScreenshot("storagedim-3-collecting");
-			context.waitTicks(120);
-			context.takeScreenshot("storagedim-4-later");
+
+			for (int i = 2; i <= 9; i++) {
+				context.waitTicks(15);
+				context.takeScreenshot("storagedim-" + i + "-robot");
+				logRobots(world);
+			}
+
 			context.setScreen(() -> new InventoryScreen(net.minecraft.client.Minecraft.getInstance().player));
 			context.waitTicks(10);
-			context.takeScreenshot("storagedim-5-inventory");
+			context.takeScreenshot("storagedim-inventory");
 			context.setScreen(() -> null);
 			context.waitTicks(260);
-			context.takeScreenshot("storagedim-6-idle");
+			context.takeScreenshot("storagedim-idle");
+			logRobots(world);
 		}
 	}
 }

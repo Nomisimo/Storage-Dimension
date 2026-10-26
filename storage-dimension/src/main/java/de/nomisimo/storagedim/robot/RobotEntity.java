@@ -140,6 +140,13 @@ public class RobotEntity extends PathfinderMob {
 		return getItemBySlot(EquipmentSlot.MAINHAND);
 	}
 
+	/** For debugging and the client test: what the robot is doing right now. */
+	public String describe() {
+		return String.format("pos=%.1f/%.1f/%.1f home=%s target=%s delivery=%s carried=%s action=%d sitting=%s pathDone=%s goals=%s",
+				getX(), getY(), getZ(), home, target == null ? null : target.position(), delivery, getCarried(), getAction(), isSitting(),
+				getNavigation().isDone(), goalSelector.getAvailableGoals().stream().filter(g -> g.isRunning()).map(g -> g.getGoal().getClass().getSimpleName()).toList());
+	}
+
 	// ---- behaviour ----
 
 	@Override
