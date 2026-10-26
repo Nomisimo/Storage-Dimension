@@ -23,6 +23,7 @@ import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.EditBox;
+import net.minecraft.client.gui.components.Renderable;
 import net.minecraft.client.gui.components.Tooltip;
 import net.minecraft.client.gui.components.events.GuiEventListener;
 import net.minecraft.client.gui.screens.Screen;
@@ -139,13 +140,22 @@ public class StorageTbClient implements ClientModInitializer {
 			return;
 		}
 
+		// drawn from the screen's renderables, clicked through its children
 		List<GuiEventListener> children = (List<GuiEventListener>) screen.children();
-		boolean shown = children.contains(screen.sortingButtons);
+		List<Renderable> renderables = ((ScreenTitleAccessor) screen).storagedimTb$getRenderables();
+		boolean me = MeView.isOpen(screen.getMenu());
 
-		if (MeView.isOpen(screen.getMenu()) && shown) {
+		if (me) {
 			children.remove(screen.sortingButtons);
-		} else if (!MeView.isOpen(screen.getMenu()) && !shown) {
-			children.add(screen.sortingButtons);
+			renderables.remove(screen.sortingButtons);
+		} else {
+			if (!children.contains(screen.sortingButtons)) {
+				children.add(screen.sortingButtons);
+			}
+
+			if (!renderables.contains(screen.sortingButtons)) {
+				renderables.add(screen.sortingButtons);
+			}
 		}
 	}
 
