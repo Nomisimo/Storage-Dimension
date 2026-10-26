@@ -24,6 +24,7 @@ import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.components.Tooltip;
+import net.minecraft.client.gui.components.events.GuiEventListener;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.input.KeyEvent;
 import net.minecraft.client.input.MouseButtonEvent;
@@ -111,6 +112,8 @@ public class StorageTbClient implements ClientModInitializer {
 
 				// with the search sync on, text typed into JEI's search bar also searches ME storage
 				ScreenEvents.afterTick(screen).register(current -> {
+					updateSortingButtons(backpack);
+
 					// Traveler's Backpack rebuilds its widgets now and then without telling anybody; the field comes back
 					if (MeView.isOpen(backpack.getMenu()) && (searchBox == null || !Screens.getWidgets(current).contains(searchBox))) {
 						updateSearch(backpack, true);
@@ -129,7 +132,25 @@ public class StorageTbClient implements ClientModInitializer {
 	}
 
 	/** Shows the search field above the window while the ME view is on, and removes it otherwise. */
+	/** The backpack's own five sorting buttons make no sense for ME storage: hidden while the ME view is on. */
+	@SuppressWarnings("unchecked")
+	private static void updateSortingButtons(BackpackScreen screen) {
+		if (screen.sortingButtons == null) {
+			return;
+		}
+
+		List<GuiEventListener> children = (List<GuiEventListener>) screen.children();
+		boolean shown = children.contains(screen.sortingButtons);
+
+		if (MeView.isOpen(screen.getMenu()) && shown) {
+			children.remove(screen.sortingButtons);
+		} else if (!MeView.isOpen(screen.getMenu()) && !shown) {
+			children.add(screen.sortingButtons);
+		}
+	}
+
 	private static void updateSearch(BackpackScreen screen, boolean on) {
+		updateSortingButtons(screen);
 		Screens.getWidgets(screen).removeIf(widget -> widget instanceof SearchBox);
 
 		if (!on) {
