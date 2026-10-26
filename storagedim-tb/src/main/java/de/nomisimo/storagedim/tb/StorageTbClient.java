@@ -6,6 +6,7 @@ import java.util.List;
 import java.util.Locale;
 
 import com.tiviacz.travelersbackpack.client.screens.BackpackScreen;
+import com.tiviacz.travelersbackpack.client.screens.buttons.IButton;
 import com.tiviacz.travelersbackpack.inventory.menu.BackpackBaseMenu;
 
 import de.nomisimo.storagedim.tb.mixin.ScreenTitleAccessor;
@@ -133,6 +134,9 @@ public class StorageTbClient implements ClientModInitializer {
 	}
 
 	/** Shows the search field above the window while the ME view is on, and removes it otherwise. */
+	/** The backpack's own buttons while the ME view hides them. */
+	private static List<IButton> hiddenButtons;
+
 	/** The backpack's own five sorting buttons make no sense for ME storage: hidden while the ME view is on. */
 	@SuppressWarnings("unchecked")
 	private static void updateSortingButtons(BackpackScreen screen) {
@@ -148,7 +152,22 @@ public class StorageTbClient implements ClientModInitializer {
 		if (me) {
 			children.remove(screen.sortingButtons);
 			renderables.remove(screen.sortingButtons);
+
+			// the backpack's own buttons next to them (equip and the like) go too, until the backpack shows again
+			if (!screen.buttons.isEmpty()) {
+				hiddenButtons = new ArrayList<>(screen.buttons);
+				screen.buttons.clear();
+			}
 		} else {
+			if (hiddenButtons != null) {
+				// a rebuilt screen made its own buttons meanwhile
+				if (screen.buttons.isEmpty()) {
+					screen.buttons.addAll(hiddenButtons);
+				}
+
+				hiddenButtons = null;
+			}
+
 			if (!children.contains(screen.sortingButtons)) {
 				children.add(screen.sortingButtons);
 			}
