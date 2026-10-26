@@ -257,7 +257,7 @@ public class RobotEntity extends PathfinderMob {
 	}
 
 	private void finishPickup() {
-		if (target != null && target.isAlive() && distanceToSqr(target) < 4 && getCarried().isEmpty()) {
+		if (target != null && target.isAlive() && distanceToSqr(target) < 6.25 && getCarried().isEmpty()) {
 			ItemStack stack = target.getItem();
 			ItemStack taken = stack.split(stack.getMaxStackSize());
 			setItemSlot(EquipmentSlot.MAINHAND, taken);
@@ -410,7 +410,7 @@ public class RobotEntity extends PathfinderMob {
 				reach = 2.2;
 			} else if (target != null) {
 				goal = target.position();
-				reach = 1.4;
+				reach = 1.8;
 			} else {
 				goal = Vec3.atBottomCenterOf(home());
 				reach = 3;
@@ -427,6 +427,12 @@ public class RobotEntity extends PathfinderMob {
 					getNavigation().stop();
 				}
 
+				return;
+			}
+
+			// the path ends on the block next to the goal; walk the last bit straight
+			if (getNavigation().isDone() && position().distanceTo(goal) < reach + 2) {
+				getMoveControl().setWantedPosition(goal.x, goal.y, goal.z, 1.0);
 				return;
 			}
 
