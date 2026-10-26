@@ -36,40 +36,31 @@ Ein Fabric-Mod für **Minecraft 26.1.2**. Seit Version 0.4.0 (Sammelroboter, eig
 
 ![Dimensionskiste, Filterkiste, ME-Terminal und Sammelroboter im Inventar](docs/screenshots/items.png)
 
-## Rezept
+## Rezepte
 
-```
-A P A      A = Amethystscherbe
-P C P      P = Enderperle
-A P A      C = Kiste
-```
+Dimensionskiste (A = Amethystscherbe, P = Enderperle, C = Kiste):
 
-ME-Terminal:
+![Rezept Dimensionskiste](docs/screenshots/rezept-storage-chest.png)
 
-```
-R A R      R = Redstone
-A E A      A = Amethystscherbe
-R A R      E = Enderkiste
-```
+ME-Terminal (R = Redstone, A = Amethystscherbe, E = Enderkiste):
 
-Filterkiste:
+![Rezept ME-Terminal](docs/screenshots/rezept-me-terminal.png)
 
-```
-F F F      F = Rahmen
-F C F      C = Kiste
-F E F      E = Enderauge
-```
+Filterkiste (8× Rahmen um eine Kiste, unten mittig ein Enderauge):
 
-Sammelroboter:
+![Rezept Filterkiste](docs/screenshots/rezept-filter-chest.png)
 
-```
-I K I      I = Eisenbarren, K = Kürbis
-R T R      R = Redstone, T = Trichter
-N   N      N = Eisennugget
-```
+Sammelroboter (Eisenbarren, Kürbis, Redstone, Trichter, Eisennuggets):
 
-ME-Upgrade (formlos): Enderauge, 2× Amethystscherbe, Redstoneblock, Papier.
-ME-Rucksack (formlos): beliebiges Bündel + ME-Upgrade.
+![Rezept Sammelroboter](docs/screenshots/rezept-robot.png)
+
+ME-Upgrade (formlos: Enderauge, 2× Amethystscherbe, Redstoneblock, Papier):
+
+![Rezept ME-Upgrade](docs/screenshots/rezept-me-upgrade.png)
+
+ME-Rucksack (formlos: beliebiges Bündel + ME-Upgrade):
+
+![Rezept ME-Rucksack](docs/screenshots/rezept-me-backpack.png)
 
 Alle Rezepte stehen auch in [JEI](https://modrinth.com/mod/jei).
 
