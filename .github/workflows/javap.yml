@@ -30,15 +30,15 @@ jobs:
             echo "=================== $cls"
             javap $flags -cp "$CP" "$cls" 2>&1 | head -4000
           done < ../jp/tools/javap-classes.txt
-      - name: Fabric menu classes
+      - name: screen bytecode
         run: |
-          for j in $(find ~/.gradle -name "*.jar" -path "*fabric*" | grep -v sources); do unzip -l "$j" 2>/dev/null | grep -iE "MenuType|ScreenHandler|MenuScreen|menu/v1|screenhandler" | awk -v j="$(basename $j)" '{print j": "$4}'; done | sort -u | head -60
-          unzip -p $(find ~/.gradle -name "*.jar" -path "*fabric*" | grep -i "transitive\|fabric-api-base\|fabric-screen-handler\|fabric-menu" | head -3 | tr '\n' ' ') "*.accesswidener" "*.classtweaker" 2>/dev/null | grep -i "MenuScreens\|MenuType" | head
-          for j in $(find ~/.gradle -name "*.jar" -path "*fabric*" | grep -v sources); do unzip -l "$j" 2>/dev/null | grep -iE "accesswidener|classtweaker" | awk -v j="$j" '{print j" "$4}'; done | head -30
-          JADE="/tmp/jade.jar"
-          curl -sL -o $JADE "https://cdn.modrinth.com/data/nvQzSEkH/versions/Yo9xOce3/Jade-mc26.1-Fabric-26.1.11.jar"
-          MC="$JADE:$(find ~/.gradle /home/runner/work -name '*.jar' \( -path '*minecraft*' -o -path '*fabric*' \) | tr '\n' ':')"
-          for c in snownee.jade.api.IJadeProvider snownee.jade.api.BlockAccessor snownee.jade.api.IBlockComponentProvider; do echo "=================== $c"; javap -cp "$MC" $c 2>&1 | head -60; done
+          MC="$(find ~/.gradle /home/runner/work -name '*.jar' \( -path '*minecraft*' -o -path '*fabric*' \) | tr '\n' ':')"
+          for c in net.minecraft.client.gui.screens.inventory.AbstractContainerScreen net.minecraft.client.gui.screens.Screen net.minecraft.client.gui.screens.inventory.ContainerScreen; do
+            for m in extractRenderState extractContents extractBackground extractLabels init; do
+              echo "=== $c.$m"; javap -c -p -cp "$MC" $c | sed -n "/ $m(/,/^$/p" | grep -E "invoke|getfield|Code|$m" | head -40
+            done
+          done
+          javap -p -cp "$MC" net.minecraft.client.input.InputWithModifiers net.minecraft.client.gui.components.Button\$OnPress net.minecraft.network.chat.ComponentSerialization net.minecraft.world.entity.Entity | grep -iE "interface|class|Shift|STREAM_CODEC|isUnderWater|teleportTo|canBreathe|horizontalCollision|getFluidState|isInWater"
       - name: TB screen render
         run: |
           JAR=$(find ~/.gradle -iname "travelersbackpack*.jar" | grep -v sources | head -1)
