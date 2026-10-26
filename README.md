@@ -57,7 +57,7 @@ Ein Fabric-Mod für **Minecraft 26.1.2**. Seit Version 0.4.0 (Sammelroboter, eig
 
   ![Roboter warten fröhlich an ihrer Station](docs/screenshots/roboter-station.png)
 
-  ![Ein Roboter ohne Kiste in Reichweite zeigt 🚫 neben seinem Namen](docs/screenshots/roboter-traurig.png)
+  ![Ein Roboter ohne Kiste in Reichweite: 🚫 links und rechts von seinem Namen](docs/screenshots/roboter-traurig.png)
 
 - **Roboter-Barriere:** Ein durchsichtiger Plasma-Schild. Spieler, Tiere und Items gehen einfach hindurch, Sammelroboter nicht, und sie planen auch keinen Weg hindurch oder darüber. Gut für Türen und Bereiche, aus denen die Roboter nichts holen sollen. Rezept: 8 Glas um eine Amethystscherbe ergibt 8 Barrieren.
 
