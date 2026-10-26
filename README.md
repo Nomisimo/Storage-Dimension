@@ -24,7 +24,7 @@ Ein Fabric-Mod für **Minecraft 26.1.2**. Seit Version 0.4.0 (Sammelroboter, eig
   - **Nur mit Station:** Ein Roboter lässt sich erst hinstellen, wenn er in einer Roboter-Station eingestellt wurde (siehe unten). Danach folgt er immer den Einstellungen seiner Station; was dort geändert wird, gilt sofort für alle ihre Roboter. Am Roboter selbst lässt sich nichts mehr umstellen.
   - **Schwarm:** Mehrere Roboter stimmen sich ab. Jeder holt ein anderes Item, es rennen nie alle zum selben.
   - **Stimmung:** Ohne Arbeit laufen die Roboter zu ihrer Station, setzen sich hin und schauen sich fröhlich um, jeder in seinem eigenen Takt. Erreicht ein Roboter seine Station nicht oder steht in seiner Reichweite keine Kiste, setzt er sich hin und schaut auf den Boden, und links und rechts von seinem Namen erscheint ein rotes 🚫 (Fehler).
-  - **Wasser:** Roboter tauchen. Unter Wasser laufen sie am Grund entlang und tragen eine kleine Taucherbrille aus Glas, an der Oberfläche schwimmen sie schnell und ziehen eine Spritzspur hinter sich her. Ertrinken können sie nicht.
+  - **Wasser:** Roboter tauchen. Unter Wasser laufen sie am Grund entlang und tragen einen Taucherhelm: einen Glaskasten um den ganzen Kopf, an der Oberfläche schwimmen sie schnell und ziehen eine Spritzspur hinter sich her. Ertrinken können sie nicht.
   - **Regen:** Draußen ohne Dach über sich spannen sie einen kleinen Regenschirm in ihrer Farbe auf.
   - Bevor er losläuft, plant er den ganzen Weg und folgt ihm. Gibt es keinen Weg (eingemauert, hinter einer Roboter-Barriere, über Lava), lässt er das Item sofort für eine Minute in Ruhe und nimmt das nächste. Bleibt er unterwegs trotzdem hängen, gibt er nach 5 Sekunden auf. Kisten erreicht er bis etwa drei Blöcke über dem Boden.
   - Will er zu seiner Station und kommt 3 Minuten lang nicht näher, teleportiert er sich hin.
@@ -39,7 +39,7 @@ Ein Fabric-Mod für **Minecraft 26.1.2**. Seit Version 0.4.0 (Sammelroboter, eig
 
   ![Bei Regen spannen die Roboter ihren Schirm auf](docs/screenshots/roboter-regenschirm.png)
 
-  ![Ein Roboter taucht mit Taucherbrille](docs/screenshots/roboter-tauchen.png)
+  ![Ein Roboter taucht mit Glashelm](docs/screenshots/roboter-tauchen.png)
 
 - **Roboter-Station:** Ein Block, der Sammelroboter einstellt. Rechtsklick öffnet ein eigenes Fenster mit Knöpfen und Textfeldern:
   - oben der **Name der Station** (erscheint auch in Jade und im Tooltip der Roboter),

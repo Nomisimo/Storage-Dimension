@@ -262,7 +262,7 @@ public class ClientScreenshots implements FabricClientGameTest {
 
 			if (robot != null) {
 				robot.teleportTo(pool.getX() + 0.5, pool.getY(), pool.getZ() + 1.2);
-				// facing the camera, so the goggles can be seen
+				// facing the camera, so the helmet can be seen
 				robot.setYRot(0);
 				robot.setYHeadRot(0);
 			}

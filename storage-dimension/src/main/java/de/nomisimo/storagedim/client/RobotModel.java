@@ -68,11 +68,9 @@ public class RobotModel extends EntityModel<RobotRenderState> {
 				.texOffs(28, 30).addBox(-3, -2, -6, 6, 1, 1)
 				.texOffs(36, 0).addBox(-3.5F, -4.5F, -3.5F, 1, 3, 3)
 				.texOffs(36, 6).addBox(2.5F, -4.5F, -3.5F, 1, 3, 3), PartPose.offset(0, -6, 0));
-		// diving goggles over both eyes with a rubber strap, only worn under water
+		// a diving helmet: a glass box around the whole head and beak, only worn under water
 		head.addOrReplaceChild("goggles", CubeListBuilder.create()
-				.texOffs(0, 40).addBox(-4.2F, -5, -4, 1, 4, 4)
-				.texOffs(10, 40).addBox(3.2F, -5, -4, 1, 4, 4)
-				.texOffs(0, 48).addBox(-4, -4, -5.5F, 8, 1, 9), PartPose.ZERO);
+				.texOffs(0, 88).addBox(-4, -6, -7, 8, 7, 11), PartPose.ZERO);
 		head.addOrReplaceChild("jaw", CubeListBuilder.create()
 				.texOffs(0, 30).addBox(-3, 0, -6, 6, 1, 7), PartPose.offset(0, -1, 0.5F));
 
