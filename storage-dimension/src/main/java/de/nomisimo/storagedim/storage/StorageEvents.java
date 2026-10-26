@@ -48,6 +48,7 @@ public final class StorageEvents {
 		ServerLifecycleEvents.SERVER_STOPPING.register(server -> StorageData.unload());
 		ServerLifecycleEvents.AFTER_SAVE.register((server, flush, force) -> StorageData.save(false));
 		ServerTickEvents.END_SERVER_TICK.register(StorageEvents::tick);
+		MeChestStorage.register();
 		UseBlockCallback.EVENT.register((player, level, hand, hit) -> {
 			if (level.isClientSide() || hand != InteractionHand.MAIN_HAND || !(player instanceof ServerPlayer serverPlayer)) {
 				return InteractionResult.PASS;
@@ -169,7 +170,7 @@ public final class StorageEvents {
 	 * The filters that apply at {@code pos}: a single chest has {@link FilterChests#SLOTS}, a double chest shares the
 	 * {@link FilterChests#DOUBLE_SLOTS} of the half with the smaller position.
 	 */
-	private static FilterChests.FilterChest resolveFilterChest(Level level, BlockPos pos, StorageData data, FilterChests.FilterChest own) {
+	static FilterChests.FilterChest resolveFilterChest(Level level, BlockPos pos, StorageData data, FilterChests.FilterChest own) {
 		BlockPos partner = filterPartner(level, pos, data);
 		FilterChests.FilterChest chest = partner != null && partner.asLong() < pos.asLong() ? data.filterChest(Rooms.id(level), partner) : own;
 		int size = partner == null ? FilterChests.SLOTS : FilterChests.DOUBLE_SLOTS;

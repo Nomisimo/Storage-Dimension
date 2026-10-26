@@ -18,6 +18,9 @@
 		],
 		"client": [
 			"de.nomisimo.storagedim.client.StorageDimensionClient"
+		],
+		"jei_mod_plugin": [
+			"de.nomisimo.storagedim.client.StorageJeiPlugin"
 		]
 	},
 	"mixins": [
