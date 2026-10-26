@@ -9,6 +9,7 @@ import java.util.Set;
 import java.util.UUID;
 
 import de.nomisimo.storagedim.StorageDimensionMod;
+import io.netty.buffer.ByteBuf;
 import net.fabricmc.fabric.api.networking.v1.PayloadTypeRegistry;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
 import net.minecraft.network.RegistryFriendlyByteBuf;
@@ -31,7 +32,7 @@ public final class ChestMarks {
 
 	public record MarksPayload(String dimension, List<Long> storage, List<Long> filter, List<Long> terminal) implements CustomPacketPayload {
 		public static final Type<MarksPayload> TYPE = new Type<>(StorageDimensionMod.id("chest_marks"));
-		private static final StreamCodec<RegistryFriendlyByteBuf, List<Long>> LONGS = ByteBufCodecs.VAR_LONG.apply(ByteBufCodecs.list());
+		private static final StreamCodec<ByteBuf, List<Long>> LONGS = ByteBufCodecs.VAR_LONG.apply(ByteBufCodecs.list());
 		public static final StreamCodec<RegistryFriendlyByteBuf, MarksPayload> CODEC = StreamCodec.composite(
 				ByteBufCodecs.STRING_UTF8, MarksPayload::dimension,
 				LONGS, MarksPayload::storage,
