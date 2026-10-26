@@ -34,12 +34,4 @@ jobs:
         run: |
           JAR=$(find ~/.gradle -iname "travelersbackpack*.jar" | grep -v sources | head -1)
           mkdir /tmp/tb && cd /tmp/tb && unzip -q "$JAR"
-          MC=".:$(find ~/.gradle /home/runner/work -name '*.jar' \( -path '*minecraft*' -o -path '*fabric*' -o -path '*modrinth*' \) | tr '\n' ':')"
-          echo "=== jei/compat classes"; find . -iname "*.class" | grep -iE "jei|compat" | head -60
-          echo "=== entrypoints"; cat fabric.mod.json | head -80
-          for m in openBackpackFromSlot openBackpackSettings; do
-            echo "=== ServerActions.$m"; javap -c -p -cp "$MC" com.tiviacz.travelersbackpack.common.ServerActions | sed -n "/ $m(/,/^$/p" | head -150
-          done
-          echo "=== BackpackContainer.openBackpack"; javap -c -p -cp "$MC" com.tiviacz.travelersbackpack.inventory.BackpackContainer | sed -n "/ openBackpack(/,/^$/p" | head -200
-          echo "=== ServerboundActionTagPacket"; javap -c -p -cp "$MC" com.tiviacz.travelersbackpack.network.ServerboundActionTagPacket | grep -nE "OPEN_|invokestatic|getstatic|tableswitch|lookupswitch|: [0-9]+$" | head -200
-          echo "=== Reference consts"; javap -constants -p -cp "$MC" com.tiviacz.travelersbackpack.util.Reference | head -20
+          ls data/travelersbackpack/recipe | head -80
