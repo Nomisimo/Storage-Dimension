@@ -30,6 +30,18 @@ jobs:
             echo "=================== $cls"
             javap $flags -cp "$CP" "$cls" 2>&1 | head -4000
           done < ../jp/tools/javap-classes.txt
+      - name: Jade
+        run: |
+          for p in jade wthit; do
+            echo "== $p"; curl -s "https://api.modrinth.com/v2/project/$p/version?game_versions=%5B%2226.1.2%22%5D&loaders=%5B%22fabric%22%5D" | python3 -c "import json,sys; [print(v['version_number'], v['id'], v['date_published'][:10], v['files'][0]['url']) for v in json.load(sys.stdin)[:4]]"
+          done
+          URL=$(curl -s "https://api.modrinth.com/v2/project/jade/version?game_versions=%5B%2226.1.2%22%5D&loaders=%5B%22fabric%22%5D" | python3 -c "import json,sys; print(json.load(sys.stdin)[0]['files'][0]['url'])")
+          curl -sL -o /tmp/jade.jar "$URL"
+          MC="/tmp/jade.jar:$(find ~/.gradle /home/runner/work -name '*.jar' \( -path '*minecraft*' -o -path '*fabric*' \) | tr '\n' ':')"
+          unzip -p /tmp/jade.jar fabric.mod.json | head -60
+          for c in snownee.jade.api.IWailaPlugin snownee.jade.api.IWailaClientRegistration snownee.jade.api.IWailaCommonRegistration snownee.jade.api.IEntityComponentProvider snownee.jade.api.IServerDataProvider snownee.jade.api.IComponentProvider snownee.jade.api.IToggleableProvider snownee.jade.api.EntityAccessor snownee.jade.api.Accessor snownee.jade.api.ITooltip snownee.jade.api.config.IPluginConfig snownee.jade.api.WailaPlugin snownee.jade.api.StreamServerDataProvider; do
+            echo "=================== $c"; javap -cp "$MC" $c 2>&1 | head -80
+          done
       - name: TB screen render
         run: |
           JAR=$(find ~/.gradle -iname "travelersbackpack*.jar" | grep -v sources | head -1)

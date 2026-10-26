@@ -1,6 +1,19 @@
--p com.tiviacz.travelersbackpack.client.screens.BackpackScreen
--p net.fabricmc.fabric.api.client.screen.v1.ScreenEvents
--p net.fabricmc.fabric.api.client.screen.v1.ScreenEvents$AfterExtract
--p net.fabricmc.fabric.api.client.screen.v1.ScreenEvents$AfterRender
--p net.minecraft.client.gui.components.Renderable
--p net.minecraft.client.gui.screens.Screen
+-p net.minecraft.world.inventory.MenuType
+-p net.minecraft.client.gui.screens.MenuScreens
+net.minecraft.client.gui.GuiGraphicsExtractor
+-p net.minecraft.client.gui.screens.inventory.AbstractContainerScreen
+net.minecraft.client.gui.components.Button
+net.minecraft.client.gui.components.Button$Builder
+net.minecraft.client.gui.components.AbstractWidget
+net.minecraft.client.gui.components.AbstractButton
+net.minecraft.client.gui.components.EditBox
+net.minecraft.client.gui.components.Tooltip
+net.minecraft.client.gui.components.CycleButton
+net.minecraft.client.input.MouseButtonEvent
+net.minecraft.client.input.KeyEvent
+net.minecraft.client.input.CharacterEvent
+net.minecraft.world.inventory.AbstractContainerMenu
+net.fabricmc.fabric.api.screenhandler.v1.ExtendedMenuType
+net.fabricmc.fabric.api.screenhandler.v1.ExtendedScreenHandlerType
+net.fabricmc.fabric.api.menu.v1.ExtendedMenuType
+net.minecraft.core.particles.ParticleTypes
