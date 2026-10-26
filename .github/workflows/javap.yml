@@ -23,9 +23,7 @@ jobs:
         run: |
           JAR=$(find ~/.gradle -iname "*travelersbackpack*.jar" | grep -v sources | head -1)
           echo "JAR=$JAR"
-          unzip -l "$JAR" | grep -iE "recipe/.*upgrade|blank|lang/en_us" | head -80
-          unzip -p "$JAR" fabric.mod.json | head -40
-          unzip -p "$JAR" $(unzip -l "$JAR" | grep -o "assets/travelersbackpack/lang/en_us.json") | tr ',' '\n' | grep -i upgrade | head -60
-          for f in $(unzip -l "$JAR" | grep -oE "data/travelersbackpack/recipe/[a-z_]*upgrade[a-z_]*\.json" | head -6); do echo "== $f"; unzip -p "$JAR" "$f"; done
-          unzip -p "$JAR" $(unzip -l "$JAR" | grep -oE "data/travelersbackpack/tags/item/[a-z_/]*upgrade[a-z_]*\.json" | head -3) || true
-          unzip -l "$JAR" | grep -i "tags/item" | head -40
+          for f in data/travelersbackpack/tags/item/backpack_upgrades.json data/travelersbackpack/tags/item/readme.txt; do echo "== $f"; unzip -p "$JAR" "$f"; echo; done
+          unzip -l "$JAR" | grep -iE "UpgradeSlot|upgrade/UpgradeItem|BackpackSlot" | head
+          mkdir x && cd x && unzip -q "$JAR" && javap -p -cp . com.tiviacz.travelersbackpack.inventory.menu.slot.UpgradeSlotItemHandler 2>&1 | head -40 || true
+          grep -rl "backpack_upgrades" --include=*.class . | head
