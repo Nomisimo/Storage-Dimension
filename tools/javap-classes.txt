@@ -1,7 +1,7 @@
--c net.minecraft.client.renderer.blockentity.ChestRenderer
--p net.minecraft.client.renderer.blockentity.state.ChestRenderState
--p net.minecraft.client.renderer.Sheets
--p net.minecraft.client.renderer.special.ChestSpecialRenderer
--p net.minecraft.client.renderer.special.ChestSpecialRenderer$Unbaked
--p net.minecraft.client.resources.model.Material
--p net.minecraft.client.renderer.blockentity.state.BlockEntityRenderState
+-p net.minecraft.client.resources.model.sprite.SpriteId
+-p net.minecraft.client.renderer.SpriteMapper
+-p net.minecraft.client.renderer.blockentity.state.ChestRenderState$ChestMaterialType
+-c net.minecraft.client.model.object.chest.ChestModel
+-p net.fabricmc.fabric.api.entity.event.v1.ServerEntityWorldChangeEvents
+-p net.fabricmc.fabric.api.entity.event.v1.ServerEntityLevelChangeEvents
+-p net.fabricmc.fabric.api.networking.v1.PlayerLookup
