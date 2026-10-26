@@ -53,7 +53,7 @@ Ein Fabric-Mod für **Minecraft 26.1.2**. Seit Version 0.4.0 (Sammelroboter, eig
 
   ![Fenster der Roboter-Station mit Roboterliste](docs/screenshots/roboter-station-menu.png)
 
-  ![Nach dem Zurückrufen warten alle an der Station, auch der eingemauerte Quak3 hat sich hergeholt](docs/screenshots/roboter-station-rueckruf.png)
+  ![Nach dem Zurückrufen sind alle „auf dem Weg“; der eingemauerte Quak3 findet keinen Weg und zeigt 🚫, bis er sich zur Station teleportiert](docs/screenshots/roboter-station-rueckruf.png)
 
   ![Roboter warten fröhlich an ihrer Station](docs/screenshots/roboter-station.png)
 
