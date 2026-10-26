@@ -15,6 +15,7 @@ import de.nomisimo.storagedim.StorageDimensionMod;
 import mezz.jei.api.IModPlugin;
 import mezz.jei.api.constants.RecipeTypes;
 import mezz.jei.api.registration.IRecipeRegistration;
+import mezz.jei.api.runtime.IJeiRuntime;
 import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.client.Minecraft;
 import net.minecraft.core.registries.Registries;
@@ -28,8 +29,11 @@ import net.minecraft.world.item.crafting.RecipeHolder;
 /**
  * Since 1.21.2 servers no longer send recipes to clients, so JEI cannot see ours on a server.
  * This plugin reads them from our own jar and hands them to JEI.
+ * It also gives the ME terminal access to JEI's search bar, for the search sync.
  */
 public class StorageJeiPlugin implements IModPlugin {
+	private static IJeiRuntime runtime;
+
 	@Override
 	public Identifier getPluginUid() {
 		return Identifier.fromNamespaceAndPath("storagedim", "jei");
@@ -81,5 +85,26 @@ public class StorageJeiPlugin implements IModPlugin {
 		}
 
 		registration.addRecipes(RecipeTypes.CRAFTING, recipes);
+	}
+
+	@Override
+	public void onRuntimeAvailable(IJeiRuntime jeiRuntime) {
+		runtime = jeiRuntime;
+	}
+
+	@Override
+	public void onRuntimeUnavailable() {
+		runtime = null;
+	}
+
+	/** The text in JEI's search bar, or null while JEI is not ready. */
+	static String searchText() {
+		return runtime == null ? null : runtime.getIngredientFilter().getFilterText();
+	}
+
+	static void setSearchText(String text) {
+		if (runtime != null && !text.equals(runtime.getIngredientFilter().getFilterText())) {
+			runtime.getIngredientFilter().setFilterText(text);
+		}
 	}
 }

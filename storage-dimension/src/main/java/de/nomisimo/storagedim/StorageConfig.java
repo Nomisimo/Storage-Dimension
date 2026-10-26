@@ -21,6 +21,9 @@ public final class StorageConfig {
 	/** true: every player uses the same storage and the same room. false: everyone has their own, shareable via /storage teilen. */
 	public boolean sharedStorage = true;
 
+	/** Client only. true: the search field of the ME terminal and JEI's search bar always hold the same text. */
+	public boolean jeiSearchSync = false;
+
 	public static StorageConfig get() {
 		if (instance == null) {
 			load();
@@ -50,6 +53,17 @@ public final class StorageConfig {
 			} catch (Exception e) {
 				StorageDimensionMod.LOGGER.error("storagedim.json konnte nicht geschrieben werden", e);
 			}
+		}
+	}
+
+	/** Writes the current settings, e.g. after a switch in the game changed one. */
+	public static void save() {
+		Path file = FabricLoader.getInstance().getConfigDir().resolve("storagedim.json");
+
+		try (Writer writer = Files.newBufferedWriter(file, StandardCharsets.UTF_8)) {
+			GSON.toJson(get(), writer);
+		} catch (Exception e) {
+			StorageDimensionMod.LOGGER.error("storagedim.json konnte nicht geschrieben werden", e);
 		}
 	}
 }

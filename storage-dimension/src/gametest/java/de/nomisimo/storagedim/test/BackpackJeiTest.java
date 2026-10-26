@@ -13,6 +13,7 @@ import com.tiviacz.travelersbackpack.inventory.menu.BackpackBaseMenu;
 import com.tiviacz.travelersbackpack.inventory.upgrades.crafting.CraftingUpgrade;
 import com.tiviacz.travelersbackpack.util.Reference;
 
+import de.nomisimo.storagedim.StorageConfig;
 import de.nomisimo.storagedim.api.StorageApi;
 import mezz.jei.api.constants.RecipeTypes;
 import mezz.jei.api.gui.IRecipeLayoutDrawable;
@@ -28,7 +29,6 @@ import net.fabricmc.fabric.api.client.gametest.v1.context.TestServerConnection;
 import net.fabricmc.fabric.api.client.gametest.v1.context.TestSingleplayerContext;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
 import net.fabricmc.loader.api.FabricLoader;
-import net.minecraft.client.Minecraft;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.resources.Identifier;
@@ -103,7 +103,6 @@ public class BackpackJeiTest implements FabricClientGameTest {
 			ServerPlayer player = server.getPlayerList().getPlayers().get(0);
 			StorageApi.insert(player, new ItemStack(Items.OAK_PLANKS, 300));
 			StorageApi.insert(player, new ItemStack(Items.COAL, 20));
-			player.getInventory().add(new ItemStack(Items.STICK, 2));
 
 			ItemStack backpack = new ItemStack(ModItems.STANDARD_TRAVELERS_BACKPACK);
 			BackpackWrapper.initializeSize(backpack);
@@ -111,6 +110,7 @@ public class BackpackJeiTest implements FabricClientGameTest {
 			backpack.set(ModDataComponents.UPGRADES, ItemContainerContents.fromItems(List.of(new ItemStack(ModItems.CRAFTING_UPGRADE), me)));
 			player.getInventory().setItem(0, backpack);
 			player.getInventory().setSelectedSlot(0);
+			player.getInventory().add(new ItemStack(Items.STICK, 2));
 			BackpackContainer.openBackpack(player, player.getInventory().getItem(0), Reference.ITEM_SCREEN_ID, 0);
 		});
 		context.waitFor(client -> client.screen instanceof BackpackScreen, 200);
@@ -132,7 +132,7 @@ public class BackpackJeiTest implements FabricClientGameTest {
 		context.takeScreenshot("backpack-after-jei");
 
 		// ME view in place of the backpack slots
-		toggleView();
+		context.runOnClient(client -> toggleView());
 		context.waitTicks(10);
 		logClientSlots(context, "view on");
 		context.takeScreenshot("backpack-me-view");
@@ -153,11 +153,29 @@ public class BackpackJeiTest implements FabricClientGameTest {
 		logState(world, "view on, after shift-click on first ME slot");
 		context.takeScreenshot("backpack-me-view-2");
 
-		toggleView();
+		context.runOnClient(client -> toggleView());
 		context.waitTicks(10);
 		logClientSlots(context, "view off");
 		logState(world, "view off");
 		context.runOnClient(client -> client.player.closeContainer());
+		context.waitTicks(5);
+
+		// search sync: text in JEI's search bar also searches the ME terminal
+		context.runOnClient(client -> StorageConfig.get().jeiSearchSync = true);
+		world.getServer().runOnServer(server -> {
+			ServerPlayer player = server.getPlayerList().getPlayers().get(0);
+			StorageApi.insert(player, new ItemStack(Items.COBBLESTONE, 500));
+			StorageApi.openStorage(player);
+		});
+		context.waitTicks(10);
+		context.runOnClient(client -> TestJeiPlugin.runtime.getIngredientFilter().setFilterText("planks"));
+		context.waitTicks(10);
+		context.takeScreenshot("terminal-jei-sync");
+		context.runOnClient(client -> {
+			TestJeiPlugin.runtime.getIngredientFilter().setFilterText("");
+			StorageConfig.get().jeiSearchSync = false;
+			client.player.closeContainer();
+		});
 		context.waitTicks(5);
 	}
 
@@ -170,19 +188,13 @@ public class BackpackJeiTest implements FabricClientGameTest {
 		});
 	}
 
-	/** Same as clicking the ME upgrade's icon in the backpack window. */
+	/** Same as clicking the ME upgrade's icon in the backpack window. Client thread only. */
 	private static void toggleView() {
 		try {
 			Class<?> type = Class.forName("de.nomisimo.storagedim.tb.MeNetworking$TogglePayload");
 			Field field = type.getDeclaredField("INSTANCE");
 			field.setAccessible(true);
-			Minecraft.getInstance().execute(() -> {
-				try {
-					ClientPlayNetworking.send((CustomPacketPayload) field.get(null));
-				} catch (IllegalAccessException e) {
-					throw new IllegalStateException(e);
-				}
-			});
+			ClientPlayNetworking.send((CustomPacketPayload) field.get(null));
 		} catch (ReflectiveOperationException e) {
 			log("toggle failed: " + e);
 		}

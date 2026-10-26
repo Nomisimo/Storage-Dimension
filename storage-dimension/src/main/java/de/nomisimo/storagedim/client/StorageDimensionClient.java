@@ -1,5 +1,6 @@
 package de.nomisimo.storagedim.client;
 
+import de.nomisimo.storagedim.StorageConfig;
 import de.nomisimo.storagedim.robot.Robots;
 import de.nomisimo.storagedim.storage.StorageMenu;
 import de.nomisimo.storagedim.storage.TerminalNetworking;
@@ -11,8 +12,11 @@ import net.fabricmc.fabric.api.client.rendering.v1.EntityRendererRegistry;
 import net.fabricmc.fabric.api.client.rendering.v1.ModelLayerRegistry;
 import net.fabricmc.fabric.api.client.screen.v1.ScreenEvents;
 import net.fabricmc.fabric.api.client.screen.v1.Screens;
+import net.fabricmc.loader.api.FabricLoader;
+import net.minecraft.ChatFormatting;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.components.Button;
+import net.minecraft.client.gui.components.Tooltip;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.gui.screens.inventory.MenuAccess;
@@ -22,7 +26,8 @@ import org.lwjgl.glfw.GLFW;
 
 /**
  * Optional client part: draws a search field in the top left of the ME terminal window, where the title would be,
- * with the sort button right next to it. Without this on the client the terminal still works with its item buttons.
+ * with the sort button right next to it and, with JEI, a switch that couples the search with JEI's search bar.
+ * Without this on the client the terminal still works with its item buttons.
  */
 @Environment(EnvType.CLIENT)
 public class StorageDimensionClient implements ClientModInitializer {
@@ -34,6 +39,9 @@ public class StorageDimensionClient implements ClientModInitializer {
 	private static int terminalId = -1;
 	private static StorageMenu.Sort sort = StorageMenu.Sort.AMOUNT;
 	private static Button sortButton;
+	private static Button syncButton;
+	private static SearchBox searchBox;
+	private static final boolean JEI = FabricLoader.getInstance().isModLoaded("jei");
 
 	@Override
 	public void onInitializeClient() {
@@ -61,6 +69,17 @@ public class StorageDimensionClient implements ClientModInitializer {
 			if (isTerminal(screen)) {
 				addWidgets(screen);
 			}
+
+			// with the search sync on, text typed into JEI's search bar also searches the terminal
+			ScreenEvents.afterTick(screen).register(current -> {
+				if (JEI && StorageConfig.get().jeiSearchSync && isTerminal(current) && searchBox != null) {
+					String jei = StorageJeiPlugin.searchText();
+
+					if (jei != null && !jei.equals(searchBox.getValue())) {
+						searchBox.setValue(jei);
+					}
+				}
+			});
 		});
 	}
 
@@ -73,18 +92,64 @@ public class StorageDimensionClient implements ClientModInitializer {
 		int top = (screen.height - IMAGE_HEIGHT) / 2;
 
 		// re-initialising (e.g. after resizing) must not add a second set
-		Screens.getWidgets(screen).removeIf(widget -> widget instanceof SearchBox || widget == sortButton);
+		Screens.getWidgets(screen).removeIf(widget -> widget instanceof SearchBox || widget == sortButton || widget == syncButton);
 
-		SearchBox search = new SearchBox(Minecraft.getInstance(), left + 7, top + 4, 108, 12);
+		// with JEI there is a small switch between search field and sort button
+		SearchBox search = new SearchBox(Minecraft.getInstance(), left + 7, top + 4, JEI ? 94 : 108, 12);
 		search.setMaxLength(50);
 		search.setHint(Component.literal("Suchen …"));
-		search.setResponder(text -> ClientPlayNetworking.send(new TerminalNetworking.SearchPayload(text)));
+		search.setResponder(text -> {
+			ClientPlayNetworking.send(new TerminalNetworking.SearchPayload(text));
+
+			if (JEI && StorageConfig.get().jeiSearchSync) {
+				StorageJeiPlugin.setSearchText(text);
+			}
+		});
+		searchBox = search;
 		Screens.getWidgets(screen).add(search);
+
+		if (JEI) {
+			syncButton = Button.builder(syncLabel(), button -> {
+				StorageConfig config = StorageConfig.get();
+				config.jeiSearchSync = !config.jeiSearchSync;
+				StorageConfig.save();
+				button.setMessage(syncLabel());
+				button.setTooltip(syncTooltip());
+
+				if (config.jeiSearchSync) {
+					String jei = StorageJeiPlugin.searchText();
+
+					// JEI's search wins when it has one, otherwise the terminal's goes to JEI
+					if (jei != null && !jei.isEmpty()) {
+						search.setValue(jei);
+					} else {
+						StorageJeiPlugin.setSearchText(search.getValue());
+					}
+				}
+			}).bounds(left + 103, top + 4, 13, 12).tooltip(syncTooltip()).build();
+			Screens.getWidgets(screen).add(syncButton);
+
+			String jei = StorageConfig.get().jeiSearchSync ? StorageJeiPlugin.searchText() : null;
+
+			if (jei != null && !jei.isEmpty()) {
+				search.setValue(jei);
+			}
+		}
 
 		sortButton = Button.builder(label(sort), button -> ClientPlayNetworking.send(TerminalNetworking.SortPayload.INSTANCE))
 				.bounds(left + 118, top + 4, 51, 12)
 				.build();
 		Screens.getWidgets(screen).add(sortButton);
+	}
+
+	private static Component syncLabel() {
+		return Component.literal("J").withStyle(StorageConfig.get().jeiSearchSync ? ChatFormatting.GREEN : ChatFormatting.GRAY);
+	}
+
+	private static Tooltip syncTooltip() {
+		return Tooltip.create(Component.literal(StorageConfig.get().jeiSearchSync
+				? "Suche mit JEI gekoppelt: an\nKlicken zum Trennen"
+				: "Suche mit JEI gekoppelt: aus\nKlicken zum Koppeln"));
 	}
 
 	private static StorageMenu.Sort parse(String name) {
