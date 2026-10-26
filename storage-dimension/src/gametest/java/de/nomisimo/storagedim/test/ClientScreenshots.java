@@ -15,6 +15,8 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.EntitySpawnReason;
 import net.minecraft.world.entity.item.ItemEntity;
+import net.minecraft.world.inventory.AbstractContainerMenu;
+import net.minecraft.world.inventory.ContainerInput;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.block.Blocks;
@@ -75,6 +77,36 @@ public class ClientScreenshots implements FabricClientGameTest {
 				}
 			}
 		});
+	}
+
+	/** Drags a stack across two inventory slots and a display slot in the open terminal, then double-click collects it again. */
+	private static void dragInTerminal(ClientGameTestContext context, TestSingleplayerContext world) {
+		world.getServer().runOnServer(server -> {
+			ServerPlayer player = server.getPlayerList().getPlayers().get(0);
+			de.nomisimo.storagedim.storage.StorageMenu.open(player, StorageData.get().networkFor(player.getUUID()));
+		});
+		context.waitTicks(10);
+		world.getServer().runOnServer(server -> {
+			ServerPlayer player = server.getPlayerList().getPlayers().get(0);
+			net.minecraft.world.inventory.AbstractContainerMenu menu = player.containerMenu;
+			player.getInventory().setItem(9, new ItemStack(Items.DIRT, 64));
+			menu.clicked(54, 0, ContainerInput.PICKUP, player);
+			menu.clicked(-999, AbstractContainerMenu.getQuickcraftMask(0, 0), ContainerInput.QUICK_CRAFT, player);
+			menu.clicked(55, AbstractContainerMenu.getQuickcraftMask(1, 0), ContainerInput.QUICK_CRAFT, player);
+			menu.clicked(0, AbstractContainerMenu.getQuickcraftMask(1, 0), ContainerInput.QUICK_CRAFT, player);
+			menu.clicked(56, AbstractContainerMenu.getQuickcraftMask(1, 0), ContainerInput.QUICK_CRAFT, player);
+			menu.clicked(-999, AbstractContainerMenu.getQuickcraftMask(2, 0), ContainerInput.QUICK_CRAFT, player);
+			String drag = "carried=" + menu.getCarried().getCount() + " inv10=" + player.getInventory().getItem(10).getCount()
+					+ " inv11=" + player.getInventory().getItem(11).getCount();
+			menu.clicked(55, 0, ContainerInput.PICKUP, player);
+			menu.clicked(55, 0, ContainerInput.PICKUP_ALL, player);
+			String collect = "carried=" + menu.getCarried().getCount() + " inv11=" + player.getInventory().getItem(11).getCount();
+			System.out.println("STORAGEDIM DRAG " + menu.getClass().getSimpleName() + " drag[" + drag + "] collect[" + collect + "]");
+			player.getInventory().add(menu.getCarried());
+			menu.setCarried(ItemStack.EMPTY);
+			player.closeContainer();
+		});
+		context.waitTicks(5);
 	}
 
 	@Override
@@ -148,6 +180,8 @@ public class ClientScreenshots implements FabricClientGameTest {
 			recipe(context, world, "robot", i, of(Items.PUMPKIN), i, r, of(Items.HOPPER), r, n, null, n);
 			recipe(context, world, "me_upgrade", of(Items.ENDER_EYE), a, a, of(Items.REDSTONE_BLOCK), of(Items.PAPER));
 			recipe(context, world, "me_backpack", of(Items.BUNDLE), upgrade);
+
+			dragInTerminal(context, world);
 
 			context.waitTicks(200);
 			context.takeScreenshot("storagedim-idle");

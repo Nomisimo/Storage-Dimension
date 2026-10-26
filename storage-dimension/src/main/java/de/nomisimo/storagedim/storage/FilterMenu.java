@@ -13,6 +13,7 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.ChestMenu;
 import net.minecraft.world.inventory.ContainerInput;
 import net.minecraft.world.inventory.MenuType;
+import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.item.component.ItemLore;
@@ -77,7 +78,10 @@ public class FilterMenu extends ChestMenu {
 
 	@Override
 	public void clicked(int slotIndex, int buttonNum, ContainerInput input, Player player) {
-		if (slotIndex >= 0 && slotIndex < size) {
+		if (input == ContainerInput.PICKUP_ALL || input == ContainerInput.QUICK_CRAFT) {
+			// Dragging and double-click collecting work in the own inventory only, see canDragTo and canTakeItemForPickAll.
+			super.clicked(slotIndex, buttonNum, input, player);
+		} else if (slotIndex >= 0 && slotIndex < size) {
 			if (slotIndex >= chest.filters().size()) {
 				return;
 			}
@@ -102,7 +106,7 @@ public class FilterMenu extends ChestMenu {
 					StorageData.markDirty();
 				}
 			}
-		} else if (slotIndex >= menuSlots && input != ContainerInput.PICKUP_ALL && input != ContainerInput.QUICK_CRAFT) {
+		} else if (slotIndex >= menuSlots) {
 			super.clicked(slotIndex, buttonNum, input, player);
 		}
 
@@ -111,6 +115,16 @@ public class FilterMenu extends ChestMenu {
 		if (viewer instanceof ServerPlayer) {
 			sendAllDataToRemote();
 		}
+	}
+
+	@Override
+	public boolean canDragTo(Slot slot) {
+		return slot.container != display;
+	}
+
+	@Override
+	public boolean canTakeItemForPickAll(ItemStack stack, Slot slot) {
+		return slot.container != display;
 	}
 
 	@Override

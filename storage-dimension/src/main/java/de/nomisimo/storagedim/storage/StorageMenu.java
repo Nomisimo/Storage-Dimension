@@ -23,6 +23,7 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.ChestMenu;
 import net.minecraft.world.inventory.ContainerInput;
 import net.minecraft.world.inventory.MenuType;
+import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.item.component.ItemLore;
@@ -261,7 +262,10 @@ public class StorageMenu extends ChestMenu {
 
 	@Override
 	public void clicked(int slotIndex, int buttonNum, ContainerInput input, Player player) {
-		if (slotIndex == SLOT_SEARCH && !clientUi && player instanceof ServerPlayer serverPlayer) {
+		if (input == ContainerInput.PICKUP_ALL || input == ContainerInput.QUICK_CRAFT) {
+			// Dragging and double-click collecting work in the own inventory; canDragTo and canTakeItemForPickAll keep them off the display.
+			super.clicked(slotIndex, buttonNum, input, player);
+		} else if (slotIndex == SLOT_SEARCH && !clientUi && player instanceof ServerPlayer serverPlayer) {
 			if (buttonNum == 1) {
 				search = "";
 				page = 0;
@@ -278,8 +282,6 @@ public class StorageMenu extends ChestMenu {
 				network.insert(stack);
 				slots.get(slotIndex).setChanged();
 			}
-		} else if (input == ContainerInput.PICKUP_ALL || input == ContainerInput.QUICK_CRAFT) {
-			// Would pull display items or spread into the terminal; ignore.
 		} else {
 			super.clicked(slotIndex, buttonNum, input, player);
 		}
@@ -362,6 +364,16 @@ public class StorageMenu extends ChestMenu {
 		if (viewer instanceof ServerPlayer) {
 			sendAllDataToRemote();
 		}
+	}
+
+	@Override
+	public boolean canDragTo(Slot slot) {
+		return slot.container != display;
+	}
+
+	@Override
+	public boolean canTakeItemForPickAll(ItemStack stack, Slot slot) {
+		return slot.container != display;
 	}
 
 	@Override

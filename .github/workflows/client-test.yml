@@ -32,7 +32,7 @@ jobs:
           mkdir -p /tmp/shots
           find storage-dimension -path "*screenshots*" -name "*.png" -exec cp {} /tmp/shots/ \; || true
           tail -300 storage-dimension/client.log > /tmp/shots/client-log-tail.txt || true
-          grep -iE "error|exception|mixin|storagedim|STORAGEDIM ROBOT" storage-dimension/client.log | head -300 > /tmp/shots/client-log-errors.txt || true
+          grep -iE "error|exception|mixin|storagedim|STORAGEDIM ROBOT|STORAGEDIM DRAG" storage-dimension/client.log | head -300 > /tmp/shots/client-log-errors.txt || true
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git checkout --orphan screenshots
