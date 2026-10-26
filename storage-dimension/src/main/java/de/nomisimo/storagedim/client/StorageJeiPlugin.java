@@ -14,10 +14,13 @@ import com.mojang.serialization.JsonOps;
 import de.nomisimo.storagedim.StorageDimensionMod;
 import mezz.jei.api.IModPlugin;
 import mezz.jei.api.constants.RecipeTypes;
+import mezz.jei.api.gui.handlers.IGuiContainerHandler;
+import mezz.jei.api.registration.IGuiHandlerRegistration;
 import mezz.jei.api.registration.IRecipeRegistration;
 import mezz.jei.api.runtime.IJeiRuntime;
 import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.renderer.Rect2i;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.Identifier;
 import net.minecraft.resources.RegistryOps;
@@ -37,6 +40,17 @@ public class StorageJeiPlugin implements IModPlugin {
 	@Override
 	public Identifier getPluginUid() {
 		return Identifier.fromNamespaceAndPath("storagedim", "jei");
+	}
+
+	/** JEI's item list keeps clear of the robot list beside the robot station window. */
+	@Override
+	public void registerGuiHandlers(IGuiHandlerRegistration registration) {
+		registration.addGuiContainerHandler(StationScreen.class, new IGuiContainerHandler<StationScreen>() {
+			@Override
+			public List<Rect2i> getGuiExtraAreas(StationScreen screen) {
+				return List.of(screen.listArea());
+			}
+		});
 	}
 
 	@Override

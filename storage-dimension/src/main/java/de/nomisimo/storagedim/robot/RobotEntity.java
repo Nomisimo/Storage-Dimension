@@ -86,6 +86,8 @@ public class RobotEntity extends PathfinderMob {
 	private static final int RECALL_WAIT_TICKS = 1200;
 	/** A robot loaded later than this after the button press does not follow the recall any more. */
 	private static final int RECALL_VALID_TICKS = 2400;
+	/** Wanting back to its station without getting any closer for 3 minutes, it teleports there. */
+	private static final int HOME_STUCK_TICKS = 3600;
 	private static final int RECALL_NONE = 0;
 	private static final int RECALL_RETURNING = 1;
 	private static final int RECALL_WAITING = 2;
@@ -140,6 +142,8 @@ public class RobotEntity extends PathfinderMob {
 	private long recallUntil;
 	private double recallBest;
 	private int recallStuck;
+	private double homeBest = Double.MAX_VALUE;
+	private int homeStuck;
 
 	public RobotEntity(EntityType<? extends PathfinderMob> type, Level level) {
 		super(type, level);
@@ -326,6 +330,30 @@ public class RobotEntity extends PathfinderMob {
 		}
 	}
 
+	/** Safety net: a station robot that wants home but has not got closer for 3 minutes teleports there. */
+	private void tickHomeStuck() {
+		boolean wantsHome = station != null && recallPhase == RECALL_NONE && !nearHome() && target == null
+				&& getCarried().isEmpty() && getAction() == 0 && !stationMissing();
+
+		if (!wantsHome) {
+			homeBest = Double.MAX_VALUE;
+			homeStuck = 0;
+			return;
+		}
+
+		double distance = position().distanceTo(Vec3.atBottomCenterOf(home()));
+
+		if (distance < homeBest - 0.5) {
+			homeBest = distance;
+			homeStuck = 0;
+		} else if (++homeStuck >= HOME_STUCK_TICKS) {
+			teleportHome();
+			homeUnreachableUntil = 0;
+			homeBest = Double.MAX_VALUE;
+			homeStuck = 0;
+		}
+	}
+
 	private void teleportHome() {
 		BlockPos h = home();
 		BlockPos spot = h.above();
@@ -379,12 +407,12 @@ public class RobotEntity extends PathfinderMob {
 	/** What it is doing, for its station's list and the look-at tooltip. */
 	public Component status() {
 		if (recallPhase == RECALL_RETURNING) {
-			return Component.literal("Kommt zur Station zurück").withStyle(ChatFormatting.AQUA);
+			return Component.literal("Rückruf: kommt zurück").withStyle(ChatFormatting.AQUA);
 		}
 
 		if (recallPhase == RECALL_WAITING) {
 			long seconds = Math.max(0, (recallUntil - level().getGameTime()) / 20);
-			return Component.literal("Wartet nach dem Rückruf (" + seconds + " s)").withStyle(ChatFormatting.AQUA);
+			return Component.literal("Rückruf: wartet noch " + seconds + " s").withStyle(ChatFormatting.AQUA);
 		}
 
 		if (stationMissing()) {
@@ -392,11 +420,11 @@ public class RobotEntity extends PathfinderMob {
 		}
 
 		if (noChest) {
-			return Component.literal("Traurig: keine Kiste in Reichweite").withStyle(ChatFormatting.RED);
+			return Component.literal("Traurig: keine Kiste da").withStyle(ChatFormatting.RED);
 		}
 
 		if (level().getGameTime() < homeUnreachableUntil) {
-			return Component.literal("Traurig: kommt nicht zur Station").withStyle(ChatFormatting.RED);
+			return Component.literal("Traurig: Weg versperrt").withStyle(ChatFormatting.RED);
 		}
 
 		if (!getCarried().isEmpty()) {
@@ -1033,6 +1061,7 @@ public class RobotEntity extends PathfinderMob {
 		}
 
 		tickRecall();
+		tickHomeStuck();
 
 		// a boat or minecart the robot walked into would hold it forever: it climbs straight out again
 		if (isPassenger()) {

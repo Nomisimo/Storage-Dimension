@@ -16,6 +16,7 @@ import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.components.Tooltip;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
+import net.minecraft.client.renderer.Rect2i;
 import net.minecraft.client.input.KeyEvent;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.player.Inventory;
@@ -42,7 +43,7 @@ public class StationScreen extends AbstractContainerScreen<StationMenu> {
 
 	public StationScreen(StationMenu menu, Inventory inventory, Component title) {
 		super(menu, inventory, title, StationMenu.WIDTH, StationMenu.HEIGHT);
-		inventoryLabelY = StationMenu.INVENTORY_Y - 11;
+		inventoryLabelY = StationMenu.INVENTORY_Y - 10;
 	}
 
 	/** Settings and robot list from the server. */
@@ -61,24 +62,24 @@ public class StationScreen extends AbstractContainerScreen<StationMenu> {
 		int l = leftPos;
 		int t = topPos;
 
-		stationName = addRenderableWidget(new NameBox(font, l + 8, t + 18, 160, 14, "Name der Station …"));
+		stationName = addRenderableWidget(new NameBox(font, l + 7, t + 5, 162, 12, "Name der Station …"));
 		stationName.setResponder(text -> send(StationMenu.ACTION_STATION_NAME, 0, text));
 		mode = addRenderableWidget(Button.builder(Component.empty(), b -> send(StationMenu.ACTION_MODE, 0, ""))
-				.bounds(l + 8, t + 66, 160, 16)
+				.bounds(l + 8, t + StationMenu.MODE_Y, 160, 14)
 				.tooltip(Tooltip.create(Component.literal("Umschalten: die Items im Filter sammeln oder liegen lassen")))
 				.build());
 		addRenderableWidget(Button.builder(Component.literal("−"), b -> send(StationMenu.ACTION_RANGE, -1, ""))
-				.bounds(l + 8, t + 86, 20, 16).tooltip(Tooltip.create(Component.literal("Reichweite kleiner"))).build());
+				.bounds(l + 8, t + StationMenu.RANGE_Y, 20, 14).tooltip(Tooltip.create(Component.literal("Reichweite kleiner"))).build());
 		addRenderableWidget(Button.builder(Component.literal("+"), b -> send(StationMenu.ACTION_RANGE, 1, ""))
-				.bounds(l + 148, t + 86, 20, 16).tooltip(Tooltip.create(Component.literal("Reichweite größer"))).build());
+				.bounds(l + 148, t + StationMenu.RANGE_Y, 20, 14).tooltip(Tooltip.create(Component.literal("Reichweite größer"))).build());
 		color = addRenderableWidget(Button.builder(Component.empty(), b -> send(StationMenu.ACTION_COLOR, 1, ""))
-				.bounds(l + 8, t + 106, 78, 16).tooltip(Tooltip.create(Component.literal("Klick: nächste Farbe"))).build());
+				.bounds(l + 8, t + StationMenu.BUTTONS_Y, 78, 14).tooltip(Tooltip.create(Component.literal("Klick: nächste Farbe"))).build());
 		addRenderableWidget(Button.builder(Component.literal("Zurückrufen"), b -> send(StationMenu.ACTION_RECALL, 0, ""))
-				.bounds(l + 90, t + 106, 78, 16)
+				.bounds(l + 90, t + StationMenu.BUTTONS_Y, 78, 14)
 				.tooltip(Tooltip.create(Component.literal("Alle Roboter kommen zur Station und warten dort eine Minute. "
 						+ "Wer 10 Sekunden nicht vorankommt, teleportiert sich her.")))
 				.build());
-		robotName = addRenderableWidget(new NameBox(font, l + 8, t + 137, 84, 16, "Robotername …"));
+		robotName = addRenderableWidget(new NameBox(font, l + 8, t + StationMenu.IO_Y, 84, 16, "Robotername …"));
 		robotName.setResponder(text -> send(StationMenu.ACTION_ROBOT_NAME, 0, text));
 		update();
 	}
@@ -101,7 +102,7 @@ public class StationScreen extends AbstractContainerScreen<StationMenu> {
 			robotName.setValue(data.robotName());
 		}
 
-		mode.setMessage(Component.literal(data.exclude() ? "Sammelt alles AUSSER dem Filter" : "Sammelt nur den Filter (leer = alles)"));
+		mode.setMessage(Component.literal(data.exclude() ? "Sammelt alles AUSSER Filter" : "Sammelt nur den Filter"));
 		color.setMessage(Component.literal("■ ").withColor(data.color()).append(Component.literal(RobotConfig.colorName(data.color()))
 				.withStyle(ChatFormatting.WHITE)));
 	}
@@ -140,17 +141,16 @@ public class StationScreen extends AbstractContainerScreen<StationMenu> {
 
 	@Override
 	protected void extractLabels(GuiGraphicsExtractor graphics, int mouseX, int mouseY) {
-		graphics.text(font, title, titleLabelX, titleLabelY, TEXT, false);
 		graphics.text(font, playerInventoryTitle, inventoryLabelX, inventoryLabelY, TEXT, false);
-		graphics.text(font, "Filter", 8, StationMenu.FILTER_Y - 11, TEXT, false);
-		graphics.text(font, "Roboter einstellen:", 8, StationMenu.IO_Y - 11, TEXT, false);
+		graphics.text(font, "Filter (leer = alles)", 8, StationMenu.FILTER_Y - 10, TEXT, false);
+		graphics.text(font, "Roboter hineinlegen:", 8, StationMenu.IO_Y - 10, TEXT, false);
 		graphics.text(font, "→", StationMenu.INPUT_X + 23, StationMenu.IO_Y + 4, TEXT, false);
 
 		if (data == null) {
 			return;
 		}
 
-		graphics.centeredText(font, Component.literal(RobotConfig.rangeText(data.range())), 88, 90, 0xFF202020);
+		graphics.centeredText(font, Component.literal(RobotConfig.rangeText(data.range())), 88, StationMenu.RANGE_Y + 3, 0xFF202020);
 
 		int x = imageWidth + LIST_GAP;
 		List<String> names = data.names();
@@ -177,9 +177,13 @@ public class StationScreen extends AbstractContainerScreen<StationMenu> {
 		}
 
 		if (names.size() > visible) {
-			graphics.text(font, (scroll + 1) + "–" + Math.min(names.size(), scroll + visible) + " von " + names.size() + " (Mausrad)",
-					x + 6, imageHeight - 5 - 9 + 12, 0xFF606060, false);
+			graphics.text(font, "↕", x + LIST_WIDTH - 14, 6, TEXT, false);
 		}
+	}
+
+	/** Where the robot list is on screen, for JEI to keep its item list away from it. */
+	public Rect2i listArea() {
+		return new Rect2i(leftPos + imageWidth + LIST_GAP, topPos, LIST_WIDTH, imageHeight);
 	}
 
 	private int visibleEntries() {

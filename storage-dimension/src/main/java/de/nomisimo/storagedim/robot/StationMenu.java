@@ -52,13 +52,16 @@ public class StationMenu extends AbstractContainerMenu {
 
 	// layout, shared with the screen (item positions inside the window)
 	public static final int WIDTH = 176;
-	public static final int HEIGHT = 248;
+	public static final int HEIGHT = 216;
 	public static final int FILTER_X = 8;
-	public static final int FILTER_Y = 47;
+	public static final int FILTER_Y = 30;
+	public static final int MODE_Y = 50;
+	public static final int RANGE_Y = 66;
+	public static final int BUTTONS_Y = 82;
 	public static final int INPUT_X = 100;
 	public static final int OUTPUT_X = 140;
-	public static final int IO_Y = 137;
-	public static final int INVENTORY_Y = 166;
+	public static final int IO_Y = 108;
+	public static final int INVENTORY_Y = 134;
 
 	// actions the screen sends
 	public static final int ACTION_RANGE = 0;
@@ -297,13 +300,15 @@ public class StationMenu extends AbstractContainerMenu {
 		List<Component> states = new ArrayList<>();
 
 		for (Map.Entry<UUID, String> robot : StorageData.get().stationRobots(dim, pos).entrySet()) {
-			names.add(robot.getValue());
 			Entity entity = viewer.level().getEntity(robot.getKey());
+			String name = robot.getValue().isEmpty() ? "Roboter " + (names.size() + 1) : robot.getValue();
 
 			if (entity instanceof RobotEntity r) {
 				int distance = (int) Math.round(Math.sqrt(r.distanceToSqr(pos.getX() + 0.5, pos.getY(), pos.getZ() + 0.5)));
-				states.add(r.status().copy().append(Component.literal(" · " + distance + " m").withStyle(ChatFormatting.GRAY)));
+				names.add(name + " · " + distance + " m");
+				states.add(r.status());
 			} else {
+				names.add(name);
 				states.add(Component.literal("nicht geladen").withStyle(ChatFormatting.GRAY));
 			}
 		}

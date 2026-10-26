@@ -107,6 +107,7 @@ public class StorageMenu extends ChestMenu {
 
 		if (clientUi && player.containerMenu instanceof StorageMenu menu) {
 			TerminalNetworking.sendOpened(player, menu.containerId, menu.sort());
+			TerminalNetworking.sendPage(player, menu.containerId, menu.page, menu.pages, menu.kinds, menu.total);
 		}
 	}
 

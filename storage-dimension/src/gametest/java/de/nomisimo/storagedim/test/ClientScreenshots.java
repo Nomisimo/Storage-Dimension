@@ -111,7 +111,7 @@ public class ClientScreenshots implements FabricClientGameTest {
 			menu.action(StationMenu.ACTION_STATION_NAME, 0, "Nordlager");
 			menu.action(StationMenu.ACTION_ROBOT_NAME, 0, "Quak");
 			menu.action(StationMenu.ACTION_RANGE, -1, "");  // one step smaller: 8 chunks
-			menu.action(StationMenu.ACTION_COLOR, 1, "");   // white
+			menu.action(StationMenu.ACTION_COLOR, 15, "");  // red
 			menu.setCarried(new ItemStack(Robots.ROBOT_ITEM, 3));
 			menu.clicked(StationMenu.SLOT_INPUT, 0, ContainerInput.PICKUP, player);  // three robots in
 
@@ -223,10 +223,11 @@ public class ClientScreenshots implements FabricClientGameTest {
 		world.getServer().runOnServer(server -> {
 			server.getCommands().performPrefixedCommand(server.createCommandSourceStack(), "weather rain");
 			ServerPlayer player = server.getPlayerList().getPlayers().get(0);
-			RobotEntity robot = player.level().getEntities(Robots.ROBOT, r -> r.station() != null).stream().findFirst().orElse(null);
+			RobotEntity robot = player.level().getEntities(Robots.ROBOT, r -> "Quak2".equals(r.getCustomName() == null ? null : r.getCustomName().getString()))
+					.stream().findFirst().orElse(null);
 
 			if (robot != null) {
-				lookAt(player, robot.position().add(0, 0.4, 0), 3.5);
+				lookAt(player, robot.position().add(0, 0.6, 0), 2.6);
 			}
 		});
 		context.waitTicks(40);
@@ -257,7 +258,7 @@ public class ClientScreenshots implements FabricClientGameTest {
 			}
 
 			drop(level, pool.getX() - 1.5, pool.getY() - 1.5, pool.getZ() - 1.5, new ItemStack(Items.KELP, 3));
-			lookAt(player, Vec3.atCenterOf(pool.below(2)), 4.5);
+			lookAt(player, Vec3.atCenterOf(pool.below(2)), 6);
 		});
 
 		for (int t = 0; t < 4; t++) {
@@ -279,7 +280,7 @@ public class ClientScreenshots implements FabricClientGameTest {
 
 	/** Puts the player {@code distance} blocks south-east of the point and turns them to look at it. */
 	private static void lookAt(ServerPlayer player, Vec3 target, double distance) {
-		Vec3 eye = target.add(distance * 0.6, distance * 0.45, distance * 0.65);
+		Vec3 eye = target.add(distance * 0.55, distance * 0.6, distance * 0.6);
 		double dx = target.x - eye.x;
 		double dy = target.y - eye.y;
 		double dz = target.z - eye.z;
