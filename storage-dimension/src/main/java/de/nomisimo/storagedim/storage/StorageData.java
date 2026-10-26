@@ -367,7 +367,11 @@ public final class StorageData {
 						JsonObject entry = el.getAsJsonObject();
 						int slot = entry.get("slot").getAsInt();
 
-						if (slot >= 0 && slot < FilterChests.SLOTS) {
+						if (slot >= 0 && slot < FilterChests.DOUBLE_SLOTS) {
+							if (slot >= chest.filters().size()) {
+								chest.resize(FilterChests.DOUBLE_SLOTS);
+							}
+
 							ItemStack.CODEC.parse(ops, entry.get("stack")).resultOrPartial(StorageDimensionMod.LOGGER::warn)
 									.ifPresent(stack -> chest.filters().set(slot, stack.copyWithCount(1)));
 						}

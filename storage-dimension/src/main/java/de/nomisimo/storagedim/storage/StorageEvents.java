@@ -85,32 +85,101 @@ public final class StorageEvents {
 		boolean storageChest = StorageItems.isStorageChest(stack);
 		boolean filterChest = StorageItems.isFilterChest(stack);
 
-		if (level.isClientSide() || !(storageChest || filterChest) || !state.is(Blocks.CHEST) || !(placer instanceof ServerPlayer player)) {
+		if (level.isClientSide() || !state.is(Blocks.CHEST)) {
 			return;
 		}
 
-		// Never merge into a double chest; each special chest stands alone.
-		if (state.getValue(ChestBlock.TYPE) != ChestType.SINGLE) {
-			BlockPos other = pos.relative(ChestBlock.getConnectedDirection(state));
-			BlockState otherState = level.getBlockState(other);
+		StorageData data = StorageData.get();
+		String dim = Rooms.id(level);
+		BlockPos other = state.getValue(ChestBlock.TYPE) == ChestType.SINGLE ? null : pos.relative(ChestBlock.getConnectedDirection(state));
 
-			if (otherState.is(Blocks.CHEST)) {
-				level.setBlock(other, otherState.setValue(ChestBlock.TYPE, ChestType.SINGLE), Block.UPDATE_ALL);
+		if (!storageChest && !filterChest) {
+			// A plain chest never joins a special one.
+			if (other != null && (data.filterChest(dim, other) != null || data.chestOwner(dim, other) != null)) {
+				splitChest(level, pos, state, other);
 			}
 
-			level.setBlock(pos, state.setValue(ChestBlock.TYPE, ChestType.SINGLE), Block.UPDATE_ALL);
+			return;
 		}
 
-		if (filterChest) {
-			StorageData.get().setFilterChest(Rooms.id(level), pos, FilterChests.FilterChest.empty(player.getUUID()));
-			player.sendSystemMessage(Component.literal("Filterkiste gesetzt. Schleichen + Rechtsklick mit leerer Hand stellt die Filter ein.")
+		if (!(placer instanceof ServerPlayer player)) {
+			return;
+		}
+
+		FilterChests.FilterChest partner = other == null ? null : data.filterChest(dim, other);
+
+		if (filterChest && partner != null) {
+			// Two filter chests make a double chest; its filters live on the half with the smaller position.
+			FilterChests.FilterChest placed = FilterChests.FilterChest.empty(player.getUUID());
+
+			if (pos.asLong() < other.asLong()) {
+				placed.filters().clear();
+				placed.filters().addAll(partner.filters());
+			}
+
+			placed.resize(FilterChests.DOUBLE_SLOTS);
+			partner.resize(FilterChests.DOUBLE_SLOTS);
+			data.setFilterChest(dim, pos, placed);
+			player.sendSystemMessage(Component.literal("Doppelte Filterkiste: jetzt " + FilterChests.DOUBLE_SLOTS + " Filter-Plätze.")
 					.withStyle(ChatFormatting.DARK_PURPLE));
 			return;
 		}
 
-		StorageData.get().setChest(Rooms.id(level), pos, player.getUUID());
+		// Otherwise never merge into a double chest; each special chest stands alone.
+		if (other != null) {
+			splitChest(level, pos, state, other);
+		}
+
+		if (filterChest) {
+			data.setFilterChest(dim, pos, FilterChests.FilterChest.empty(player.getUUID()));
+			player.sendSystemMessage(Component.literal("Filterkiste gesetzt. Schleichen + Rechtsklick mit leerer Hand stellt die Filter ein. "
+					+ "Zwei Filterkisten nebeneinander werden eine Doppelkiste mit " + FilterChests.DOUBLE_SLOTS + " Filtern.")
+					.withStyle(ChatFormatting.DARK_PURPLE));
+			return;
+		}
+
+		data.setChest(dim, pos, player.getUUID());
 		player.sendSystemMessage(Component.literal("Dimensionskiste gesetzt. Wer Zugriff auf den Speicher hat, kommt beim Öffnen hinein.")
 				.withStyle(ChatFormatting.DARK_PURPLE));
+	}
+
+	private static void splitChest(Level level, BlockPos pos, BlockState state, BlockPos other) {
+		BlockState otherState = level.getBlockState(other);
+
+		if (otherState.is(Blocks.CHEST)) {
+			level.setBlock(other, otherState.setValue(ChestBlock.TYPE, ChestType.SINGLE), Block.UPDATE_ALL);
+		}
+
+		level.setBlock(pos, state.setValue(ChestBlock.TYPE, ChestType.SINGLE), Block.UPDATE_ALL);
+	}
+
+	/** The other half of a double filter chest, or null. */
+	private static BlockPos filterPartner(Level level, BlockPos pos, StorageData data) {
+		BlockState state = level.getBlockState(pos);
+
+		if (!state.is(Blocks.CHEST) || state.getValue(ChestBlock.TYPE) == ChestType.SINGLE) {
+			return null;
+		}
+
+		BlockPos other = pos.relative(ChestBlock.getConnectedDirection(state));
+		return level.getBlockState(other).is(Blocks.CHEST) && data.filterChest(Rooms.id(level), other) != null ? other : null;
+	}
+
+	/**
+	 * The filters that apply at {@code pos}: a single chest has {@link FilterChests#SLOTS}, a double chest shares the
+	 * {@link FilterChests#DOUBLE_SLOTS} of the half with the smaller position.
+	 */
+	private static FilterChests.FilterChest resolveFilterChest(Level level, BlockPos pos, StorageData data, FilterChests.FilterChest own) {
+		BlockPos partner = filterPartner(level, pos, data);
+		FilterChests.FilterChest chest = partner != null && partner.asLong() < pos.asLong() ? data.filterChest(Rooms.id(level), partner) : own;
+		int size = partner == null ? FilterChests.SLOTS : FilterChests.DOUBLE_SLOTS;
+
+		if (chest.filters().size() != size) {
+			chest.resize(size);
+			StorageData.markDirty();
+		}
+
+		return chest;
 	}
 
 	private static boolean onBreak(Level level, net.minecraft.world.entity.player.Player player, BlockPos pos, BlockState state) {
@@ -143,6 +212,16 @@ public final class StorageEvents {
 		FilterChests.FilterChest filterChest = data.filterChest(Rooms.id(level), pos);
 
 		if (filterChest != null) {
+			BlockPos partner = filterPartner(level, pos, data);
+
+			if (partner != null && pos.asLong() < partner.asLong()) {
+				// The half holding the shared filters goes: the other half keeps the first seven.
+				FilterChests.FilterChest survivor = data.filterChest(Rooms.id(level), partner);
+				survivor.filters().clear();
+				survivor.filters().addAll(filterChest.filters());
+				survivor.resize(FilterChests.SLOTS);
+			}
+
 			data.removeFilterChest(Rooms.id(level), pos);
 
 			if (!state.is(Blocks.CHEST)) {
@@ -222,7 +301,7 @@ public final class StorageEvents {
 		FilterChests.FilterChest filterChest = data.filterChest(Rooms.id(level), pos);
 
 		if (filterChest != null) {
-			return useFilterChest(player, level, pos, data, filterChest);
+			return useFilterChest(player, level, pos, data, resolveFilterChest(level, pos, data, filterChest));
 		}
 
 		UUID owner = data.chestOwner(Rooms.id(level), pos);
@@ -402,7 +481,7 @@ public final class StorageEvents {
 				drain(level, pos, chest.getValue().owner());
 
 				if (level.getBlockState(pos.below()).is(Blocks.HOPPER)) {
-					restock(level, pos, chest.getValue());
+					restock(level, pos, resolveFilterChest(level, pos, data, chest.getValue()));
 				}
 			}
 		}
