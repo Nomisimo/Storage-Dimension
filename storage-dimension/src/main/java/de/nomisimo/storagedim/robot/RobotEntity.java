@@ -498,7 +498,8 @@ public class RobotEntity extends PathfinderMob {
 			getLookControl().setLookAt(goal.x, goal.y, goal.z);
 			double distance = position().distanceTo(goal);
 
-			if (distance <= reach || goalKey == delivery && canReachChest(goal)) {
+			// items only when nothing is in between, so it does not grab them through a wall
+			if (distance <= reach && (goalKey != target || hasLineOfSight(target)) || goalKey == delivery && canReachChest(goal)) {
 				if (!getCarried().isEmpty() && delivery != null) {
 					startAction(2);
 				} else if (target != null) {

@@ -243,7 +243,7 @@ public class ClientScreenshots implements FabricClientGameTest {
 				ServerLevel level = server.getPlayerList().getPlayers().get(0).level();
 				BlockPos base = server.getPlayerList().getPlayers().get(0).blockPosition();
 				System.out.println("STORAGEDIM ITEMS left " + level.getEntitiesOfClass(ItemEntity.class, new net.minecraft.world.phys.AABB(base).inflate(20))
-						.stream().map(item -> item.getItem().toString()).toList());
+						.stream().map(item -> item.getItem() + "@" + item.blockPosition().toShortString()).toList());
 			});
 		}
 	}
