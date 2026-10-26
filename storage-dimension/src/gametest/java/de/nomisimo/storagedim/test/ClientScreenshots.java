@@ -162,7 +162,7 @@ public class ClientScreenshots implements FabricClientGameTest {
 			level.setBlockAndUpdate(lonely.below(), Blocks.STONE.defaultBlockState());
 			level.setBlockAndUpdate(lonely, RobotStationBlock.BLOCK.defaultBlockState());
 			String dim = Rooms.id(level);
-			StorageData.get().setStation(dim, lonely, StorageData.get().station(dim, lonely).withRange(16).withName("Traurig").withStationName("Einsam"));
+			StorageData.get().setStation(dim, lonely, StorageData.get().station(dim, lonely).withRange(16).withName("Pieps").withStationName("Einsam"));
 			RobotEntity robot = Robots.ROBOT.create(level, EntitySpawnReason.SPAWN_ITEM_USE);
 			robot.snapTo(lonely.getX() + 2.5, lonely.getY(), lonely.getZ() + 0.5, 0, 0);
 			robot.setup(player.getUUID(), lonely);
@@ -280,9 +280,13 @@ public class ClientScreenshots implements FabricClientGameTest {
 		logRobots(world);
 		world.getServer().runOnServer(server -> {
 			ServerPlayer player = server.getPlayerList().getPlayers().get(0);
-			// look at the sad robot
-			BlockPos base = player.blockPosition();
-			player.teleportTo(player.level(), base.getX() + 42.5, base.getY(), base.getZ() + 4.5, java.util.Set.of(), 180, 30, true);
+			// close up on the robot without a chest: its name between two error icons
+			RobotEntity robot = player.level().getEntities(Robots.ROBOT, r -> "Pieps".equals(r.getCustomName() == null ? null : r.getCustomName().getString()))
+					.stream().findFirst().orElse(null);
+
+			if (robot != null) {
+				lookAt(player, robot.position().add(0, 0.8, 0), 3);
+			}
 		});
 		context.waitTicks(40);
 		context.takeScreenshot("robot-sad");
