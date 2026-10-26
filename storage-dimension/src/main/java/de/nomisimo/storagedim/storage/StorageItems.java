@@ -2,6 +2,7 @@ package de.nomisimo.storagedim.storage;
 
 import java.util.List;
 
+import de.nomisimo.storagedim.StorageDimensionMod;
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.nbt.CompoundTag;
@@ -28,6 +29,7 @@ public final class StorageItems {
 		tag.putBoolean(CHEST_TAG, true);
 		stack.set(DataComponents.CUSTOM_DATA, CustomData.of(tag));
 		stack.set(DataComponents.ITEM_NAME, Component.literal("Dimensionskiste"));
+		stack.set(DataComponents.ITEM_MODEL, StorageDimensionMod.id("dimension_chest"));
 		stack.set(DataComponents.LORE, new ItemLore(List.of(
 				Component.literal("Öffnen bringt dich in deine Storage Dimension").withStyle(ChatFormatting.GRAY),
 				Component.literal("Hopper liefern direkt in den Speicher").withStyle(ChatFormatting.GRAY))));
@@ -41,6 +43,7 @@ public final class StorageItems {
 		tag.putBoolean(TERMINAL_TAG, true);
 		stack.set(DataComponents.CUSTOM_DATA, CustomData.of(tag));
 		stack.set(DataComponents.ITEM_NAME, Component.literal("ME-Terminal"));
+		stack.set(DataComponents.ITEM_MODEL, StorageDimensionMod.id("me_terminal"));
 		stack.set(DataComponents.LORE, new ItemLore(List.of(
 				Component.literal("Öffnet den ME-Speicher direkt").withStyle(ChatFormatting.GRAY))));
 		return stack;
@@ -53,6 +56,7 @@ public final class StorageItems {
 		tag.putBoolean(FILTER_TAG, true);
 		stack.set(DataComponents.CUSTOM_DATA, CustomData.of(tag));
 		stack.set(DataComponents.ITEM_NAME, Component.literal("Filterkiste"));
+		stack.set(DataComponents.ITEM_MODEL, StorageDimensionMod.id("filter_chest"));
 		stack.set(DataComponents.LORE, new ItemLore(List.of(
 				Component.literal("Zeigt bis zu 7 gewählte Items aus dem ME-Speicher").withStyle(ChatFormatting.GRAY),
 				Component.literal("Schleichen + Rechtsklick: Filter einstellen").withStyle(ChatFormatting.GRAY))));

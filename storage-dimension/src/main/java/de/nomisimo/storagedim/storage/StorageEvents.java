@@ -49,6 +49,7 @@ public final class StorageEvents {
 		ServerLifecycleEvents.AFTER_SAVE.register((server, flush, force) -> StorageData.save(false));
 		ServerTickEvents.END_SERVER_TICK.register(StorageEvents::tick);
 		MeChestStorage.register();
+		ChestMarks.register();
 		UseBlockCallback.EVENT.register((player, level, hand, hit) -> {
 			if (level.isClientSide() || hand != InteractionHand.MAIN_HAND || !(player instanceof ServerPlayer serverPlayer)) {
 				return InteractionResult.PASS;
@@ -419,6 +420,7 @@ public final class StorageEvents {
 	// ---- ticking ----
 
 	private static void tick(MinecraftServer server) {
+		ChestMarks.tick(server);
 		StorageData data = StorageData.get();
 
 		if (data == null) {

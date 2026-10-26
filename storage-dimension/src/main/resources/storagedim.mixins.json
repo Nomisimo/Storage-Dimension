@@ -5,6 +5,9 @@
 	"mixins": [
 		"BlockItemMixin"
 	],
+	"client": [
+		"ChestRendererMixin"
+	],
 	"injectors": {
 		"defaultRequire": 1
 	}

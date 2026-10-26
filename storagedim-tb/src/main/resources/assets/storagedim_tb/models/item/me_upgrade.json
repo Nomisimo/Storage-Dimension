@@ -1,7 +1,6 @@
 {
   "parent": "minecraft:item/generated",
   "textures": {
-    "layer0": "travelersbackpack:item/blank_upgrade",
-    "layer1": "minecraft:item/ender_eye"
+    "layer0": "storagedim_tb:item/me_upgrade"
   }
 }

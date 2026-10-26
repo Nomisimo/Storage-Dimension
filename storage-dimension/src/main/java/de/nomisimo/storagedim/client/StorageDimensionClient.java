@@ -39,6 +39,7 @@ public class StorageDimensionClient implements ClientModInitializer {
 	public void onInitializeClient() {
 		ModelLayerRegistry.registerModelLayer(RobotModel.LAYER, RobotModel::createBodyLayer);
 		EntityRendererRegistry.register(Robots.ROBOT, RobotRenderer::new);
+		ClientChestMarks.register();
 		ClientPlayNetworking.registerGlobalReceiver(TerminalNetworking.OpenedPayload.TYPE, (payload, context) -> {
 			terminalId = payload.containerId();
 			sort = parse(payload.sort());

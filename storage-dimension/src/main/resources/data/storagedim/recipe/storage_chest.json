@@ -30,7 +30,8 @@
           "color": "gray",
           "italic": false
         }
-      ]
+      ],
+      "minecraft:item_model": "storagedim:dimension_chest"
     }
   }
 }

@@ -165,6 +165,7 @@ public final class StorageData {
 
 	public void setChest(String dimension, BlockPos pos, UUID owner) {
 		chests.computeIfAbsent(dimension, d -> new HashMap<>()).put(pos.asLong(), owner);
+		ChestMarks.changed(dimension);
 		markDirty();
 	}
 
@@ -172,6 +173,7 @@ public final class StorageData {
 		Map<Long, UUID> map = chests.get(dimension);
 
 		if (map != null && map.remove(pos.asLong()) != null) {
+			ChestMarks.changed(dimension);
 			markDirty();
 		}
 	}
@@ -185,6 +187,7 @@ public final class StorageData {
 
 	public void setFilterChest(String dimension, BlockPos pos, FilterChests.FilterChest chest) {
 		filterChests.computeIfAbsent(dimension, d -> new HashMap<>()).put(pos.asLong(), chest);
+		ChestMarks.changed(dimension);
 		markDirty();
 	}
 
@@ -192,6 +195,7 @@ public final class StorageData {
 		Map<Long, FilterChests.FilterChest> map = filterChests.get(dimension);
 
 		if (map != null && map.remove(pos.asLong()) != null) {
+			ChestMarks.changed(dimension);
 			markDirty();
 		}
 	}
@@ -207,6 +211,7 @@ public final class StorageData {
 		Set<Long> set = terminals.computeIfAbsent(dimension, d -> new HashSet<>());
 
 		if (present ? set.add(pos.asLong()) : set.remove(pos.asLong())) {
+			ChestMarks.changed(dimension);
 			markDirty();
 		}
 	}

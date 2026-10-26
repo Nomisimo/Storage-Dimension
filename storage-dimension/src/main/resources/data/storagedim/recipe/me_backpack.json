@@ -28,7 +28,8 @@
           "color": "gray",
           "italic": false
         }
-      ]
+      ],
+      "minecraft:item_model": "storagedim:me_backpack"
     }
   }
 }
