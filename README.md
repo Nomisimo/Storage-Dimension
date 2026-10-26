@@ -17,15 +17,28 @@ Ein Fabric-Mod für **Minecraft 26.1.2**. Seit Version 0.4.0 (Sammelroboter, eig
   - Die Suche ist beim nächsten Öffnen wieder leer, die Sortierung bleibt.
 - **Hopper-Eingang:** Trichter, die in eine Dimensionskiste oder Filterkiste zeigen, liefern direkt in den Speicher. Zum Anbauen mit einem Item in der Hand schleichen.
 - **Maschinen anderer Mods (z. B. Tech Reborn, Advanced Reborn):** Dimensions- und Filterkisten sind über die Fabric-Transfer-API angebunden. Was eine Maschine hineinschiebt, landet direkt im ME-Speicher, und aus einer Filterkiste können Maschinen die Filter-Items herausziehen.
-- **Sammelroboter:** Ein kleiner Roboter mit Schnabel. Mit dem Roboter-Item auf einen Block klicken stellt ihn hin, die Stelle ist sein Zuhause. Er sammelt im Umkreis von bis zu 160 Blöcken (10 Chunks) herumliegende Items ein, immer einen Stapel im Schnabel, und bringt ihn zur nächsten Dimensionskiste, zum ME-Terminal oder zu einer passenden Filterkiste. Er läuft Stufen hoch und runter. Ohne Arbeit setzt er sich hin.
-  - Farbstoff auf den Roboter färbt Schnabel und Füße.
-  - Rechtsklick mit leerer Hand stellt die Reichweite um: 1, 2, 4, 6, 8 oder 10 Chunks.
-  - Schleichen + Rechtsklick mit einem Item setzt es auf seinen Filter oder nimmt es wieder herunter (bis zu 9 Items). Mit Filter sammelt er nur diese Items, ohne Filter alles.
+- **Sammelroboter:** Ein kleiner Roboter mit Schnabel. Mit dem Roboter-Item auf einen Block klicken stellt ihn hin. Er sammelt herumliegende Items ein, immer einen Stapel im Schnabel, und bringt ihn zur nächsten Dimensionskiste, zum ME-Terminal oder zu einer passenden Filterkiste. Er läuft Stufen hoch und runter und stellt sich zum Aufheben direkt auf das Item.
+  - **Ohne Station** ist die Stelle, an der er steht, sein Zuhause. Rechtsklick mit leerer Hand stellt die Reichweite um (1, 2, 4, 6, 8 oder 10 Chunks), Farbstoff färbt Schnabel und Füße, Schleichen + Rechtsklick mit einem Item setzt es auf seinen Filter oder nimmt es wieder herunter (bis zu 9 Items). Mit Filter sammelt er nur diese Items, ohne Filter alles.
+  - **Mit Roboter-Station** (siehe unten) bekommt er Reichweite, Filter, Farbe und Namen von der Station. Die Reichweite zählt dann ab der Station.
+  - **Schwarm:** Mehrere Roboter stimmen sich ab. Jeder holt ein anderes Item, es rennen nie alle zum selben.
+  - **Stimmung:** Ohne Arbeit laufen Stations-Roboter zu ihrer Station, setzen sich hin und schauen sich fröhlich um, bis ein Item auftaucht. Erreicht ein Roboter seine Station nicht oder steht in seiner Reichweite keine Kiste, setzt er sich hin und schaut traurig auf den Boden.
   - Bevor er losläuft, plant er den ganzen Weg und folgt ihm. Gibt es keinen Weg (eingemauert, hinter einer Roboter-Barriere, über Lava), lässt er das Item sofort für eine Minute in Ruhe und nimmt das nächste. Bleibt er unterwegs trotzdem hängen, gibt er nach 5 Sekunden auf. Kisten erreicht er bis etwa drei Blöcke über dem Boden.
   - Neu fallengelassene Items bemerkt er nach spätestens einer halben Sekunde.
-  - Schleichen + Rechtsklick mit leerer Hand nimmt ihn wieder auf, samt dem Item im Schnabel.
-  - Nur Spieler können ihm schaden.
-  - Er arbeitet nur in geladenen Chunks.
+  - Schleichen + Rechtsklick mit leerer Hand nimmt ihn wieder auf, samt dem Item im Schnabel und seinen Einstellungen.
+  - Nur Spieler können ihm schaden. Er arbeitet nur in geladenen Chunks.
+- **Roboter-Station:** Ein Block, der Sammelroboter einstellt. Rechtsklick öffnet das Menü:
+  - obere Reihe: bis zu 9 Filter-Items (Item draufklicken setzt, leere Hand entfernt),
+  - Kompass: Reichweite (Linksklick größer, Rechtsklick kleiner), Farbstoff: Farbe (Klick schaltet weiter), Namensschild: Name (Linksklick eingeben, Rechtsklick löschen),
+  - Roboter in den Eingang (links vom Pfeil) legen, er kommt rechts im Ausgang eingestellt wieder heraus. Die Einstellungen stehen im Tooltip des Roboter-Items.
+  - Ein eingestellter Roboter, der außerhalb der Reichweite seiner Station hingestellt wird, läuft zuerst zur Station und arbeitet dann los.
+  - Ein vergebener Name schwebt wie ein Namensschild über dem Roboter. Ohne Namen steht dort nichts.
+
+  ![Menü der Roboter-Station](docs/screenshots/roboter-station-menu.png)
+
+  ![Roboter warten fröhlich an ihrer Station](docs/screenshots/roboter-station.png)
+
+  ![Ein Roboter ohne Kiste in Reichweite sitzt traurig da](docs/screenshots/roboter-traurig.png)
+
 - **Roboter-Barriere:** Ein durchsichtiger Plasma-Schild. Spieler, Tiere und Items gehen einfach hindurch, Sammelroboter nicht, und sie planen auch keinen Weg hindurch oder darüber. Gut für Türen und Bereiche, aus denen die Roboter nichts holen sollen. Rezept: 8 Glas um eine Amethystscherbe ergibt 8 Barrieren.
 
   ![Roboter-Barriere als Wand hinter den Kisten](docs/screenshots/roboter-barriere.png)
@@ -73,6 +86,14 @@ Roboter-Barriere (8 Glas um eine Amethystscherbe, ergibt 8):
 
 ![Rezept Roboter-Barriere](docs/screenshots/rezept-robot-barrier.png)
 
+Roboter-Station (Blitzableiter, Eisenbarren, Redstoneblock, Kiste):
+
+![Rezept Roboter-Station](docs/screenshots/rezept-robot-station.png)
+
+ME-Upgrade mit dem Traveler's-Backpack-Add-on (formlos: Leeres Upgrade, Enderauge, 2× Amethystscherbe, Redstoneblock):
+
+![Rezept ME-Upgrade für Traveler's Backpack](docs/screenshots/rezept-tb-me-upgrade.png)
+
 Alle Rezepte stehen auch in [JEI](https://modrinth.com/mod/jei).
 
 ## Befehle
@@ -91,6 +112,7 @@ Alle Rezepte stehen auch in [JEI](https://modrinth.com/mod/jei).
 | `/storage give terminal` | (OP) Gibt ein ME-Terminal |
 | `/storage give filter` | (OP) Gibt eine Filterkiste |
 | `/storage give robot` | (OP) Gibt einen Sammelroboter |
+| `/storage give station` | (OP) Gibt eine Roboter-Station |
 | `/storage give barrier` | (OP) Gibt 16 Roboter-Barrieren |
 
 ## Bauen
