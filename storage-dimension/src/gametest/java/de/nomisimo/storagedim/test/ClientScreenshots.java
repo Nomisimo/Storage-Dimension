@@ -238,32 +238,35 @@ public class ClientScreenshots implements FabricClientGameTest {
 		context.takeScreenshot("robot-umbrella");
 		world.getServer().runOnServer(server -> server.getCommands().performPrefixedCommand(server.createCommandSourceStack(), "weather clear"));
 
-		// diving: a pool with a robot walking along the bottom
+		// diving: a glass tank on the ground with a robot inside, seen through the glass
 		world.getServer().runOnServer(server -> {
 			ServerPlayer player = server.getPlayerList().getPlayers().get(0);
 			ServerLevel level = player.level();
 			BlockPos station = player.blockPosition().offset(0, 0, -2);
-			BlockPos pool = station.offset(-8, 0, 6);
+			BlockPos column = station.offset(-8, 0, 6);
+			BlockPos pool = new BlockPos(column.getX(), level.getHeight(net.minecraft.world.level.levelgen.Heightmap.Types.MOTION_BLOCKING, column.getX(), column.getZ()), column.getZ());
 
 			for (int dx = -2; dx <= 2; dx++) {
 				for (int dz = -2; dz <= 2; dz++) {
-					// two blocks deep, below the grass, so the water does not spill out
-					for (int dy = -3; dy <= -1; dy++) {
-						level.setBlockAndUpdate(pool.offset(dx, dy, dz), Blocks.WATER.defaultBlockState());
-					}
+					boolean wall = Math.abs(dx) == 2 || Math.abs(dz) == 2;
+					level.setBlockAndUpdate(pool.offset(dx, -1, dz), Blocks.GLASS.defaultBlockState());
 
-					level.setBlockAndUpdate(pool.offset(dx, -4, dz), Blocks.SAND.defaultBlockState());
+					for (int dy = 0; dy <= 2; dy++) {
+						level.setBlockAndUpdate(pool.offset(dx, dy, dz), wall ? Blocks.GLASS.defaultBlockState()
+								: dy < 2 ? Blocks.WATER.defaultBlockState() : Blocks.AIR.defaultBlockState());
+					}
 				}
 			}
 
 			RobotEntity robot = player.level().getEntities(Robots.ROBOT, r -> r.station() != null).stream().findFirst().orElse(null);
 
 			if (robot != null) {
-				robot.teleportTo(pool.getX() + 1.5, pool.getY() - 3, pool.getZ() + 1.5);
+				robot.teleportTo(pool.getX() + 0.5, pool.getY(), pool.getZ() + 0.5);
 			}
 
-			drop(level, pool.getX() - 1.5, pool.getY() - 2.5, pool.getZ() - 1.5, new ItemStack(Items.KELP, 3));
-			lookAt(player, Vec3.atCenterOf(pool.below(3)).add(1, 0, 1), 7);
+			drop(level, pool.getX() - 0.5, pool.getY() + 0.5, pool.getZ() - 0.5, new ItemStack(Items.KELP, 3));
+			// in front of the tank's south wall, looking north through the glass
+			player.teleportTo(level, pool.getX() + 0.5, pool.getY(), pool.getZ() + 4.5, java.util.Set.of(), 180, 20, true);
 		});
 
 		for (int t = 0; t < 4; t++) {
