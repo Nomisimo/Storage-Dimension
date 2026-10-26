@@ -48,7 +48,9 @@ Ein Fabric-Mod für **Minecraft 26.1.2**. Seit Version 0.4.0 (Sammelroboter, eig
   - der **Robotername**: Bekommen mehrere Roboter denselben Namen, werden sie durchnummeriert (Quak1, Quak2 …). Das Benennen kostet keine Level.
   - Roboter in den Eingang (links vom Pfeil) legen, er kommt rechts eingestellt wieder heraus. Die Einstellungen stehen im Tooltip des Roboter-Items.
   - Rechts daneben steht die **Liste aller Roboter** der Station (höchstens 32) mit Entfernung und dem, was jeder gerade tut. Mausrad blättert.
-  - **Zurückrufen:** Alle Roboter der Station laufen sofort los, die Station zeigt „Rückruf: auf dem Weg“. Angekommen sind sie im 3×3-Feld um die Station (ab 21 Robotern 5×5). Teleportiert wird nur, wer keinen Weg zur Station findet. Danach sitzen alle eine Minute an der Station und arbeiten dann normal weiter.
+  - **Zurückrufen:** Alle Roboter der Station laufen sofort los, die Station zeigt „Rückruf: auf dem Weg“. Angekommen sind sie im 3×3-Feld um die Station (ab 21 Robotern 5×5). Teleportiert wird nur, wer keinen Weg zur Station findet. Danach sitzen alle eine Minute an der Station und arbeiten dann normal weiter. Bis dahin schauen sie den Spieler an, der sie gerufen hat.
+
+  ![Nach dem Rückruf schauen die Roboter den Spieler an, der gerufen hat](docs/screenshots/roboter-rueckruf-schauen.png)
   - Ein eingestellter Roboter, der außerhalb der Reichweite seiner Station hingestellt wird, läuft zuerst zur Station und arbeitet dann los.
 
   ![Fenster der Roboter-Station mit Roboterliste](docs/screenshots/roboter-station-menu.png)
