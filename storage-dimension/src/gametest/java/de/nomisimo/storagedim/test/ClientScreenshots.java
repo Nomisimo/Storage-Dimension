@@ -259,7 +259,7 @@ public class ClientScreenshots implements FabricClientGameTest {
 			}
 
 			drop(level, pool.getX() - 1.5, pool.getY() - 2.5, pool.getZ() - 1.5, new ItemStack(Items.KELP, 3));
-			lookAt(player, Vec3.atCenterOf(pool.below(3)).add(1, 0, 1), 4);
+			lookAt(player, Vec3.atCenterOf(pool.below(3)).add(1, 0, 1), 7);
 		});
 
 		for (int t = 0; t < 4; t++) {
