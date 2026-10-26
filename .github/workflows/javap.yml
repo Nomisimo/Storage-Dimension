@@ -30,15 +30,17 @@ jobs:
             echo "=================== $cls"
             javap $flags -cp "$CP" "$cls" 2>&1 | head -4000
           done < ../jp/tools/javap-classes.txt
-      - name: screen bytecode
+      - name: Xaero
         run: |
-          MC="$(find ~/.gradle /home/runner/work -name '*.jar' \( -path '*minecraft*' -o -path '*fabric*' \) | tr '\n' ':')"
-          for c in net.minecraft.client.gui.screens.inventory.AbstractContainerScreen net.minecraft.client.gui.screens.Screen net.minecraft.client.gui.screens.inventory.ContainerScreen; do
-            for m in extractRenderState extractContents extractBackground extractLabels init; do
-              echo "=== $c.$m"; javap -c -p -cp "$MC" $c | sed -n "/ $m(/,/^$/p" | grep -E "invoke|getfield|Code|$m" | head -40
-            done
+          for p in xaeros-minimap xaeros-world-map; do
+            URL=$(curl -s "https://api.modrinth.com/v2/project/$p/version?game_versions=%5B%2226.1.2%22%5D&loaders=%5B%22fabric%22%5D" | python3 -c "import json,sys; v=json.load(sys.stdin)[0]; print(v['files'][0]['url']); import sys as s; s.stderr.write(v['version_number']+' '+v['id']+'\\n')")
+            echo "== $p $URL"; curl -sL -o /tmp/$p.jar "$URL"
+            unzip -l /tmp/$p.jar | grep -iE "entity/icon|icon/def|icon/sprite|/icon" | head -40
+            unzip -l /tmp/$p.jar | grep -iE "assets/.*(chicken|cow)" | head -10
           done
-          javap -p -cp "$MC" net.minecraft.client.input.InputWithModifiers net.minecraft.client.gui.components.Button\$OnPress net.minecraft.network.chat.ComponentSerialization net.minecraft.world.entity.Entity | grep -iE "interface|class|Shift|STREAM_CODEC|isUnderWater|teleportTo|canBreathe|horizontalCollision|getFluidState|isInWater"
+          cd /tmp && mkdir x && cd x && unzip -q /tmp/xaeros-minimap.jar
+          for f in $(find . -path "*entity/icon/definition*" -name "*.json" | grep -iE "chicken|cow|zombie|allay" | head -4); do echo "--- $f"; cat $f; echo; done
+          find . -path "*entity/icon*" | head -20
       - name: TB screen render
         run: |
           JAR=$(find ~/.gradle -iname "travelersbackpack*.jar" | grep -v sources | head -1)
