@@ -6,7 +6,8 @@
 		"BlockItemMixin"
 	],
 	"client": [
-		"ChestRendererMixin"
+		"ChestRendererMixin",
+		"ContainerScreenMixin"
 	],
 	"injectors": {
 		"defaultRequire": 1

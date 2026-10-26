@@ -1,6 +1,8 @@
 package de.nomisimo.storagedim.robot;
 
+import java.util.ArrayList;
 import java.util.EnumSet;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -12,13 +14,17 @@ import de.nomisimo.storagedim.storage.Rooms;
 import de.nomisimo.storagedim.storage.StorageData;
 import de.nomisimo.storagedim.storage.StorageMenu;
 import de.nomisimo.storagedim.storage.StorageNetwork;
+import net.minecraft.ChatFormatting;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.UUIDUtil;
 import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.network.syncher.EntityDataAccessor;
 import net.minecraft.network.syncher.EntityDataSerializers;
 import net.minecraft.network.syncher.SynchedEntityData;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.tags.DamageTypeTags;
 import net.minecraft.world.InteractionHand;
@@ -47,11 +53,18 @@ import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 
 /**
- * Walks around its home (up to {@link #RANGE} blocks, about 10 chunks), picks up one stack of dropped items with
+ * Walks around its home (up to {@link #RANGE} blocks, about 10 chunks, adjustable), picks up one stack of dropped items with
  * its beak and carries it to the nearest dimension chest, ME terminal or matching filter chest.
+ * Right-click with an empty hand changes the range, sneak + right-click with an item adds or removes it from its filter.
  */
 public class RobotEntity extends PathfinderMob {
 	public static final int RANGE = 160;
+	/** Ranges a right-click cycles through, in blocks (1, 2, 4, 6, 8 and 10 chunks). */
+	private static final int[] RANGES = {16, 32, 64, 96, 128, RANGE};
+	private static final int MAX_FILTERS = 9;
+	/** Ticks without getting closer before it gives up on an item or chest for a while. */
+	private static final int STUCK_TICKS = 100;
+	private static final int IGNORE_TICKS = 1200;
 	private static final int VERTICAL_RANGE = 48;
 	public static final int DEFAULT_COLOR = 0xF06E1E;
 	public static final int ACTION_TICKS = 14;
@@ -69,6 +82,12 @@ public class RobotEntity extends PathfinderMob {
 	private ItemEntity target;
 	private BlockPos delivery;
 	private int idleTicks;
+	private int range = RANGE;
+	/** Items it collects; empty = everything. */
+	private final List<ItemStack> filter = new ArrayList<>();
+	/** Items and chests it could not reach, with the game time until which it leaves them alone. */
+	private final Map<UUID, Long> ignoredItems = new HashMap<>();
+	private final Map<BlockPos, Long> ignoredChests = new HashMap<>();
 
 	public RobotEntity(EntityType<? extends PathfinderMob> type, Level level) {
 		super(type, level);
@@ -80,7 +99,7 @@ public class RobotEntity extends PathfinderMob {
 		return Mob.createMobAttributes()
 				.add(Attributes.MAX_HEALTH, 10)
 				.add(Attributes.MOVEMENT_SPEED, 0.28)
-				.add(Attributes.FOLLOW_RANGE, 48)
+				.add(Attributes.FOLLOW_RANGE, 64)
 				.add(Attributes.STEP_HEIGHT, 1.0)
 				.add(Attributes.SAFE_FALL_DISTANCE, 24);
 	}
@@ -140,9 +159,14 @@ public class RobotEntity extends PathfinderMob {
 		return getItemBySlot(EquipmentSlot.MAINHAND);
 	}
 
+	/** The items it collects (empty = everything); changed in game with sneak + right-click. */
+	public List<ItemStack> filter() {
+		return filter;
+	}
+
 	/** For debugging and the client test: what the robot is doing right now. */
 	public String describe() {
-		return String.format("pos=%.1f/%.1f/%.1f home=%s target=%s delivery=%s carried=%s action=%d sitting=%s pathDone=%s goals=%s",
+		return String.format("range=%d filter=%s ", range, filter) + String.format("pos=%.1f/%.1f/%.1f home=%s target=%s delivery=%s carried=%s action=%d sitting=%s pathDone=%s goals=%s",
 				getX(), getY(), getZ(), home, target == null ? null : target.position(), delivery, getCarried(), getAction(), isSitting(),
 				getNavigation().isDone(), goalSelector.getAvailableGoals().stream().filter(g -> g.isRunning()).map(g -> g.getGoal().getClass().getSimpleName()).toList());
 	}
@@ -189,14 +213,17 @@ public class RobotEntity extends PathfinderMob {
 		BlockPos h = home();
 		double dx = pos.x - h.getX();
 		double dz = pos.z - h.getZ();
-		return dx * dx + dz * dz <= RANGE * RANGE && Math.abs(pos.y - h.getY()) <= VERTICAL_RANGE;
+		return dx * dx + dz * dz <= range * range && Math.abs(pos.y - h.getY()) <= VERTICAL_RANGE;
 	}
 
 	private ItemEntity findItem() {
 		BlockPos h = home();
-		AABB area = new AABB(h).inflate(RANGE, VERTICAL_RANGE, RANGE);
+		AABB area = new AABB(h).inflate(range, VERTICAL_RANGE, range);
+		long now = level().getGameTime();
+		ignoredItems.values().removeIf(until -> until < now);
 		List<ItemEntity> items = level().getEntitiesOfClass(ItemEntity.class, area,
-				item -> item.isAlive() && !item.hasPickUpDelay() && !CLAIMED.contains(item.getUUID()) && inRange(item.position())
+				item -> item.isAlive() && !item.hasPickUpDelay() && !CLAIMED.contains(item.getUUID()) && !ignoredItems.containsKey(item.getUUID())
+						&& inRange(item.position()) && (filter.isEmpty() || FilterChests.matches(filter, item.getItem()))
 						&& findDelivery(item.getItem()) != null);
 		ItemEntity best = null;
 
@@ -219,6 +246,8 @@ public class RobotEntity extends PathfinderMob {
 
 		String dim = Rooms.id(level());
 		BlockPos best = null;
+		long now = level().getGameTime();
+		ignoredChests.values().removeIf(until -> until < now);
 		Map<Long, UUID> chests = data.chests.get(dim);
 
 		if (chests != null) {
@@ -249,7 +278,7 @@ public class RobotEntity extends PathfinderMob {
 	}
 
 	private BlockPos closer(BlockPos best, BlockPos pos) {
-		if (!inRange(Vec3.atCenterOf(pos))) {
+		if (!inRange(Vec3.atCenterOf(pos)) || ignoredChests.containsKey(pos)) {
 			return best;
 		}
 
@@ -327,6 +356,9 @@ public class RobotEntity extends PathfinderMob {
 	private class WorkGoal extends Goal {
 		private int cooldown;
 		private int repath;
+		private Object lastGoal;
+		private double bestDistance;
+		private int stuckTicks;
 
 		WorkGoal() {
 			setFlags(EnumSet.of(Flag.MOVE, Flag.LOOK));
@@ -385,6 +417,49 @@ public class RobotEntity extends PathfinderMob {
 			release();
 		}
 
+		/**
+		 * Gives up on an item or chest it has not got any closer to for a while (walled in, in lava, out of reach),
+		 * so it does not stand there forever; it leaves that one alone for a minute and takes the next.
+		 */
+		private boolean gaveUp(Object goalKey, double distance) {
+			if (goalKey != lastGoal) {
+				lastGoal = goalKey;
+				bestDistance = distance;
+				stuckTicks = 0;
+				return false;
+			}
+
+			if (distance < bestDistance - 0.5) {
+				bestDistance = distance;
+				stuckTicks = 0;
+				return false;
+			}
+
+			if (++stuckTicks < STUCK_TICKS) {
+				return false;
+			}
+
+			stuckTicks = 0;
+			lastGoal = null;
+			getNavigation().stop();
+			long until = level().getGameTime() + IGNORE_TICKS;
+
+			if (goalKey == delivery) {
+				ignoredChests.put(delivery, until);
+				delivery = findDelivery(getCarried());
+			} else if (goalKey == target) {
+				ignoredItems.put(target.getUUID(), until);
+				release();
+				target = findItem();
+
+				if (target != null) {
+					CLAIMED.add(target.getUUID());
+				}
+			}
+
+			return true;
+		}
+
 		@Override
 		public boolean requiresUpdateEveryTick() {
 			return true;
@@ -404,21 +479,26 @@ public class RobotEntity extends PathfinderMob {
 
 			Vec3 goal;
 			double reach;
+			Object goalKey;
 
 			if (!getCarried().isEmpty() && delivery != null) {
 				goal = Vec3.atCenterOf(delivery);
 				reach = 2.2;
+				goalKey = delivery;
 			} else if (target != null) {
 				goal = target.position();
 				reach = 1.8;
+				goalKey = target;
 			} else {
 				goal = Vec3.atBottomCenterOf(home());
 				reach = 3;
+				goalKey = home();
 			}
 
 			getLookControl().setLookAt(goal.x, goal.y, goal.z);
+			double distance = position().distanceTo(goal);
 
-			if (position().distanceTo(goal) <= reach) {
+			if (distance <= reach || goalKey == delivery && canReachChest(goal)) {
 				if (!getCarried().isEmpty() && delivery != null) {
 					startAction(2);
 				} else if (target != null) {
@@ -427,6 +507,10 @@ public class RobotEntity extends PathfinderMob {
 					getNavigation().stop();
 				}
 
+				return;
+			}
+
+			if (gaveUp(goalKey, distance)) {
 				return;
 			}
 
@@ -441,6 +525,14 @@ public class RobotEntity extends PathfinderMob {
 				getNavigation().moveTo(goal.x, goal.y, goal.z, 1.0);
 			}
 		}
+	}
+
+	/** Chests stacked in a wall: like a player it reaches up to a few blocks above its head. */
+	private boolean canReachChest(Vec3 chest) {
+		double dx = chest.x - getX();
+		double dz = chest.z - getZ();
+		double dy = chest.y - getY();
+		return dx * dx + dz * dz <= 2.5 * 2.5 && dy > -2 && dy < 4.5;
 	}
 
 	@Override
@@ -470,7 +562,7 @@ public class RobotEntity extends PathfinderMob {
 		ItemStack held = player.getItemInHand(hand);
 		var id = BuiltInRegistries.ITEM.getKey(held.getItem()).getPath();
 
-		if (id.endsWith("_dye")) {
+		if (id.endsWith("_dye") && !player.isSecondaryUseActive()) {
 			DyeColor color = DyeColor.byName(id.substring(0, id.length() - 4), null);
 
 			if (color != null) {
@@ -512,7 +604,60 @@ public class RobotEntity extends PathfinderMob {
 			return InteractionResult.SUCCESS;
 		}
 
+		if (hand == InteractionHand.MAIN_HAND && player.isSecondaryUseActive() && !held.isEmpty()) {
+			if (player instanceof ServerPlayer serverPlayer) {
+				toggleFilter(serverPlayer, held);
+			}
+
+			return InteractionResult.SUCCESS;
+		}
+
+		if (hand == InteractionHand.MAIN_HAND && held.isEmpty()) {
+			if (player instanceof ServerPlayer serverPlayer) {
+				int next = 0;
+
+				while (next < RANGES.length && RANGES[next] <= range) {
+					next++;
+				}
+
+				range = RANGES[next % RANGES.length];
+				release();
+				serverPlayer.sendSystemMessage(Component.literal("Reichweite: " + range / 16 + (range == 16 ? " Chunk" : " Chunks")
+						+ " (" + range + " Blöcke)").withStyle(ChatFormatting.GOLD));
+			}
+
+			return InteractionResult.SUCCESS;
+		}
+
 		return super.mobInteract(player, hand);
+	}
+
+	private void toggleFilter(ServerPlayer player, ItemStack held) {
+		boolean removed = filter.removeIf(stack -> ItemStack.isSameItem(stack, held));
+
+		if (!removed) {
+			if (filter.size() >= MAX_FILTERS) {
+				player.sendSystemMessage(Component.literal("Der Filter ist voll (" + MAX_FILTERS + " Items).").withStyle(ChatFormatting.RED));
+				return;
+			}
+
+			filter.add(held.copyWithCount(1));
+		}
+
+		release();
+		MutableComponent names = Component.empty();
+
+		if (filter.isEmpty()) {
+			names.append(Component.literal("alles").withStyle(ChatFormatting.GRAY));
+		}
+
+		for (int i = 0; i < filter.size(); i++) {
+			names.append(i == 0 ? Component.empty() : Component.literal(", ")).append(filter.get(i).getHoverName());
+		}
+
+		player.sendSystemMessage(Component.literal(removed ? "Aus dem Filter genommen: " : "Zum Filter hinzugefügt: ")
+				.append(held.getHoverName()).withStyle(ChatFormatting.GOLD));
+		player.sendSystemMessage(Component.literal("Sammelt: ").withStyle(ChatFormatting.GOLD).append(names));
 	}
 
 	/** Only players (and the void) can hurt it. */
@@ -552,6 +697,8 @@ public class RobotEntity extends PathfinderMob {
 		output.storeNullable("Owner", UUIDUtil.CODEC, owner);
 		output.storeNullable("Home", BlockPos.CODEC, home);
 		output.putInt("Color", getColor());
+		output.putInt("Range", range);
+		output.store("Filter", ItemStack.CODEC.listOf(), List.copyOf(filter));
 	}
 
 	@Override
@@ -560,5 +707,8 @@ public class RobotEntity extends PathfinderMob {
 		owner = input.read("Owner", UUIDUtil.CODEC).orElse(null);
 		home = input.read("Home", BlockPos.CODEC).orElse(null);
 		entityData.set(COLOR, input.getIntOr("Color", DEFAULT_COLOR));
+		range = Math.clamp(input.getIntOr("Range", RANGE), RANGES[0], RANGE);
+		filter.clear();
+		filter.addAll(input.read("Filter", ItemStack.CODEC.listOf()).orElse(List.of()));
 	}
 }

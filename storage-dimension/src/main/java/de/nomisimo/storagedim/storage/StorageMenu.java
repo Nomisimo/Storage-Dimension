@@ -14,6 +14,7 @@ import java.util.WeakHashMap;
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.SimpleContainer;
@@ -26,6 +27,7 @@ import net.minecraft.world.inventory.MenuType;
 import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
+import net.minecraft.world.item.component.CustomData;
 import net.minecraft.world.item.component.ItemLore;
 
 /**
@@ -42,6 +44,8 @@ public class StorageMenu extends ChestMenu {
 	private static final int SLOT_INFO = 49;
 	private static final int SLOT_NEXT = 53;
 	private static final int ICON_MAX = 99;
+	/** Custom data key on a terminal icon with the exact stored amount. */
+	public static final String COUNT_KEY = "storagedim_count";
 	private static final Set<StorageMenu> OPEN = java.util.Collections.newSetFromMap(new WeakHashMap<>());
 	/** Sort order per player, kept until the server restarts. The search starts empty every time. */
 	private static final Map<UUID, Sort> SORTS = new HashMap<>();
@@ -228,7 +232,8 @@ public class StorageMenu extends ChestMenu {
 
 	/**
 	 * The icon of a stored item. A slot can only show up to 99, so stackable items go up to 99 on the icon
-	 * and the exact amount is always part of the name.
+	 * and the exact amount is always part of the name. It also carries the exact amount under {@link #COUNT_KEY},
+	 * which the client mod draws in small digits instead of the 99.
 	 */
 	private static ItemStack displayIcon(StorageNetwork.StoredItem entry) {
 		ItemStack icon = entry.prototype.copyWithCount(1);
@@ -243,6 +248,9 @@ public class StorageMenu extends ChestMenu {
 				.append(entry.prototype.getHoverName())
 				.append(Component.literal(" × " + format(entry.count)).withStyle(ChatFormatting.GOLD))
 				.withStyle(s -> s.withItalic(false)));
+		CompoundTag tag = new CompoundTag();
+		tag.putLong(COUNT_KEY, entry.count);
+		icon.set(DataComponents.CUSTOM_DATA, CustomData.of(tag));
 		return icon;
 	}
 

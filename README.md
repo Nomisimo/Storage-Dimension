@@ -9,7 +9,7 @@ Ein Fabric-Mod für **Minecraft 26.1.2**. Seit Version 0.4.0 (Sammelroboter, eig
 ## Was der Mod macht
 
 - **Dimensionskiste:** Eine violette Kiste mit Endsternen. Wer sie öffnet und Zugriff auf den Speicher hat, wird in den Lagerraum in der Storage Dimension gezogen. Es können beliebig viele Spieler gleichzeitig drin sein. Wer keinen Zugriff hat, sieht nur ein leeres Kisten-Inventar, in dem nichts gelagert werden kann.
-- **ME-Speicher:** Die Enderkiste im Raum ist das Terminal. Dort liegen alle Items ohne Stapel- oder Slot-Grenzen. Die genaue Menge steht im Namen jedes Items (z. B. „Bruchstein × 1.234“), die Zahl auf dem Symbol geht bis 99.
+- **ME-Speicher:** Die Enderkiste im Raum ist das Terminal. Dort liegen alle Items ohne Stapel- oder Slot-Grenzen. Die genaue Menge steht im Namen jedes Items (z. B. „Bruchstein × 1.234“) und in kleiner Schrift auf dem Symbol, ohne Obergrenze (ab 100.000 abgekürzt, z. B. 123k oder 1.2M).
   - Linksklick nimmt einen Stapel, Rechtsklick einen halben, Shift-Klick schiebt ihn ins Inventar.
   - Item auf dem Cursor in das Terminal klicken oder Shift-Klick im eigenen Inventar lagert ein.
   - Der Trichter-Knopf lagert das ganze Inventar (ohne Hotbar) ein.
@@ -17,8 +17,11 @@ Ein Fabric-Mod für **Minecraft 26.1.2**. Seit Version 0.4.0 (Sammelroboter, eig
   - Die Suche ist beim nächsten Öffnen wieder leer, die Sortierung bleibt.
 - **Hopper-Eingang:** Trichter, die in eine Dimensionskiste oder Filterkiste zeigen, liefern direkt in den Speicher. Zum Anbauen mit einem Item in der Hand schleichen.
 - **Maschinen anderer Mods (z. B. Tech Reborn, Advanced Reborn):** Dimensions- und Filterkisten sind über die Fabric-Transfer-API angebunden. Was eine Maschine hineinschiebt, landet direkt im ME-Speicher, und aus einer Filterkiste können Maschinen die Filter-Items herausziehen.
-- **Sammelroboter:** Ein kleiner Roboter mit Schnabel. Mit dem Roboter-Item auf einen Block klicken stellt ihn hin, die Stelle ist sein Zuhause. Er sammelt im Umkreis von 160 Blöcken (10 Chunks) herumliegende Items ein, immer einen Stapel im Schnabel, und bringt ihn zur nächsten Dimensionskiste, zum ME-Terminal oder zu einer passenden Filterkiste. Er läuft Stufen hoch und runter. Ohne Arbeit setzt er sich hin.
+- **Sammelroboter:** Ein kleiner Roboter mit Schnabel. Mit dem Roboter-Item auf einen Block klicken stellt ihn hin, die Stelle ist sein Zuhause. Er sammelt im Umkreis von bis zu 160 Blöcken (10 Chunks) herumliegende Items ein, immer einen Stapel im Schnabel, und bringt ihn zur nächsten Dimensionskiste, zum ME-Terminal oder zu einer passenden Filterkiste. Er läuft Stufen hoch und runter. Ohne Arbeit setzt er sich hin.
   - Farbstoff auf den Roboter färbt Schnabel und Füße.
+  - Rechtsklick mit leerer Hand stellt die Reichweite um: 1, 2, 4, 6, 8 oder 10 Chunks.
+  - Schleichen + Rechtsklick mit einem Item setzt es auf seinen Filter oder nimmt es wieder herunter (bis zu 9 Items). Mit Filter sammelt er nur diese Items, ohne Filter alles.
+  - Kommt er an ein Item oder eine Kiste nicht heran (eingemauert, in Lava, zu hoch), lässt er sie nach ein paar Sekunden für eine Minute in Ruhe und holt das nächste. Kisten erreicht er bis etwa drei Blöcke über dem Boden.
   - Schleichen + Rechtsklick mit leerer Hand nimmt ihn wieder auf, samt dem Item im Schnabel.
   - Nur Spieler können ihm schaden.
   - Er arbeitet nur in geladenen Chunks.

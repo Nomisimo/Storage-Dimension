@@ -79,6 +79,30 @@ public class ClientScreenshots implements FabricClientGameTest {
 		});
 	}
 
+	private static void drop(ServerLevel level, double x, double y, double z, ItemStack stack) {
+		ItemEntity item = new ItemEntity(level, x, y, z, stack, 0, 0, 0);
+		item.setNoPickUpDelay();
+		level.addFreshEntity(item);
+	}
+
+	/** Large amounts in the terminal, drawn in small digits by the client. */
+	private static void terminalCounts(ClientGameTestContext context, TestSingleplayerContext world) {
+		world.getServer().runOnServer(server -> {
+			ServerPlayer player = server.getPlayerList().getPlayers().get(0);
+			var network = StorageData.get().networkFor(player.getUUID());
+			network.insert(new ItemStack(Items.STONE, 1_234_567));
+			network.insert(new ItemStack(Items.DIRT, 45_000));
+			network.insert(new ItemStack(Items.DIAMOND, 150));
+			network.insert(new ItemStack(Items.IRON_SWORD));
+			network.insert(new ItemStack(Items.IRON_SWORD));
+			de.nomisimo.storagedim.storage.StorageMenu.open(player, network);
+		});
+		context.waitTicks(15);
+		context.takeScreenshot("terminal-counts");
+		world.getServer().runOnServer(server -> server.getPlayerList().getPlayers().get(0).closeContainer());
+		context.waitTicks(5);
+	}
+
 	/** Drags a stack across two inventory slots and a display slot in the open terminal, then double-click collects it again. */
 	private static void dragInTerminal(ClientGameTestContext context, TestSingleplayerContext world) {
 		world.getServer().runOnServer(server -> {
@@ -182,10 +206,45 @@ public class ClientScreenshots implements FabricClientGameTest {
 			recipe(context, world, "me_backpack", of(Items.BUNDLE), upgrade);
 
 			dragInTerminal(context, world);
+			terminalCounts(context, world);
 
-			context.waitTicks(200);
+			// Filter on cobblestone; one cobblestone lies walled in glass right next to it, one further away in the open.
+			world.getServer().runOnServer(server -> {
+				ServerPlayer player = server.getPlayerList().getPlayers().get(0);
+				ServerLevel level = player.level();
+				BlockPos base = player.blockPosition();
+
+				for (RobotEntity robot : level.getEntities(Robots.ROBOT, entity -> true)) {
+					robot.filter().add(new ItemStack(Items.COBBLESTONE));
+				}
+
+				BlockPos cage = base.offset(-4, 0, -1);
+
+				for (int dx = -1; dx <= 1; dx++) {
+					for (int dy = -1; dy <= 1; dy++) {
+						for (int dz = -1; dz <= 1; dz++) {
+							level.setBlockAndUpdate(cage.offset(dx, dy, dz), dx == 0 && dy == 0 && dz == 0 ? Blocks.AIR.defaultBlockState() : Blocks.GLASS.defaultBlockState());
+						}
+					}
+				}
+
+				drop(level, cage.getX() + 0.5, cage.getY(), cage.getZ() + 0.5, new ItemStack(Items.COBBLESTONE, 5));
+				drop(level, base.getX() + 4.5, base.getY() + 0.2, base.getZ() - 1.5, new ItemStack(Items.COBBLESTONE, 7));
+				drop(level, base.getX() + 3.5, base.getY() + 0.2, base.getZ() - 1.5, new ItemStack(Items.OAK_LOG, 3));
+			});
+
+			for (int t = 0; t < 4; t++) {
+				context.waitTicks(100);
+				logRobots(world);
+			}
+
 			context.takeScreenshot("storagedim-idle");
-			logRobots(world);
+			world.getServer().runOnServer(server -> {
+				ServerLevel level = server.getPlayerList().getPlayers().get(0).level();
+				BlockPos base = server.getPlayerList().getPlayers().get(0).blockPosition();
+				System.out.println("STORAGEDIM ITEMS left " + level.getEntitiesOfClass(ItemEntity.class, new net.minecraft.world.phys.AABB(base).inflate(20))
+						.stream().map(item -> item.getItem().toString()).toList());
+			});
 		}
 	}
 }
