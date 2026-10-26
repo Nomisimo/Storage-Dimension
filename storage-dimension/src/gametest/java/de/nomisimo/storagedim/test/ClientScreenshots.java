@@ -99,11 +99,16 @@ public class ClientScreenshots implements FabricClientGameTest {
 	 * A third robot belongs to a station without any chest in range and should sit sadly. Then: the robot list in the
 	 * station screen, the recall button (a walled-in robot teleports), rain (umbrellas), diving and the Jade tooltip.
 	 */
+	/** Where the player stood when the station scene started; the station is two blocks north of it. */
+	private static BlockPos stationBase;
+
 	private static void stationTest(ClientGameTestContext context, TestSingleplayerContext world) {
 		world.getServer().runOnServer(server -> {
 			ServerPlayer player = server.getPlayerList().getPlayers().get(0);
 			ServerLevel level = player.level();
 			BlockPos base = player.blockPosition();
+			// robots bump into the player now and then; the scene keeps to where it started
+			stationBase = base;
 			BlockPos station = base.offset(0, 0, -2);
 			level.setBlockAndUpdate(station, RobotStationBlock.BLOCK.defaultBlockState());
 			StationMenu.open(player, station);
@@ -127,7 +132,7 @@ public class ClientScreenshots implements FabricClientGameTest {
 		world.getServer().runOnServer(server -> {
 			ServerPlayer player = server.getPlayerList().getPlayers().get(0);
 			ServerLevel level = player.level();
-			BlockPos base = player.blockPosition();
+			BlockPos base = stationBase;
 			ItemStack configured = player.containerMenu.getSlot(StationMenu.SLOT_OUTPUT).getItem().copy();
 			player.containerMenu.getSlot(StationMenu.SLOT_OUTPUT).set(ItemStack.EMPTY);
 			player.closeContainer();
@@ -182,7 +187,7 @@ public class ClientScreenshots implements FabricClientGameTest {
 		context.takeScreenshot("station-idle");
 		world.getServer().runOnServer(server -> {
 			ServerPlayer player = server.getPlayerList().getPlayers().get(0);
-			BlockPos base = player.blockPosition();
+			BlockPos base = stationBase;
 			System.out.println("STORAGEDIM PLANKS left " + player.level().getEntitiesOfClass(ItemEntity.class, new net.minecraft.world.phys.AABB(base).inflate(20),
 					item -> item.getItem().is(Items.OAK_PLANKS)).size());
 			System.out.println("STORAGEDIM STATION robots=" + StorageData.get().stationRobots(Rooms.id(player.level()), base.offset(0, 0, -2)));
@@ -195,7 +200,7 @@ public class ClientScreenshots implements FabricClientGameTest {
 		// recall: everybody sets off at once ("auf dem Weg"), the walled-in robot has no way and teleports
 		world.getServer().runOnServer(server -> {
 			ServerPlayer player = server.getPlayerList().getPlayers().get(0);
-			BlockPos base = player.blockPosition();
+			BlockPos base = stationBase;
 			drop(player.level(), base.getX() - 6.5, base.getY() + 0.2, base.getZ() + 6.5, new ItemStack(Items.OAK_PLANKS, 8));
 			((StationMenu) player.containerMenu).action(StationMenu.ACTION_RECALL, 0, "");
 		});
@@ -216,7 +221,7 @@ public class ClientScreenshots implements FabricClientGameTest {
 			ServerPlayer player = server.getPlayerList().getPlayers().get(0);
 			player.closeContainer();
 			standing[0] = player.position();
-			BlockPos station = player.blockPosition().offset(0, 0, -2);
+			BlockPos station = stationBase.offset(0, 0, -2);
 			lookAt(player, Vec3.atBottomCenterOf(station), 5);
 		});
 		context.waitTicks(40);
@@ -257,7 +262,7 @@ public class ClientScreenshots implements FabricClientGameTest {
 		world.getServer().runOnServer(server -> {
 			ServerPlayer player = server.getPlayerList().getPlayers().get(0);
 			ServerLevel level = player.level();
-			BlockPos station = player.blockPosition().offset(0, 0, -2);
+			BlockPos station = stationBase.offset(0, 0, -2);
 			BlockPos column = station.offset(-8, 0, 6);
 			BlockPos pool = new BlockPos(column.getX(), level.getHeight(net.minecraft.world.level.levelgen.Heightmap.Types.MOTION_BLOCKING, column.getX(), column.getZ()), column.getZ());
 
