@@ -1,1 +1,14 @@
--c net.minecraft.client.gui.screens.inventory.AbstractContainerScreen
+-p net.minecraft.world.level.block.state.BlockBehaviour$Properties
+-p net.minecraft.world.level.block.TransparentBlock
+-p net.minecraft.world.level.block.HalfTransparentBlock
+-p net.minecraft.world.phys.shapes.EntityCollisionContext
+-p net.minecraft.world.phys.shapes.CollisionContext
+-p net.minecraft.world.level.pathfinder.WalkNodeEvaluator
+-p net.minecraft.world.level.pathfinder.PathfindingContext
+-p net.minecraft.world.level.pathfinder.PathType
+-p net.minecraft.world.entity.ai.navigation.GroundPathNavigation
+-p net.minecraft.world.entity.ai.navigation.PathNavigation
+-p net.minecraft.world.level.pathfinder.Path
+-p net.fabricmc.fabric.api.client.rendering.v1.BlockRenderLayerMap
+-p net.minecraft.client.renderer.chunk.ChunkSectionLayer
+-p net.minecraft.world.item.BlockItem
