@@ -1,8 +1,3 @@
--p net.fabricmc.fabric.api.client.screen.v1.ScreenEvents
--p net.fabricmc.fabric.api.client.screen.v1.ScreenEvents$AfterExtract
--p net.fabricmc.fabric.api.client.screen.v1.ScreenEvents$AfterRender
--p net.minecraft.client.gui.GuiGraphicsExtractor
--p net.minecraft.client.gui.screens.inventory.AbstractContainerScreen
--p net.minecraft.world.entity.ai.util.DefaultRandomPos
--p net.minecraft.world.level.storage.ValueOutput
--p net.minecraft.world.level.storage.ValueInput
+-c -p net.minecraft.client.gui.screens.inventory.AbstractContainerScreen
+-p net.minecraft.world.item.component.CustomData
+-p org.joml.Matrix3x2fStack
