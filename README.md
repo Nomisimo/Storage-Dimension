@@ -9,7 +9,7 @@ Ein Fabric-Mod für **Minecraft 26.1.2**. Seit Version 0.4.0 (Sammelroboter, eig
 ## Was der Mod macht
 
 - **Dimensionskiste:** Eine violette Kiste mit Endsternen. Wer sie öffnet und Zugriff auf den Speicher hat, wird in den Lagerraum in der Storage Dimension gezogen. Es können beliebig viele Spieler gleichzeitig drin sein. Wer keinen Zugriff hat, sieht nur ein leeres Kisten-Inventar, in dem nichts gelagert werden kann.
-- **ME-Speicher:** Die Enderkiste im Raum ist das Terminal. Dort liegen alle Items ohne Stapel- oder Slot-Grenzen. Die genaue Menge steht im Namen jedes Items (z. B. „Bruchstein × 1.234“) und in kleiner Schrift auf dem Symbol, ohne Obergrenze (ab 100.000 abgekürzt, z. B. 123k oder 1.2M).
+- **ME-Speicher:** Die Enderkiste im Raum ist das Terminal. Dort liegen alle Items ohne Stapel- oder Slot-Grenzen. Die genaue Menge steht im Namen jedes Items (z. B. „Bruchstein × 1.234“) und in kleiner Schrift auf dem Symbol, ohne Obergrenze (ab 1.000 abgekürzt, z. B. 1k, 1.2k, 45k oder 1.2M).
   - Linksklick nimmt einen Stapel, Rechtsklick einen halben, Shift-Klick schiebt ihn ins Inventar.
   - Item auf dem Cursor in das Terminal klicken oder Shift-Klick im eigenen Inventar lagert ein.
   - Der Trichter-Knopf lagert das ganze Inventar (ohne Hotbar) ein.
@@ -21,10 +21,12 @@ Ein Fabric-Mod für **Minecraft 26.1.2**. Seit Version 0.4.0 (Sammelroboter, eig
   - Farbstoff auf den Roboter färbt Schnabel und Füße.
   - Rechtsklick mit leerer Hand stellt die Reichweite um: 1, 2, 4, 6, 8 oder 10 Chunks.
   - Schleichen + Rechtsklick mit einem Item setzt es auf seinen Filter oder nimmt es wieder herunter (bis zu 9 Items). Mit Filter sammelt er nur diese Items, ohne Filter alles.
-  - Kommt er an ein Item oder eine Kiste nicht heran (eingemauert, in Lava, zu hoch), lässt er sie nach ein paar Sekunden für eine Minute in Ruhe und holt das nächste. Kisten erreicht er bis etwa drei Blöcke über dem Boden.
+  - Bevor er losläuft, plant er den ganzen Weg und folgt ihm. Gibt es keinen Weg (eingemauert, hinter einer Roboter-Barriere, über Lava), lässt er das Item sofort für eine Minute in Ruhe und nimmt das nächste. Bleibt er unterwegs trotzdem hängen, gibt er nach 5 Sekunden auf. Kisten erreicht er bis etwa drei Blöcke über dem Boden.
+  - Neu fallengelassene Items bemerkt er nach spätestens einer halben Sekunde.
   - Schleichen + Rechtsklick mit leerer Hand nimmt ihn wieder auf, samt dem Item im Schnabel.
   - Nur Spieler können ihm schaden.
   - Er arbeitet nur in geladenen Chunks.
+- **Roboter-Barriere:** Ein durchsichtiger Plasma-Schild. Spieler, Tiere und Items gehen einfach hindurch, Sammelroboter nicht, und sie planen auch keinen Weg hindurch oder darüber. Gut für Türen und Bereiche, aus denen die Roboter nichts holen sollen. Rezept: 8 Glas um eine Amethystscherbe ergibt 8 Barrieren.
 
   ![Der Sammelroboter holt Items und bringt sie zu den Kisten](docs/screenshots/roboter-bei-der-arbeit.png)
 
@@ -65,6 +67,10 @@ ME-Rucksack (formlos: beliebiges Bündel + ME-Upgrade):
 
 ![Rezept ME-Rucksack](docs/screenshots/rezept-me-backpack.png)
 
+Roboter-Barriere (8 Glas um eine Amethystscherbe, ergibt 8):
+
+![Rezept Roboter-Barriere](docs/screenshots/rezept-robot-barrier.png)
+
 Alle Rezepte stehen auch in [JEI](https://modrinth.com/mod/jei).
 
 ## Befehle
@@ -83,6 +89,7 @@ Alle Rezepte stehen auch in [JEI](https://modrinth.com/mod/jei).
 | `/storage give terminal` | (OP) Gibt ein ME-Terminal |
 | `/storage give filter` | (OP) Gibt eine Filterkiste |
 | `/storage give robot` | (OP) Gibt einen Sammelroboter |
+| `/storage give barrier` | (OP) Gibt 16 Roboter-Barrieren |
 
 ## Bauen
 
@@ -107,7 +114,7 @@ Die Daten liegen in `world/storagedim.json`.
 
 Im Ordner `storagedim-tb/` liegt ein kleiner Zusatz-Mod. Er fügt ein echtes **ME-Upgrade** für den Upgrade-Slot von Traveler's Backpack hinzu.
 
-- Rezept (formlos): Leeres Upgrade (Traveler's Backpack), Enderauge, 2× Amethystscherbe, Redstoneblock.
+- Rezept (formlos): Leeres Upgrade (Traveler's Backpack), Enderauge, 2× Amethystscherbe, Redstoneblock. Mit dem Zusatz-Mod ergibt auch das normale ME-Upgrade-Rezept (mit Papier) dieses Upgrade. Es gibt dann nur noch ein ME-Upgrade: Es passt in den Upgrade-Slot und macht mit einem Bündel auch einen ME-Rucksack.
 - Upgrade in einen Upgrade-Slot des Rucksacks legen. Linksklick auf das ME-Symbol im Rucksack-Fenster öffnet den ME-Speicher, Rechtsklick nimmt das Upgrade wieder heraus.
 - Der Rucksack muss nicht in der Hand sein: auf dem Rücken tragen und mit der Rucksack-Taste von Traveler's Backpack (Standard **B**) öffnen reicht.
 - **Crafting aus dem ME-Speicher:** Hat der Rucksack zusätzlich das Crafting-Upgrade, holt der „+“-Knopf von [JEI](https://modrinth.com/mod/jei) fehlende Zutaten auch aus dem ME-Speicher, genauso wie aus Inventar und Rucksack. Shift + „+“ füllt das Raster für so viele Durchgänge wie möglich (bis zu einem Stapel). Was vorher im Raster lag, kommt zurück ins Inventar oder, wenn das voll ist, in den Speicher.

@@ -46,27 +46,38 @@ public class StorageJeiPlugin implements IModPlugin {
 
 		RegistryOps<JsonElement> ops = minecraft.getConnection().registryAccess().createSerializationContext(JsonOps.INSTANCE);
 		List<RecipeHolder<CraftingRecipe>> recipes = new ArrayList<>();
-		Path dir = FabricLoader.getInstance().getModContainer("storagedim").flatMap(mod -> mod.findPath("data/storagedim/recipe")).orElse(null);
+		// our own recipes and, if installed, those of the Traveler's Backpack add-on
+		for (String mod : List.of("storagedim", "storagedim_tb")) {
+			Path dir = FabricLoader.getInstance().getModContainer(mod).flatMap(container -> container.findPath("data/" + mod + "/recipe")).orElse(null);
 
-		if (dir == null) {
-			return;
-		}
-
-		try (Stream<Path> files = Files.list(dir)) {
-			for (Path file : files.filter(f -> f.toString().endsWith(".json")).sorted().toList()) {
-				String name = file.getFileName().toString().replace(".json", "");
-
-				try (Reader reader = Files.newBufferedReader(file)) {
-					Recipe.CODEC.parse(ops, JsonParser.parseReader(reader)).resultOrPartial(StorageDimensionMod.LOGGER::warn).ifPresent(recipe -> {
-						if (recipe instanceof CraftingRecipe crafting) {
-							recipes.add(new RecipeHolder<>(ResourceKey.create(Registries.RECIPE,
-									Identifier.fromNamespaceAndPath("storagedim", name)), crafting));
-						}
-					});
-				}
+			if (dir == null) {
+				continue;
 			}
-		} catch (Exception e) {
-			StorageDimensionMod.LOGGER.warn("Rezepte für JEI nicht lesbar", e);
+
+			try (Stream<Path> files = Files.list(dir)) {
+				for (Path file : files.filter(f -> f.toString().endsWith(".json")).sorted().toList()) {
+					String name = file.getFileName().toString().replace(".json", "");
+
+					try (Reader reader = Files.newBufferedReader(file)) {
+						JsonElement json = JsonParser.parseReader(reader);
+
+						// the only condition we use: "not when the add-on is installed"
+						if (json.isJsonObject() && json.getAsJsonObject().has("fabric:load_conditions")
+								&& FabricLoader.getInstance().isModLoaded("storagedim_tb")) {
+							continue;
+						}
+
+						Recipe.CODEC.parse(ops, json).resultOrPartial(StorageDimensionMod.LOGGER::warn).ifPresent(recipe -> {
+							if (recipe instanceof CraftingRecipe crafting) {
+								recipes.add(new RecipeHolder<>(ResourceKey.create(Registries.RECIPE,
+										Identifier.fromNamespaceAndPath(mod, name)), crafting));
+							}
+						});
+					}
+				}
+			} catch (Exception e) {
+				StorageDimensionMod.LOGGER.warn("Rezepte für JEI nicht lesbar", e);
+			}
 		}
 
 		registration.addRecipes(RecipeTypes.CRAFTING, recipes);

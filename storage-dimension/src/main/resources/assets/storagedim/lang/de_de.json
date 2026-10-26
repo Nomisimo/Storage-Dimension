@@ -1,4 +1,6 @@
 {
   "item.storagedim.robot": "Sammelroboter",
-  "entity.storagedim.robot": "Sammelroboter"
+  "entity.storagedim.robot": "Sammelroboter",
+  "block.storagedim.robot_barrier": "Roboter-Barriere",
+  "item.storagedim.robot_barrier": "Roboter-Barriere"
 }

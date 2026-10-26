@@ -13,7 +13,7 @@ import net.minecraft.core.component.DataComponents;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.component.CustomData;
 
-/** Draws the amount of a terminal icon in half-size digits, shortened to k, M, G … once it gets long. */
+/** Draws the amount of a terminal icon in half-size digits, shortened to k, M, G … from 1000 on. */
 @Environment(EnvType.CLIENT)
 public final class TerminalCounts {
 	private static final String[] UNITS = {"k", "M", "G", "T", "P", "E"};
@@ -27,9 +27,9 @@ public final class TerminalCounts {
 		return data == null ? -1 : data.copyTag().getLongOr(StorageMenu.COUNT_KEY, -1);
 	}
 
-	/** Up to 99999 in full, then 123k, 1.2M and so on: at most five characters, which fit a slot at half size. */
+	/** Up to 999 in full, then 1k, 1.2k, 12k, 123k, 1.2M and so on (rounded down, so 999 never shows as 1k). */
 	static String format(long count) {
-		if (count < 100_000) {
+		if (count < 1000) {
 			return Long.toString(count);
 		}
 
@@ -41,7 +41,8 @@ public final class TerminalCounts {
 			unit++;
 		}
 
-		return (value < 10 ? String.format(Locale.ROOT, "%.1f", value) : Long.toString((long) value)) + UNITS[unit];
+		String number = value < 10 ? String.format(Locale.ROOT, "%.1f", Math.floor(value * 10) / 10) : Long.toString((long) value);
+		return (number.endsWith(".0") ? number.substring(0, number.length() - 2) : number) + UNITS[unit];
 	}
 
 	public static void draw(GuiGraphicsExtractor graphics, Font font, long count, int x, int y) {

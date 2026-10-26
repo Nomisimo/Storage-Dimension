@@ -41,12 +41,19 @@ import net.minecraft.world.entity.ai.goal.Goal;
 import net.minecraft.world.entity.ai.goal.LookAtPlayerGoal;
 import net.minecraft.world.entity.ai.goal.RandomLookAroundGoal;
 import net.minecraft.world.entity.ai.goal.WaterAvoidingRandomStrollGoal;
+import net.minecraft.world.entity.ai.navigation.GroundPathNavigation;
+import net.minecraft.world.entity.ai.navigation.PathNavigation;
 import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.DyeColor;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.pathfinder.Path;
+import net.minecraft.world.level.pathfinder.PathFinder;
+import net.minecraft.world.level.pathfinder.PathType;
+import net.minecraft.world.level.pathfinder.PathfindingContext;
+import net.minecraft.world.level.pathfinder.WalkNodeEvaluator;
 import net.minecraft.world.level.storage.ValueInput;
 import net.minecraft.world.level.storage.ValueOutput;
 import net.minecraft.world.phys.AABB;
@@ -65,6 +72,10 @@ public class RobotEntity extends PathfinderMob {
 	/** Ticks without getting closer before it gives up on an item or chest for a while. */
 	private static final int STUCK_TICKS = 100;
 	private static final int IGNORE_TICKS = 1200;
+	/** How many of the closest items or chests it checks for a way per search. */
+	private static final int PATH_CHECKS = 4;
+	/** Ticks between two searches for dropped items. */
+	private static final int SEARCH_TICKS = 10;
 	private static final int VERTICAL_RANGE = 48;
 	public static final int DEFAULT_COLOR = 0xF06E1E;
 	public static final int ACTION_TICKS = 14;
@@ -88,6 +99,9 @@ public class RobotEntity extends PathfinderMob {
 	/** Items and chests it could not reach, with the game time until which it leaves them alone. */
 	private final Map<UUID, Long> ignoredItems = new HashMap<>();
 	private final Map<BlockPos, Long> ignoredChests = new HashMap<>();
+	/** The way to the current item or chest, worked out once when it was chosen. */
+	private Path plannedPath;
+	private long nextSearch;
 
 	public RobotEntity(EntityType<? extends PathfinderMob> type, Level level) {
 		super(type, level);
@@ -99,7 +113,7 @@ public class RobotEntity extends PathfinderMob {
 		return Mob.createMobAttributes()
 				.add(Attributes.MAX_HEALTH, 10)
 				.add(Attributes.MOVEMENT_SPEED, 0.28)
-				.add(Attributes.FOLLOW_RANGE, 64)
+				.add(Attributes.FOLLOW_RANGE, RANGE + 16)
 				.add(Attributes.STEP_HEIGHT, 1.0)
 				.add(Attributes.SAFE_FALL_DISTANCE, 24);
 	}
@@ -216,24 +230,68 @@ public class RobotEntity extends PathfinderMob {
 		return dx * dx + dz * dz <= range * range && Math.abs(pos.y - h.getY()) <= VERTICAL_RANGE;
 	}
 
+	/**
+	 * The closest item it can walk to. Items whose way is blocked (walled in, behind a robot barrier, across lava)
+	 * are found out here, before it sets off, and left alone for a minute.
+	 */
 	private ItemEntity findItem() {
+		// a way can only be worked out standing (or swimming); try again on the next search
+		if (!onGround() && !isInLiquid()) {
+			return null;
+		}
+
 		BlockPos h = home();
 		AABB area = new AABB(h).inflate(range, VERTICAL_RANGE, range);
 		long now = level().getGameTime();
 		ignoredItems.values().removeIf(until -> until < now);
-		List<ItemEntity> items = level().getEntitiesOfClass(ItemEntity.class, area,
-				item -> item.isAlive() && !item.hasPickUpDelay() && !CLAIMED.contains(item.getUUID()) && !ignoredItems.containsKey(item.getUUID())
+		List<ItemEntity> items = new ArrayList<>(level().getEntitiesOfClass(ItemEntity.class, area,
+				item -> item.isAlive() && !CLAIMED.contains(item.getUUID()) && !ignoredItems.containsKey(item.getUUID())
 						&& inRange(item.position()) && (filter.isEmpty() || FilterChests.matches(filter, item.getItem()))
-						&& findDelivery(item.getItem()) != null);
-		ItemEntity best = null;
+						&& findDelivery(item.getItem()) != null));
+		items.sort(java.util.Comparator.comparingDouble(this::distanceToSqr));
 
-		for (ItemEntity item : items) {
-			if (best == null || distanceToSqr(item) < distanceToSqr(best)) {
-				best = item;
+		for (int i = 0; i < Math.min(items.size(), PATH_CHECKS); i++) {
+			ItemEntity item = items.get(i);
+			Path path = getNavigation().createPath(item, 1);
+
+			if (path != null && path.canReach()) {
+				plannedPath = path;
+				return item;
 			}
+
+			ignoredItems.put(item.getUUID(), now + IGNORE_TICKS);
 		}
 
-		return best;
+		return null;
+	}
+
+	/** Picks the closest chest for what it carries that it can walk to; unreachable ones are left alone for a minute. */
+	private BlockPos planDelivery() {
+		// a way can only be worked out standing (or swimming); try again on the next search
+		if (!onGround() && !isInLiquid()) {
+			return null;
+		}
+
+		long now = level().getGameTime();
+
+		for (int i = 0; i < PATH_CHECKS; i++) {
+			BlockPos chest = findDelivery(getCarried());
+
+			if (chest == null) {
+				return null;
+			}
+
+			Path path = getNavigation().createPath(chest, 3);
+
+			if (path != null && path.canReach()) {
+				plannedPath = path;
+				return chest;
+			}
+
+			ignoredChests.put(chest, now + IGNORE_TICKS);
+		}
+
+		return null;
 	}
 
 	/** The closest chest in range that takes this stack, or null. */
@@ -346,6 +404,8 @@ public class RobotEntity extends PathfinderMob {
 	}
 
 	private void release() {
+		plannedPath = null;
+
 		if (target != null) {
 			CLAIMED.remove(target.getUUID());
 			target = null;
@@ -355,7 +415,6 @@ public class RobotEntity extends PathfinderMob {
 	/** Goes for items, carries them home, or walks back when it strayed too far. */
 	private class WorkGoal extends Goal {
 		private int cooldown;
-		private int repath;
 		private Object lastGoal;
 		private double bestDistance;
 		private int stuckTicks;
@@ -374,7 +433,7 @@ public class RobotEntity extends PathfinderMob {
 				return false;
 			}
 
-			cooldown = 40;
+			cooldown = SEARCH_TICKS;
 			return hasWork();
 		}
 
@@ -385,14 +444,16 @@ public class RobotEntity extends PathfinderMob {
 
 		private boolean hasWork() {
 			if (!getCarried().isEmpty()) {
-				if (delivery == null) {
-					delivery = findDelivery(getCarried());
+				if (delivery == null && level().getGameTime() >= nextSearch) {
+					nextSearch = level().getGameTime() + SEARCH_TICKS;
+					delivery = planDelivery();
 				}
 
 				return delivery != null;
 			}
 
-			if (target == null || !target.isAlive()) {
+			if ((target == null || !target.isAlive()) && level().getGameTime() >= nextSearch) {
+				nextSearch = level().getGameTime() + SEARCH_TICKS;
 				release();
 				target = findItem();
 
@@ -408,7 +469,6 @@ public class RobotEntity extends PathfinderMob {
 		public void start() {
 			setSitting(false);
 			idleTicks = 0;
-			repath = 0;
 		}
 
 		@Override
@@ -446,7 +506,7 @@ public class RobotEntity extends PathfinderMob {
 
 			if (goalKey == delivery) {
 				ignoredChests.put(delivery, until);
-				delivery = findDelivery(getCarried());
+				delivery = planDelivery();
 			} else if (goalKey == target) {
 				ignoredItems.put(target.getUUID(), until);
 				release();
@@ -521,10 +581,45 @@ public class RobotEntity extends PathfinderMob {
 				return;
 			}
 
-			if (--repath <= 0 || getNavigation().isDone()) {
-				repath = 30;
+			// follow the way worked out when the goal was chosen; only look for a new one when it ends early
+			if (plannedPath != null) {
+				getNavigation().moveTo(plannedPath, 1.0);
+				plannedPath = null;
+			} else if (getNavigation().isDone()) {
 				getNavigation().moveTo(goal.x, goal.y, goal.z, 1.0);
 			}
+		}
+	}
+
+	/** Paths may be as long as its range, so it can work out the whole way to anything in range. */
+	private void applyRange() {
+		getAttribute(Attributes.FOLLOW_RANGE).setBaseValue(range + 16);
+		getNavigation().updatePathfinderMaxVisitedNodes();
+	}
+
+	/** Walks like any mob, but treats robot barriers as walls when working out a way. */
+	@Override
+	protected PathNavigation createNavigation(Level level) {
+		return new GroundPathNavigation(this, level) {
+			@Override
+			protected PathFinder createPathFinder(int maxVisitedNodes) {
+				nodeEvaluator = new BarrierAwareEvaluator();
+				nodeEvaluator.setCanPassDoors(true);
+				return new PathFinder(nodeEvaluator, maxVisitedNodes);
+			}
+		};
+	}
+
+	private static final class BarrierAwareEvaluator extends WalkNodeEvaluator {
+		@Override
+		public PathType getPathType(PathfindingContext context, int x, int y, int z) {
+			// neither through a barrier nor on top of one
+			if (context.getBlockState(new BlockPos(x, y, z)).is(RobotBarrierBlock.BLOCK)
+					|| context.getBlockState(new BlockPos(x, y - 1, z)).is(RobotBarrierBlock.BLOCK)) {
+				return PathType.BLOCKED;
+			}
+
+			return super.getPathType(context, x, y, z);
 		}
 	}
 
@@ -622,6 +717,7 @@ public class RobotEntity extends PathfinderMob {
 				}
 
 				range = RANGES[next % RANGES.length];
+				applyRange();
 				release();
 				serverPlayer.sendSystemMessage(Component.literal("Reichweite: " + range / 16 + (range == 16 ? " Chunk" : " Chunks")
 						+ " (" + range + " Blöcke)").withStyle(ChatFormatting.GOLD));
@@ -709,6 +805,7 @@ public class RobotEntity extends PathfinderMob {
 		home = input.read("Home", BlockPos.CODEC).orElse(null);
 		entityData.set(COLOR, input.getIntOr("Color", DEFAULT_COLOR));
 		range = Math.clamp(input.getIntOr("Range", RANGE), RANGES[0], RANGE);
+		applyRange();
 		filter.clear();
 		filter.addAll(input.read("Filter", ItemStack.CODEC.listOf()).orElse(List.of()));
 	}

@@ -1,4 +1,6 @@
 {
   "item.storagedim.robot": "Collector Robot",
-  "entity.storagedim.robot": "Collector Robot"
+  "entity.storagedim.robot": "Collector Robot",
+  "block.storagedim.robot_barrier": "Robot Barrier",
+  "item.storagedim.robot_barrier": "Robot Barrier"
 }

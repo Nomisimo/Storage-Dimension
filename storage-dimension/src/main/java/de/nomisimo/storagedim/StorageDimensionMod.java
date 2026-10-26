@@ -23,6 +23,7 @@ public class StorageDimensionMod implements ModInitializer {
 	public void onInitialize() {
 		StorageConfig.load();
 		Robots.register();
+		de.nomisimo.storagedim.robot.RobotBarrierBlock.register();
 		StorageEvents.register();
 		StorageCommands.register();
 		TerminalNetworking.register();

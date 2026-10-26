@@ -1,5 +1,6 @@
 package de.nomisimo.storagedim.test;
 
+import de.nomisimo.storagedim.robot.RobotBarrierBlock;
 import de.nomisimo.storagedim.robot.RobotEntity;
 import de.nomisimo.storagedim.robot.Robots;
 import de.nomisimo.storagedim.storage.FilterChests;
@@ -204,6 +205,8 @@ public class ClientScreenshots implements FabricClientGameTest {
 			recipe(context, world, "robot", i, of(Items.PUMPKIN), i, r, of(Items.HOPPER), r, n, null, n);
 			recipe(context, world, "me_upgrade", of(Items.ENDER_EYE), a, a, of(Items.REDSTONE_BLOCK), of(Items.PAPER));
 			recipe(context, world, "me_backpack", of(Items.BUNDLE), upgrade);
+			ItemStack g = of(Items.GLASS);
+			recipe(context, world, "robot_barrier", g, g, g, g, of(Items.AMETHYST_SHARD), g, g, g, g);
 
 			dragInTerminal(context, world);
 			terminalCounts(context, world);
@@ -229,6 +232,27 @@ public class ClientScreenshots implements FabricClientGameTest {
 				}
 
 				drop(level, cage.getX() + 0.5, cage.getY(), cage.getZ() + 0.5, new ItemStack(Items.COBBLESTONE, 5));
+
+				// a ring of robot barriers around another cobblestone, and a barrier wall behind the chests for the picture
+				BlockPos ring = base.offset(-2, 0, 3);
+
+				for (int dx = -1; dx <= 1; dx++) {
+					for (int dz = -1; dz <= 1; dz++) {
+						if (dx != 0 || dz != 0) {
+							level.setBlockAndUpdate(ring.offset(dx, 0, dz), RobotBarrierBlock.BLOCK.defaultBlockState());
+						}
+					}
+				}
+
+				drop(level, ring.getX() + 0.5, ring.getY() + 0.2, ring.getZ() + 0.5, new ItemStack(Items.COBBLESTONE, 3));
+
+				for (int dx = -4; dx <= 5; dx++) {
+					for (int dy = 0; dy <= 1; dy++) {
+						level.setBlockAndUpdate(base.offset(dx, dy, -6), RobotBarrierBlock.BLOCK.defaultBlockState());
+					}
+				}
+
+				player.getInventory().add(new ItemStack(RobotBarrierBlock.ITEM, 16));
 				drop(level, base.getX() + 4.5, base.getY() + 0.2, base.getZ() - 1.5, new ItemStack(Items.COBBLESTONE, 7));
 				drop(level, base.getX() + 3.5, base.getY() + 0.2, base.getZ() - 1.5, new ItemStack(Items.OAK_LOG, 3));
 			});
