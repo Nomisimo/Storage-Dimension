@@ -269,7 +269,7 @@ public class ClientScreenshots implements FabricClientGameTest {
 
 			drop(level, pool.getX() - 0.5, pool.getY() + 0.5, pool.getZ() - 0.5, new ItemStack(Items.KELP, 3));
 			// in front of the tank's south wall, looking north through the glass
-			player.teleportTo(level, pool.getX() + 0.5, pool.getY(), pool.getZ() + 3.3, java.util.Set.of(), 180, 35, true);
+			player.teleportTo(level, pool.getX() + 0.5, pool.getY(), pool.getZ() + 3.3, java.util.Set.of(), 180, 22, true);
 		});
 
 		for (int t = 0; t < 4; t++) {

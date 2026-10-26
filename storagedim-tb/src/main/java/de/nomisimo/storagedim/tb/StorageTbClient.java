@@ -141,7 +141,7 @@ public class StorageTbClient implements ClientModInitializer {
 		layout(screen);
 		SearchBox search = new SearchBox(Minecraft.getInstance(), barX + 6, barY + 4, searchWidth(), 12);
 		search.setMaxLength(MeView.MAX_SEARCH);
-		search.setHint(Component.literal("Storage Dimension durchsuchen …"));
+		search.setHint(Component.literal("Suchen …"));
 		search.setValue(text);
 		search.setResponder(value -> {
 			ClientPlayNetworking.send(new MeNetworking.SearchPayload(value));
@@ -291,9 +291,9 @@ public class StorageTbClient implements ClientModInitializer {
 		ClientPlayNetworking.send(new MeNetworking.ButtonPayload(button));
 	}
 
-	/** Amounts as in the ME terminal: 1234, then 12.3k, 45M and so on. */
+	/** Amounts as in the ME terminal: 999, then 1.2k, 45M and so on. */
 	private static String format(long count) {
-		if (count < 10000) {
+		if (count < 1000) {
 			return Long.toString(count);
 		}
 
