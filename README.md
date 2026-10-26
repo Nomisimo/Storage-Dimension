@@ -1,135 +1,205 @@
 # Storage Dimension
 
-Ein Fabric-Mod für **Minecraft 26.1.2**. Seit Version 0.4.0 (Sammelroboter, eigene Texturen) muss `storage-dimension-*.jar` **auf dem Server und bei allen Spielern** liegen.
+Ein Fabric-Mod für **Minecraft 26.1.2**: ein gemeinsamer Lagerraum in einer eigenen Dimension, ein ME-Speicher ohne Stapelgrenzen und kleine Sammelroboter, die herumliegende Items einsammeln und einlagern.
 
-**Download:** Die fertigen Dateien gibt es unter [Releases](https://github.com/Nomisimo/Storage-Dimension/releases). Dort steht auch, welche Datei wohin gehört.
+**Aktuelle Version: 0.5.0.** Die fertigen Dateien gibt es unter [Releases](https://github.com/Nomisimo/Storage-Dimension/releases), dort steht auch, welche Datei wohin gehört.
 
 ![Dimensionskiste, Filterkiste, doppelte Filterkiste und ME-Terminal, davor der Sammelroboter](docs/screenshots/kisten-und-roboter.png)
 
-## Was der Mod macht
+## Inhalt
 
-- **Dimensionskiste:** Eine violette Kiste mit Endsternen. Wer sie öffnet und Zugriff auf den Speicher hat, wird in den Lagerraum in der Storage Dimension gezogen. Es können beliebig viele Spieler gleichzeitig drin sein. Wer keinen Zugriff hat, sieht nur ein leeres Kisten-Inventar, in dem nichts gelagert werden kann.
-- **ME-Speicher:** Die Enderkiste im Raum ist das Terminal. Dort liegen alle Items ohne Stapel- oder Slot-Grenzen. Die genaue Menge steht im Namen jedes Items (z. B. „Bruchstein × 1.234“) und in kleiner Schrift auf dem Symbol, ohne Obergrenze (ab 1.000 abgekürzt, z. B. 1k, 1.2k, 45k oder 1.2M).
-  - Linksklick nimmt einen Stapel, Rechtsklick einen halben, Shift-Klick schiebt ihn ins Inventar.
-  - Item auf dem Cursor in das Terminal klicken oder Shift-Klick im eigenen Inventar lagert ein.
-  - Unten im Fenster: **◀ / ▶** blättern, **Einlagern** lagert das ganze Inventar (ohne Hotbar) ein, daneben stehen Seite, Sorten und Gesamtmenge. Ohne die Mod auf dem Client sind es Item-Knöpfe (Pfeile, Trichter).
+- [Installation](#installation)
+- [Speicher](#speicher): Dimensionskiste, ME-Speicher, ME-Terminal, Filterkiste, Trichter und Maschinen
+- [Sammelroboter](#sammelroboter): Roboter, Roboter-Station, Rückruf, Roboter-Barriere
+- [ME-Rucksack und Traveler's Backpack](#me-rucksack-und-travelers-backpack)
+- [Rezepte](#rezepte)
+- [Befehle](#befehle)
+- [Einstellungen](#einstellungen)
+- [Selbst bauen](#selbst-bauen)
 
-  ![ME-Terminal mit Suchfeld, Sortier-Knopf und Knöpfen zum Blättern und Einlagern](docs/screenshots/terminal-knoepfe.png)
-  - **Suche und Sortierung:** Oben links im Fenster sitzt ein Suchfeld, rechts daneben der Sortier-Knopf (*Menge* / *A–Z*). Gesucht wird beim Tippen.
-  - Die Suche ist beim nächsten Öffnen wieder leer, die Sortierung bleibt.
-  - Mit [JEI](https://modrinth.com/mod/jei) sitzt zwischen Suchfeld und Sortier-Knopf ein kleiner Schalter **J**. Ist er grün, sind die Suche im Terminal und die JEI-Suchleiste gekoppelt: was in einer steht, steht auch in der anderen. Die Einstellung bleibt gespeichert (`jeiSearchSync` in `config/storagedim.json` beim Spieler).
-- **Hopper-Eingang:** Trichter, die in eine Dimensionskiste oder Filterkiste zeigen, liefern direkt in den Speicher. Zum Anbauen mit einem Item in der Hand schleichen.
-- **Maschinen anderer Mods (z. B. Tech Reborn, Advanced Reborn):** Dimensions- und Filterkisten sind über die Fabric-Transfer-API angebunden. Was eine Maschine hineinschiebt, landet direkt im ME-Speicher, und aus einer Filterkiste können Maschinen die Filter-Items herausziehen.
-- **Sammelroboter:** Ein kleiner Roboter mit Schnabel. Er sammelt herumliegende Items ein, immer einen Stapel im Schnabel, und bringt ihn zur nächsten Dimensionskiste, zum ME-Terminal oder zu einer passenden Filterkiste. Er hüpft bis zu zwei Blöcke hoch, auch über Zäune und Mauern, und stellt sich zum Aufheben direkt auf das Item. Roboter-Barrieren überspringt er nicht. Aus Booten und Loren steigt er sofort wieder aus.
-  - **Nur mit Station:** Ein Roboter lässt sich erst hinstellen, wenn er in einer Roboter-Station eingestellt wurde (siehe unten). Danach folgt er immer den Einstellungen seiner Station; was dort geändert wird, gilt sofort für alle ihre Roboter. Am Roboter selbst lässt sich nichts mehr umstellen.
-  - **Schwarm:** Mehrere Roboter stimmen sich ab. Jeder holt ein anderes Item, es rennen nie alle zum selben.
-  - **Stimmung:** Ohne Arbeit laufen die Roboter zu ihrer Station, setzen sich hin und schauen sich fröhlich um, jeder in seinem eigenen Takt. Erreicht ein Roboter seine Station nicht oder steht in seiner Reichweite keine Kiste, setzt er sich hin und schaut auf den Boden, und links und rechts von seinem Namen erscheint ein rotes 🚫 (Fehler).
-  - **Wasser:** Roboter tauchen. Unter Wasser laufen sie am Grund entlang und tragen einen Taucherhelm: einen Glaskasten um den ganzen Kopf, an der Oberfläche schwimmen sie schnell und ziehen eine Spritzspur hinter sich her. Ertrinken können sie nicht.
-  - **Regen:** Draußen ohne Dach über sich spannen sie einen kleinen Regenschirm in ihrer Farbe auf.
-  - Bevor er losläuft, plant er den ganzen Weg und folgt ihm. Gibt es keinen Weg (eingemauert, hinter einer Roboter-Barriere, über Lava), lässt er das Item sofort für eine Minute in Ruhe und nimmt das nächste. Bleibt er unterwegs trotzdem hängen, gibt er nach 5 Sekunden auf. Kisten erreicht er bis etwa drei Blöcke über dem Boden.
-  - Will er zu seiner Station und kommt 3 Minuten lang nicht näher, teleportiert er sich hin.
-  - Neu fallengelassene Items bemerkt er nach spätestens einer halben Sekunde.
-  - Schleichen + Rechtsklick mit leerer Hand nimmt ihn wieder auf, samt dem Item im Schnabel.
-  - Nur Spieler können ihm schaden. Er arbeitet nur in geladenen Chunks.
-  - Mit [Jade](https://modrinth.com/mod/jade) zeigt der Blick auf einen Roboter seine Station, Reichweite, Filter und was er gerade tut (oder welchen Fehler er hat). Mit [Xaero's Minimap](https://modrinth.com/mod/xaeros-minimap) erscheinen die Roboter mit ihrem Gesicht auf der Karte.
+## Installation
 
-  <img src="docs/screenshots/minimap-icon.png" width="64" alt="Roboter-Icon für Xaero's Minimap">
+`storage-dimension-0.5.0.jar` muss **auf dem Server und bei allen Spielern** im Ordner `mods` liegen.
 
-  ![Jade zeigt Station, Filter und Zustand eines Roboters](docs/screenshots/roboter-jade.png)
+1. Fabric Loader 0.19.5 oder neuer und [Fabric API](https://modrinth.com/mod/fabric-api) für 26.1.2 auf Server und Clients installieren.
+2. `storage-dimension-0.5.0.jar` (nicht die `-sources.jar`) in den `mods`-Ordner legen.
+3. Optional das [Traveler's-Backpack-Add-on](#me-rucksack-und-travelers-backpack) `storagedim-tb-0.5.0.jar` dazulegen, ebenfalls auf Server und Clients.
+4. Server starten. Die Dimension `storagedim:storage` wird automatisch angelegt, die Daten liegen in `world/storagedim.json`.
 
-  ![Bei Regen spannen die Roboter ihren Schirm auf](docs/screenshots/roboter-regenschirm.png)
+**Passt gut dazu (optional):** [JEI](https://modrinth.com/mod/jei) (Rezepte, Suche koppeln, „+“ im Rucksack), [Jade](https://modrinth.com/mod/jade) (Infos zu Robotern und Stationen), [Xaero's Minimap](https://modrinth.com/mod/xaeros-minimap) (Roboter auf der Karte). Getestet mit JEI 29.47.0.111, Jade 26.1.11 und Xaero's Minimap 26.6.2.
 
-  ![Ein Roboter taucht mit Glashelm](docs/screenshots/roboter-tauchen.png)
+### Als Modrinth-Pack
 
-- **Roboter-Station:** Ein Block, der Sammelroboter einstellt. Rechtsklick öffnet ein eigenes Fenster mit Knöpfen und Textfeldern:
-  - oben der **Name der Station** (erscheint auch in Jade und im Tooltip der Roboter),
-  - darunter bis zu 9 **Filter-Items** (Item draufklicken setzt, leere Hand entfernt) und der Knopf, ob die Roboter **nur den Filter** oder **alles außer dem Filter** sammeln,
-  - **Reichweite** mit − und + (1 bis 10 Chunks, gemessen ab der Station), **Farbe** (Klick schaltet weiter) und **Zurückrufen**,
-  - der **Robotername**: Bekommen mehrere Roboter denselben Namen, werden sie durchnummeriert (Quak1, Quak2 …). Das Benennen kostet keine Level.
-  - Roboter in den Eingang (links vom Pfeil) legen, er kommt rechts eingestellt wieder heraus. Die Einstellungen stehen im Tooltip des Roboter-Items.
-  - Rechts daneben steht die **Liste aller Roboter** der Station (höchstens 32) mit Entfernung und dem, was jeder gerade tut. Mausrad blättert.
-  - **Zurückrufen:** Alle Roboter der Station laufen sofort los, die Station zeigt „Rückruf: auf dem Weg“. Angekommen sind sie im 3×3-Feld um die Station (ab 21 Robotern 5×5). Teleportiert wird nur, wer keinen Weg zur Station findet. Danach sitzen alle eine Minute an der Station und arbeiten dann normal weiter. Bis dahin schauen sie den Spieler an, der sie gerufen hat.
+`storage-dimension.mrpack` liegt in jedem [Release](https://github.com/Nomisimo/Storage-Dimension/releases). Es enthält Fabric API (wird von Modrinth geladen) und die Storage-Dimension-Jar, Minecraft 26.1.2 und Fabric Loader 0.19.5 sind festgelegt. Spieler können dasselbe Pack in der Modrinth-App installieren.
 
-  ![Nach dem Rückruf schauen die Roboter den Spieler an, der gerufen hat](docs/screenshots/roboter-rueckruf-schauen.png)
-  - Ein eingestellter Roboter, der außerhalb der Reichweite seiner Station hingestellt wird, läuft zuerst zur Station und arbeitet dann los.
+- **Server-Hoster mit Modpack-Upload:** Neuen Server mit „Modpack hochladen / .mrpack“ anlegen und die Datei auswählen.
+- **Eigener Server:** Mit [mrpack-install](https://github.com/nothub/mrpack-install): `mrpack-install storage-dimension.mrpack --server-dir server`. Das lädt den Fabric-Server und Fabric API und legt die Mod ab.
 
-  ![Fenster der Roboter-Station mit Roboterliste](docs/screenshots/roboter-station-menu.png)
-
-  ![Nach dem Zurückrufen sind alle „auf dem Weg“; der eingemauerte Quak3 findet keinen Weg und zeigt 🚫, bis er sich zur Station teleportiert](docs/screenshots/roboter-station-rueckruf.png)
-
-  ![Roboter warten fröhlich an ihrer Station](docs/screenshots/roboter-station.png)
-
-  ![Ein Roboter ohne Kiste in Reichweite: 🚫 links und rechts von seinem Namen](docs/screenshots/roboter-traurig.png)
-
-- **Roboter-Barriere:** Ein durchsichtiger Plasma-Schild. Spieler, Tiere und Items gehen einfach hindurch, Sammelroboter nicht, und sie planen auch keinen Weg hindurch oder darüber. Gut für Türen und Bereiche, aus denen die Roboter nichts holen sollen. Rezept: 8 Glas um eine Amethystscherbe ergibt 8 Barrieren.
-
-  ![Roboter-Barriere als Wand hinter den Kisten](docs/screenshots/roboter-barriere.png)
-
-  ![Der Sammelroboter holt Items und bringt sie zu den Kisten](docs/screenshots/roboter-bei-der-arbeit.png)
-
-- **Werkbank und Ofen** stehen im Raum, gecraftet wird direkt in der Dimension.
-- **Gemeinsamer Speicher:** Standardmäßig teilen sich alle Spieler einen Speicher und einen Raum. Mit `"sharedStorage": false` in `config/storagedim.json` bekommt jeder seinen eigenen, der sich per `/storage teilen` freigeben lässt.
-- **Filterkiste:** Eine Kiste, die nur bis zu 7 ausgewählte Items aus dem ME-Speicher zeigt, eins pro Rahmen im Rezept. Ist ein Filter-Item verzaubert (auch ein Verzauberungsbuch), zählen nur Items mit genau denselben Verzauberungen. Zwei Filterkisten nebeneinander werden eine Doppelkiste mit 14 Filter-Plätzen (eine normale Kiste verbindet sich nie mit einer Filterkiste). Wird eine Hälfte abgebaut, behält die andere die ersten 7 Filter. Schleichen + Rechtsklick mit leerer Hand öffnet die Filter: ein Item auf einen Platz legen setzt den Filter, Klick mit leerer Hand entfernt ihn. Normaler Rechtsklick öffnet die Kiste, dort kann man die gefilterten Items herausnehmen und nur passende einlagern. Trichter, die hineinzeigen, liefern auch hier direkt in den Speicher. Ein Trichter **unter** der Filterkiste zieht die Filter-Items aus dem ME-Speicher heraus (bis zu ein Stapel pro Filter liegt dafür bereit und geht zurück in den Speicher, wenn ihn keiner abholt).
-- **ME-Terminal:** Eine uralte Kiste aus Tiefenschiefer mit Sculk-Rune. Hingestellt öffnet sie per Rechtsklick direkt den ME-Speicher, ohne Dimensionswechsel.
-- **ME-Rucksack:** Ein Rucksack, der mit dem Speicher verbunden ist und ihn von überall öffnet.
-  - **Bündel:** ME-Upgrade + Bündel in der Werkbank kombinieren. Rechtsklick öffnet den Speicher.
-  - **[Traveler's Backpack](https://www.curseforge.com/minecraft/mc-mods/travelers-backpack-fabric) (optional):** ME-Upgrade in die Zweithand, den Rucksack in die Haupthand, schleichen und rechtsklicken. Danach öffnet Schleichen + Rechtsklick mit dem Rucksack den ME-Speicher, normaler Rechtsklick weiterhin den Rucksack. Trägst du ihn auf dem Rücken, öffnet `/storage me` den Speicher. Traveler's Backpack muss dafür auf Server und Clients installiert sein.
-- **Ausgang:** Rechtsklick auf den Leuchtstein im Raum oder `/storage raus`.
+## Speicher
 
 ![Dimensionskiste, Filterkiste, ME-Terminal und Sammelroboter im Inventar](docs/screenshots/items.png)
 
+### Dimensionskiste und Lagerraum
+
+- Eine violette Kiste mit Endsternen. Wer sie öffnet und Zugriff auf den Speicher hat, wird in den Lagerraum in der Storage Dimension gezogen. Beliebig viele Spieler können gleichzeitig drin sein.
+- Wer keinen Zugriff hat, sieht nur ein leeres Kisten-Inventar, in dem nichts gelagert werden kann.
+- Im Raum stehen das ME-Terminal (die Enderkiste), eine Werkbank und ein Ofen. Gecraftet wird direkt in der Dimension.
+- Raus geht es per Rechtsklick auf den Leuchtstein im Raum oder mit `/storage raus`.
+- Standardmäßig teilen sich alle Spieler einen Speicher und einen Raum (siehe [Einstellungen](#einstellungen)).
+
+### ME-Speicher
+
+Alle Items liegen ohne Stapel- oder Slot-Grenzen im ME-Speicher. Die genaue Menge steht im Namen jedes Items (z. B. „Bruchstein × 1.234“) und in kleiner Schrift auf dem Symbol, ab 1.000 abgekürzt (1k, 1.2k, 45k, 1.2M …).
+
+- Linksklick nimmt einen Stapel, Rechtsklick einen halben, Shift-Klick schiebt ihn ins Inventar.
+- Ein Item auf dem Cursor ins Fenster klicken oder Shift-Klick im eigenen Inventar lagert ein.
+- **Oben:** Suchfeld (sucht beim Tippen, ist beim nächsten Öffnen wieder leer) und Sortier-Knopf *Menge* / *A–Z* (bleibt gespeichert). Mit JEI sitzt dazwischen der Schalter **J**: Ist er grün, sind die Suche und die JEI-Suchleiste gekoppelt.
+- **Unten:** **◀ / ▶** blättern, **Einlagern** lagert das ganze Inventar ohne Hotbar ein, daneben stehen Seite, Sorten und Gesamtmenge.
+- Ohne die Mod auf dem Client gibt es statt der Knöpfe Item-Symbole (Pfeile, Trichter, Komparator).
+
+![ME-Speicher mit Suchfeld, Sortierung und Knöpfen zum Blättern und Einlagern](docs/screenshots/terminal-knoepfe.png)
+
+### ME-Terminal
+
+Eine uralte Kiste aus Tiefenschiefer mit Sculk-Rune. Hingestellt öffnet sie per Rechtsklick direkt den ME-Speicher, ohne Dimensionswechsel.
+
+### Filterkiste
+
+Eine Kiste, die nur ausgewählte Items aus dem ME-Speicher zeigt.
+
+- **Filter einstellen:** Schleichen + Rechtsklick mit leerer Hand öffnet die Filter. Ein Item auf einen Platz legen setzt den Filter, Klick mit leerer Hand entfernt ihn. Eine Kiste hat 7 Filter-Plätze.
+- **Verzauberte Filter:** Ist ein Filter-Item verzaubert (auch ein Verzauberungsbuch), zählen nur Items mit genau denselben Verzauberungen.
+- **Benutzen:** Normaler Rechtsklick öffnet die Kiste. Dort lassen sich die gefilterten Items herausnehmen und passende einlagern.
+- **Doppelkiste:** Zwei Filterkisten nebeneinander werden eine Doppelkiste mit 14 Filter-Plätzen. Eine normale Kiste verbindet sich nie mit einer Filterkiste. Wird eine Hälfte abgebaut, behält die andere die ersten 7 Filter.
+- **Trichter darunter** ziehen die Filter-Items aus dem ME-Speicher heraus. Bis zu ein Stapel pro Filter liegt dafür bereit und geht zurück in den Speicher, wenn ihn keiner abholt.
+
+### Trichter und Maschinen
+
+- Trichter, die in eine Dimensionskiste oder Filterkiste zeigen, liefern direkt in den Speicher. Zum Anbauen mit einem Item in der Hand schleichen.
+- Maschinen anderer Mods (z. B. Tech Reborn, Advanced Reborn) sind über die Fabric-Transfer-API angebunden. Was eine Maschine in eine Dimensions- oder Filterkiste schiebt, landet im ME-Speicher, und aus einer Filterkiste können Maschinen die Filter-Items herausziehen.
+
+## Sammelroboter
+
+Ein kleiner Roboter mit Schnabel. Er sammelt herumliegende Items ein, immer einen Stapel im Schnabel, und bringt ihn zur nächsten Dimensionskiste, zum ME-Terminal oder zu einer passenden Filterkiste.
+
+![Der Sammelroboter holt Items und bringt sie zu den Kisten](docs/screenshots/roboter-bei-der-arbeit.png)
+
+### Roboter-Station
+
+Ohne Station geht nichts: Ein Roboter lässt sich erst hinstellen, wenn er in einer Roboter-Station eingestellt wurde. Danach folgt er immer den Einstellungen seiner Station. Was dort geändert wird, gilt sofort für alle ihre Roboter, am Roboter selbst lässt sich nichts umstellen.
+
+Rechtsklick auf die Station öffnet ihr Fenster:
+
+- **Name der Station** ganz oben. Er erscheint auch in Jade und im Tooltip der Roboter.
+- **Filter:** bis zu 9 Items (Item draufklicken setzt, leere Hand entfernt). Der Knopf darunter schaltet zwischen *Sammelt nur den Filter* und *Sammelt alles außer Filter*. Leer heißt: alles.
+- **Reichweite** mit − und +: 1 bis 10 Chunks, gemessen ab der Station.
+- **Farbe:** Klick schaltet weiter.
+- **Zurückrufen:** siehe unten.
+- **Robotername:** Bekommen mehrere Roboter denselben Namen, werden sie durchnummeriert (Quak1, Quak2 …). Das Benennen kostet keine Level.
+- **Roboter einstellen:** Roboter links in den Eingang legen, er kommt rechts eingestellt wieder heraus. Die Einstellungen stehen im Tooltip des Roboter-Items.
+- **Roboterliste** rechts daneben: alle Roboter der Station (höchstens 32) mit Entfernung und dem, was jeder gerade tut. Das Mausrad blättert.
+
+![Fenster der Roboter-Station mit Roboterliste](docs/screenshots/roboter-station-menu.png)
+
+Ein eingestellter Roboter, der außerhalb der Reichweite seiner Station hingestellt wird, läuft zuerst zur Station und arbeitet dann los.
+
+![Roboter-Station mit Jade-Anzeige](docs/screenshots/roboter-station.png)
+
+### Zurückrufen
+
+- Alle Roboter der Station laufen sofort los, die Station zeigt „Rückruf: auf dem Weg“.
+- Angekommen sind sie im 3×3-Feld um die Station, ab 21 Robotern im 5×5-Feld.
+- Teleportiert wird nur, wer keinen Weg zur Station findet.
+- Danach sitzen alle eine Minute an der Station und arbeiten dann normal weiter. Bis dahin schauen sie den Spieler an, der sie gerufen hat.
+
+![Nach dem Zurückrufen sind alle „auf dem Weg“; der eingemauerte Quak3 findet keinen Weg und zeigt 🚫, bis er sich zur Station teleportiert](docs/screenshots/roboter-station-rueckruf.png)
+
+![Nach dem Rückruf schauen die Roboter den Spieler an, der gerufen hat](docs/screenshots/roboter-rueckruf-schauen.png)
+
+### Wie die Roboter arbeiten
+
+- **Schwarm:** Mehrere Roboter stimmen sich ab. Jeder holt ein anderes Item, es rennen nie alle zum selben.
+- **Wege:** Bevor ein Roboter losläuft, plant er den ganzen Weg. Gibt es keinen (eingemauert, hinter einer Roboter-Barriere, über Lava), lässt er das Item eine Minute in Ruhe und nimmt das nächste. Bleibt er unterwegs hängen, gibt er nach 5 Sekunden auf. Neu fallengelassene Items bemerkt er nach spätestens einer halben Sekunde.
+- **Klettern:** Er hüpft bis zu zwei Blöcke hoch, auch über Zäune und Mauern, und stellt sich zum Aufheben direkt auf das Item. Kisten erreicht er bis etwa drei Blöcke über dem Boden. Aus Booten und Loren steigt er sofort wieder aus.
+- **Zurück zur Station:** Ohne Arbeit läuft er zu seiner Station. Kommt er dabei 3 Minuten lang nicht näher, teleportiert er sich hin.
+- **Warten:** An der Station setzt er sich hin und schaut sich fröhlich um, jeder Roboter in seinem eigenen Takt.
+- **Fehler:** Erreicht ein Roboter seine Station nicht, fehlt die Station oder steht in seiner Reichweite keine Kiste, setzt er sich hin, schaut auf den Boden, und links und rechts von seinem Namen steht ein rotes 🚫. Den Grund zeigen Jade und die Stationsliste („Fehler: Weg versperrt“, „Fehler: keine Kiste da“, „Fehler: Station fehlt“).
+- **Wasser:** Roboter tauchen. Unter Wasser laufen sie am Grund entlang und tragen einen Glashelm um den ganzen Kopf. An der Oberfläche schwimmen sie schnell und ziehen eine Spritzspur hinter sich her. Ertrinken können sie nicht.
+- **Regen:** Draußen ohne Dach über sich spannen sie einen kleinen Regenschirm in ihrer Farbe auf.
+- **Aufheben:** Schleichen + Rechtsklick mit leerer Hand nimmt einen Roboter wieder auf, samt dem Item im Schnabel.
+- Nur Spieler können Robotern schaden. Sie arbeiten nur in geladenen Chunks.
+
+![Ein Roboter ohne Kiste in Reichweite: 🚫 links und rechts von seinem Namen](docs/screenshots/roboter-traurig.png)
+
+![Ein Roboter taucht mit Glashelm](docs/screenshots/roboter-tauchen.png)
+
+![Bei Regen spannen die Roboter ihren Schirm auf](docs/screenshots/roboter-regenschirm.png)
+
+### Jade und Xaero's Minimap
+
+Mit [Jade](https://modrinth.com/mod/jade) zeigt der Blick auf einen Roboter seine Station, Reichweite, Filter und was er gerade tut (oder welchen Fehler er hat). Der Blick auf eine Station zeigt ihren Namen und wie viele Roboter zu ihr gehören. Mit [Xaero's Minimap](https://modrinth.com/mod/xaeros-minimap) erscheinen die Roboter mit ihrem Gesicht auf der Karte.
+
+![Jade zeigt Station, Filter und Zustand eines Roboters](docs/screenshots/roboter-jade.png)
+
+<img src="docs/screenshots/minimap-icon.png" width="64" alt="Roboter-Icon für Xaero's Minimap">
+
+### Roboter-Barriere
+
+Ein durchsichtiger Plasma-Schild. Spieler, Tiere und Items gehen einfach hindurch, Sammelroboter nicht, und sie planen auch keinen Weg hindurch oder darüber. Gut für Türen und Bereiche, aus denen die Roboter nichts holen sollen.
+
+![Roboter-Barriere als Wand hinter den Kisten](docs/screenshots/roboter-barriere.png)
+
+## ME-Rucksack und Traveler's Backpack
+
+Ein Rucksack, der mit dem Speicher verbunden ist und ihn von überall öffnet.
+
+- **Bündel:** ME-Upgrade + Bündel in der Werkbank kombinieren. Rechtsklick öffnet den Speicher.
+- **[Traveler's Backpack](https://modrinth.com/mod/travelersbackpack) ohne Add-on:** ME-Upgrade in die Zweithand, den Rucksack in die Haupthand, schleichen und rechtsklicken. Danach öffnet Schleichen + Rechtsklick mit dem Rucksack den ME-Speicher, normaler Rechtsklick weiterhin den Rucksack. Trägst du ihn auf dem Rücken, öffnet `/storage me` den Speicher.
+
+### Traveler's-Backpack-Add-on
+
+Das Add-on `storagedim-tb-0.5.0.jar` fügt ein echtes **ME-Upgrade** für den Upgrade-Slot von Traveler's Backpack hinzu. Es hat immer dieselbe Versionsnummer wie Storage Dimension.
+
+- **Rezept** (formlos): Leeres Upgrade (Traveler's Backpack), Enderauge, 2× Amethystscherbe, Redstoneblock. Mit dem Add-on ergibt auch das normale ME-Upgrade-Rezept (mit Papier) dieses Upgrade. Es passt in den Upgrade-Slot und macht mit einem Bündel auch einen ME-Rucksack.
+- **ME-Ansicht:** Upgrade in einen Upgrade-Slot legen. Linksklick auf das ME-Symbol zeigt den ME-Speicher direkt im Rucksack-Fenster an Stelle des Rucksack-Inhalts. Crafting und die anderen Upgrades bleiben daneben. Ein zweiter Linksklick zeigt wieder den Rucksack, Rechtsklick nimmt das Upgrade heraus.
+- Die ME-Ansicht ist aufgebaut wie der ME-Speicher: oben eine graue Leiste mit Suchfeld, **J**-Schalter und Sortierung, unten ◀ / ▶, **Einlagern** sowie Seite, Sorten und Gesamtmenge. Die Knöpfe des Rucksacks sind in der ME-Ansicht ausgeblendet. Klicks funktionieren wie im ME-Speicher.
+- Der Rucksack muss nicht in der Hand sein: auf dem Rücken tragen und mit der Rucksack-Taste (Standard **B**) öffnen reicht.
+- **Crafting aus dem ME-Speicher:** Hat der Rucksack zusätzlich das Crafting-Upgrade, holt der „+“-Knopf von JEI fehlende Zutaten auch aus dem ME-Speicher, genauso wie aus Inventar und Rucksack. „+“ ist nur grün, wenn alle Zutaten zusammen vorhanden sind, sonst markiert JEI die fehlenden rot. Shift + „+“ füllt das Raster für so viele Durchgänge wie möglich (bis zu einem Stapel). Was vorher im Raster lag, kommt zurück ins Inventar oder, wenn das voll ist, in den Speicher.
+- Der kleine Schalter neben dem ME-Symbol stellt zwischen *ME als Quelle* (Standard) und *nur Inventar* um.
+- **Installation:** `storagedim-tb-0.5.0.jar` und `storage-dimension-0.5.0.jar` auf Server und Clients, dazu Traveler's Backpack, [Forge Config API Port](https://modrinth.com/mod/forge-config-api-port) und Fabric API. JEI wird nur für „+“ und die Rezeptanzeige gebraucht.
+
+![ME-Ansicht im Rucksack mit Suchleiste, Sortierung und Knöpfen wie im ME-Speicher](docs/screenshots/rucksack-me-suche.png)
+
+![ME-Speicher im Rucksack-Fenster, daneben das Crafting-Upgrade](docs/screenshots/rucksack-me-ansicht.png)
+
 ## Rezepte
 
-Dimensionskiste (A = Amethystscherbe, P = Enderperle, C = Kiste):
-
-![Rezept Dimensionskiste](docs/screenshots/rezept-storage-chest.png)
-
-ME-Terminal (R = Redstone, A = Amethystscherbe, E = Enderkiste):
-
-![Rezept ME-Terminal](docs/screenshots/rezept-me-terminal.png)
-
-Filterkiste (8× Rahmen um eine Kiste, unten mittig ein Enderauge):
-
-![Rezept Filterkiste](docs/screenshots/rezept-filter-chest.png)
-
-Sammelroboter (Eisenbarren, Kürbis, Redstone, Trichter, Eisennuggets):
-
-![Rezept Sammelroboter](docs/screenshots/rezept-robot.png)
-
-ME-Upgrade (formlos: Enderauge, 2× Amethystscherbe, Redstoneblock, Papier):
-
-![Rezept ME-Upgrade](docs/screenshots/rezept-me-upgrade.png)
-
-ME-Rucksack (formlos: beliebiges Bündel + ME-Upgrade):
-
-![Rezept ME-Rucksack](docs/screenshots/rezept-me-backpack.png)
-
-Roboter-Barriere (8 Glas um eine Amethystscherbe, ergibt 8):
-
-![Rezept Roboter-Barriere](docs/screenshots/rezept-robot-barrier.png)
-
-Roboter-Station (Blitzableiter, Eisenbarren, Redstoneblock, Kiste):
-
-![Rezept Roboter-Station](docs/screenshots/rezept-robot-station.png)
-
-ME-Upgrade mit dem Traveler's-Backpack-Add-on (formlos: Leeres Upgrade, Enderauge, 2× Amethystscherbe, Redstoneblock):
-
-![Rezept ME-Upgrade für Traveler's Backpack](docs/screenshots/rezept-tb-me-upgrade.png)
-
 Alle Rezepte stehen auch in [JEI](https://modrinth.com/mod/jei).
+
+| Item | Zutaten | Rezept |
+| --- | --- | --- |
+| Dimensionskiste | Amethystscherben, Enderperlen, Kiste | ![Rezept Dimensionskiste](docs/screenshots/rezept-storage-chest.png) |
+| ME-Terminal | Redstone, Amethystscherben, Enderkiste | ![Rezept ME-Terminal](docs/screenshots/rezept-me-terminal.png) |
+| Filterkiste | 8 Rahmen um eine Kiste, unten mittig ein Enderauge | ![Rezept Filterkiste](docs/screenshots/rezept-filter-chest.png) |
+| Sammelroboter | Eisenbarren, Kürbis, Redstone, Trichter, Eisennuggets | ![Rezept Sammelroboter](docs/screenshots/rezept-robot.png) |
+| Roboter-Station | Blitzableiter, Eisenbarren, Redstoneblock, Kiste | ![Rezept Roboter-Station](docs/screenshots/rezept-robot-station.png) |
+| Roboter-Barriere (8 Stück) | 8 Glas um eine Amethystscherbe | ![Rezept Roboter-Barriere](docs/screenshots/rezept-robot-barrier.png) |
+| ME-Upgrade | formlos: Enderauge, 2× Amethystscherbe, Redstoneblock, Papier | ![Rezept ME-Upgrade](docs/screenshots/rezept-me-upgrade.png) |
+| ME-Rucksack | formlos: beliebiges Bündel + ME-Upgrade | ![Rezept ME-Rucksack](docs/screenshots/rezept-me-backpack.png) |
+| ME-Upgrade (Add-on) | formlos: Leeres Upgrade, Enderauge, 2× Amethystscherbe, Redstoneblock | ![Rezept ME-Upgrade für Traveler's Backpack](docs/screenshots/rezept-tb-me-upgrade.png) |
 
 ## Befehle
 
 | Befehl | Wirkung |
 | --- | --- |
 | `/storage` | Infos zum eigenen Speicher |
+| `/storage raus` | Verlässt den Lagerraum |
+| `/storage me` | Öffnet den ME-Speicher, wenn du einen ME-Rucksack trägst oder dabeihast |
 | `/storage teilen <spieler>` | Lädt jemanden in deinen Speicher ein (nur ohne gemeinsamen Speicher) |
 | `/storage annehmen` | Nimmt eine Einladung an. Dein eigener Speicher bleibt erhalten. |
 | `/storage verlassen` | Zurück zum eigenen Speicher |
 | `/storage entfernen <spieler>` | Wirft ein Mitglied raus |
 | `/storage kiste besitzer <spieler>` | Danach eine eigene Dimensionskiste anklicken, um sie jemandem zu übertragen |
-| `/storage raus` | Verlässt den Lagerraum |
-| `/storage me` | Öffnet den ME-Speicher, wenn du einen ME-Rucksack trägst oder dabeihast |
 | `/storage give [spieler]` | (OP) Gibt eine Dimensionskiste |
 | `/storage give terminal` | (OP) Gibt ein ME-Terminal |
 | `/storage give filter` | (OP) Gibt eine Filterkiste |
@@ -137,7 +207,16 @@ Alle Rezepte stehen auch in [JEI](https://modrinth.com/mod/jei).
 | `/storage give station` | (OP) Gibt eine Roboter-Station |
 | `/storage give barrier` | (OP) Gibt 16 Roboter-Barrieren |
 
-## Bauen
+## Einstellungen
+
+In `config/storagedim.json`:
+
+| Einstellung | Standard | Wirkung |
+| --- | --- | --- |
+| `sharedStorage` | `true` | Alle Spieler teilen sich einen Speicher und einen Raum. Mit `false` bekommt jeder seinen eigenen, der sich per `/storage teilen` freigeben lässt (auf dem Server). |
+| `jeiSearchSync` | `false` | Schalter **J**: Suche im ME-Speicher mit der JEI-Suchleiste koppeln (beim Spieler, lässt sich im Fenster umschalten). |
+
+## Selbst bauen
 
 Java 25 wird benötigt.
 
@@ -146,36 +225,4 @@ cd storage-dimension
 ./gradlew build
 ```
 
-Die fertige Datei liegt in `storage-dimension/build/libs/`. GitHub Actions baut bei jedem Push automatisch und legt die Jars auf den Branch `builds`. Ein Release mit Anleitung entsteht per Hand unter *Actions → release → Run workflow*.
-
-## Installation
-
-1. Fabric Loader 0.19.5 oder neuer und Fabric API für 26.1.2 auf dem Server und bei allen Spielern installieren.
-2. Die `storage-dimension-*.jar` (nicht die `-sources.jar`) auf dem Server und bei allen Spielern in den `mods`-Ordner legen.
-3. Server starten. Die Dimension `storagedim:storage` wird automatisch angelegt.
-
-Die Daten liegen in `world/storagedim.json`.
-
-### Traveler's-Backpack-Add-on (optional)
-
-Im Ordner `storagedim-tb/` liegt ein kleiner Zusatz-Mod. Er fügt ein echtes **ME-Upgrade** für den Upgrade-Slot von Traveler's Backpack hinzu.
-
-- Rezept (formlos): Leeres Upgrade (Traveler's Backpack), Enderauge, 2× Amethystscherbe, Redstoneblock. Mit dem Zusatz-Mod ergibt auch das normale ME-Upgrade-Rezept (mit Papier) dieses Upgrade. Es gibt dann nur noch ein ME-Upgrade: Es passt in den Upgrade-Slot und macht mit einem Bündel auch einen ME-Rucksack.
-- Upgrade in einen Upgrade-Slot des Rucksacks legen. Linksklick auf das ME-Symbol im Rucksack-Fenster zeigt den ME-Speicher **direkt im Rucksack-Fenster**, an Stelle des Rucksack-Inhalts. Crafting, die anderen Upgrades und die Einstellungen bleiben daneben sichtbar. Ein zweiter Linksklick zeigt wieder den Rucksack. Rechtsklick nimmt das Upgrade heraus.
-  - In der ME-Ansicht: Linksklick nimmt einen Stapel, Rechtsklick einen halben, Shift-Klick schiebt ihn ins Inventar. Ein Item vom Cursor oder Shift-Klick im eigenen Inventar lagert ein. Die Ansicht ist aufgebaut wie die ME-Kiste: Über dem Fenster liegt eine graue Leiste mit Suchfeld, „J“-Schalter (Suche an JEI koppeln) und Sortierung (Menge / A–Z). Unten sitzen ◀ und ▶ zum Blättern, „Einlagern“ (ganzes Inventar ohne Hotbar in den Speicher) sowie Seite, Sorten und Gesamtmenge. Die Sortier-Knöpfe des Rucksacks sind in der ME-Ansicht ausgeblendet.
-
-  ![ME-Ansicht im Rucksack mit Suchleiste, Sortierung und Knöpfen wie in der ME-Kiste](docs/screenshots/rucksack-me-suche.png)
-
-  ![ME-Speicher im Rucksack-Fenster, daneben das Crafting-Upgrade](docs/screenshots/rucksack-me-ansicht.png)
-
-- Der Rucksack muss nicht in der Hand sein: auf dem Rücken tragen und mit der Rucksack-Taste von Traveler's Backpack (Standard **B**) öffnen reicht.
-- **Crafting aus dem ME-Speicher:** Hat der Rucksack zusätzlich das Crafting-Upgrade, holt der „+“-Knopf von [JEI](https://modrinth.com/mod/jei) fehlende Zutaten auch aus dem ME-Speicher, genauso wie aus Inventar und Rucksack. „+“ ist nur grün, wenn alle Zutaten zusammen vorhanden sind, sonst markiert JEI die fehlenden rot. Shift + „+“ füllt das Raster für so viele Durchgänge wie möglich (bis zu einem Stapel). Was vorher im Raster lag, kommt zurück ins Inventar oder, wenn das voll ist, in den Speicher.
-  - Der kleine Schalter neben dem ME-Symbol stellt zwischen *ME als Quelle* (Standard) und *nur Inventar* um. Auf *nur Inventar* arbeitet „+“ wie ohne Upgrade.
-- Installation: `storagedim-tb-*.jar` und `storage-dimension-*.jar` **auf dem Server und bei allen Spielern**, zusammen mit Traveler's Backpack (und dessen Abhängigkeiten) und Fabric API. JEI wird nur für „+“ und die Rezeptanzeige gebraucht und reicht bei den Spielern.
-
-### Als Modrinth-Pack
-
-`storage-dimension.mrpack` liegt in jedem [Release](https://github.com/Nomisimo/Storage-Dimension/releases). Das Pack enthält Fabric API (wird von Modrinth geladen) und die Storage-Dimension-Jar. Minecraft 26.1.2 und Fabric Loader 0.19.5 sind darin festgelegt. Spieler können dasselbe Pack in der Modrinth-App installieren.
-
-- **Server-Hoster mit Modpack-Upload:** Neuen Server mit „Modpack hochladen / .mrpack“ anlegen und die Datei auswählen.
-- **Eigener Server:** Mit [mrpack-install](https://github.com/nothub/mrpack-install): `mrpack-install storage-dimension.mrpack --server-dir server`. Das lädt Fabric-Server, Fabric API und legt die Mod ab.
+Die fertige Datei liegt in `storage-dimension/build/libs/`. GitHub Actions baut bei jedem Push automatisch, macht Test-Screenshots im echten Spiel und legt die Jars auf den Branch `builds`. Ein Release entsteht per Hand unter *Actions → Release → Run workflow*.
