@@ -12,3 +12,5 @@
 -p net.fabricmc.fabric.api.client.rendering.v1.BlockRenderLayerMap
 -p net.minecraft.client.renderer.chunk.ChunkSectionLayer
 -p net.minecraft.world.item.BlockItem
+-p net.minecraft.world.level.block.state.BlockBehaviour
+-p net.minecraft.world.level.block.Block
