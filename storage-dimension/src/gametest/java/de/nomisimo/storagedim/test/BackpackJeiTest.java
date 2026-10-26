@@ -103,6 +103,11 @@ public class BackpackJeiTest implements FabricClientGameTest {
 			ServerPlayer player = server.getPlayerList().getPlayers().get(0);
 			StorageApi.insert(player, new ItemStack(Items.OAK_PLANKS, 300));
 			StorageApi.insert(player, new ItemStack(Items.COAL, 20));
+			// a few more for the picture of the ME view
+			StorageApi.insert(player, new ItemStack(Items.IRON_INGOT, 1234));
+			StorageApi.insert(player, new ItemStack(Items.REDSTONE, 5000));
+			StorageApi.insert(player, new ItemStack(Items.DIAMOND, 7));
+			StorageApi.insert(player, new ItemStack(Items.GLASS, 128));
 
 			ItemStack backpack = new ItemStack(ModItems.STANDARD_TRAVELERS_BACKPACK);
 			BackpackWrapper.initializeSize(backpack);
@@ -132,7 +137,10 @@ public class BackpackJeiTest implements FabricClientGameTest {
 		context.takeScreenshot("backpack-after-jei");
 
 		// ME view in place of the backpack slots
-		context.runOnClient(client -> toggleView());
+		context.runOnClient(client -> {
+			client.getToastManager().clear();
+			toggleView();
+		});
 		context.waitTicks(10);
 		logClientSlots(context, "view on");
 		context.takeScreenshot("backpack-me-view");
