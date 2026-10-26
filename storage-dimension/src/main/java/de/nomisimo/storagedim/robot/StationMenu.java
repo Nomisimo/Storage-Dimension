@@ -161,7 +161,7 @@ public class StationMenu extends AbstractContainerMenu {
 			case ACTION_RANGE -> config = config.withRange(step(RANGES, config.range(), value));
 			case ACTION_COLOR -> config = config.withColor(step(RobotConfig.colors(), config.color(), value));
 			case ACTION_MODE -> config = config.withExclude(!config.exclude());
-			case ACTION_RECALL -> RobotEntity.recall((ServerLevel) viewer.level(), dim, pos);
+			case ACTION_RECALL -> RobotEntity.recall((ServerLevel) viewer.level(), dim, pos, viewer.getUUID());
 			case ACTION_STATION_NAME -> config = config.withStationName(clean(text));
 			case ACTION_ROBOT_NAME -> {
 				config = config.withName(clean(text));

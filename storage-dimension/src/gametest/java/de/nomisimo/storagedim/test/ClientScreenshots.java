@@ -210,7 +210,22 @@ public class ClientScreenshots implements FabricClientGameTest {
 		}
 
 		context.takeScreenshot("station-recall");
-		world.getServer().runOnServer(server -> server.getPlayerList().getPlayers().get(0).closeContainer());
+		// after the recall they sit at the station and watch the player who called them
+		Vec3[] standing = new Vec3[1];
+		world.getServer().runOnServer(server -> {
+			ServerPlayer player = server.getPlayerList().getPlayers().get(0);
+			player.closeContainer();
+			standing[0] = player.position();
+			BlockPos station = player.blockPosition().offset(0, 0, -2);
+			lookAt(player, Vec3.atBottomCenterOf(station), 5);
+		});
+		context.waitTicks(40);
+		context.takeScreenshot("station-recall-watching");
+		world.getServer().runOnServer(server -> {
+			ServerPlayer player = server.getPlayerList().getPlayers().get(0);
+			// back to where the scene expects the player
+			player.teleportTo(player.level(), standing[0].x, standing[0].y, standing[0].z, java.util.Set.of(), 0, 0, true);
+		});
 
 		// Jade tooltip of a robot at the station, then rain: umbrellas out in the open
 		world.getServer().runOnServer(server -> {

@@ -81,6 +81,8 @@ public class RobotEntity extends PathfinderMob {
 	public static final int ACTION_TICKS = 14;
 	/** Recall button presses per station ("dimension@packed position"), as game time. */
 	private static final Map<String, Long> RECALLS = new HashMap<>();
+	/** Who pressed the recall button of each station; the robots watch that player until they work again. */
+	private static final Map<String, UUID> RECALLERS = new HashMap<>();
 	/** Called back: teleports to the station after this many ticks without getting closer, then waits there this long. */
 	private static final int RECALL_STUCK_TICKS = 200;
 	/** Up to this many robots at a station, the recall gathers them within 3x3 blocks; more need 5x5. */
@@ -114,6 +116,8 @@ public class RobotEntity extends PathfinderMob {
 	public static final int MOOD_NONE = 0;
 	public static final int MOOD_HAPPY = 1;
 	public static final int MOOD_SAD = 2;
+	/** Sitting after a recall, watching the player who called. */
+	public static final int MOOD_WATCHING = 3;
 	/** Close enough to its station to sit down and wait. */
 	private static final double HOME_RADIUS = 3;
 	/** How long it stays sad before trying to reach its station again. */
@@ -144,6 +148,8 @@ public class RobotEntity extends PathfinderMob {
 	private boolean noChest;
 	private String stationName = "";
 	private long recallSeen;
+	/** The player who called it back, watched while coming back and waiting. */
+	private UUID recaller;
 	private int recallPhase = RECALL_NONE;
 	private long recallUntil;
 	private double recallBest;
@@ -297,14 +303,16 @@ public class RobotEntity extends PathfinderMob {
 
 		if (recall != null && recall > recallSeen && level().getGameTime() - recall < RECALL_VALID_TICKS) {
 			recallSeen = recall;
+			recaller = RECALLERS.get(dim + "@" + station.asLong());
 			startRecall();
 		}
 	}
 
 	/** The recall button of a station: all its robots come back, then wait there for a minute. Loaded ones set off at once. */
-	public static void recall(ServerLevel level, String dim, BlockPos station) {
+	public static void recall(ServerLevel level, String dim, BlockPos station, UUID player) {
 		long now = level.getGameTime();
 		RECALLS.put(dim + "@" + station.asLong(), now);
+		RECALLERS.put(dim + "@" + station.asLong(), player);
 		StorageData data = StorageData.get();
 
 		if (data == null) {
@@ -314,6 +322,7 @@ public class RobotEntity extends PathfinderMob {
 		for (UUID uuid : data.stationRobots(dim, station).keySet()) {
 			if (level.getEntity(uuid) instanceof RobotEntity robot && station.equals(robot.station)) {
 				robot.recallSeen = now;
+				robot.recaller = player;
 				robot.startRecall();
 			}
 		}
@@ -372,7 +381,28 @@ public class RobotEntity extends PathfinderMob {
 			}
 		} else if (recallPhase == RECALL_WAITING && now >= recallUntil) {
 			recallPhase = RECALL_NONE;
+			recaller = null;
 		}
+	}
+
+	/** Called back, it keeps its eyes on the player who called until it works again. */
+	@Override
+	protected void customServerAiStep(ServerLevel level) {
+		super.customServerAiStep(level);
+		Player player = watchedPlayer();
+
+		if (player != null) {
+			getLookControl().setLookAt(player, 30, 30);
+		}
+	}
+
+	private Player watchedPlayer() {
+		if (recallPhase == RECALL_NONE || recaller == null) {
+			return null;
+		}
+
+		Player player = level().getPlayerByUUID(recaller);
+		return player != null && player.isAlive() && distanceToSqr(player) < 64 * 64 ? player : null;
 	}
 
 	/** Safety net: a station robot that wants home but has not got closer for 3 minutes teleports there. */
@@ -1148,7 +1178,7 @@ public class RobotEntity extends PathfinderMob {
 		if (idle && (sad || nearHome())) {
 			if (++idleTicks > (sad ? 20 : 40)) {
 				setSitting(true);
-				setMood(sad ? MOOD_SAD : MOOD_HAPPY);
+				setMood(sad ? MOOD_SAD : recallPhase == RECALL_WAITING && watchedPlayer() != null ? MOOD_WATCHING : MOOD_HAPPY);
 			}
 		} else {
 			idleTicks = 0;

@@ -133,6 +133,12 @@ public class RobotModel extends EntityModel<RobotRenderState> {
 				neck.yRot = 0;
 				head.zRot = 0.1F;
 				body.xRot = 0.15F;
+			} else if (state.mood == RobotEntity.MOOD_WATCHING) {
+				// called back: sits still and looks at the player who called
+				neck.yRot = state.yRot * Mth.DEG_TO_RAD * 0.4F;
+				head.yRot = state.yRot * Mth.DEG_TO_RAD * 0.6F;
+				head.xRot = state.xRot * Mth.DEG_TO_RAD * 0.8F;
+				head.zRot = 0;
 			} else if (state.mood == RobotEntity.MOOD_HAPPY) {
 				// looks around cheerfully, bobbing its head and wiggling now and then
 				head.yRot = Mth.sin(age * 0.12F) * 0.7F;
