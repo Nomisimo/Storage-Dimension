@@ -160,9 +160,9 @@ Im Ordner `storagedim-tb/` liegt ein kleiner Zusatz-Mod. Er fügt ein echtes **M
 
 - Rezept (formlos): Leeres Upgrade (Traveler's Backpack), Enderauge, 2× Amethystscherbe, Redstoneblock. Mit dem Zusatz-Mod ergibt auch das normale ME-Upgrade-Rezept (mit Papier) dieses Upgrade. Es gibt dann nur noch ein ME-Upgrade: Es passt in den Upgrade-Slot und macht mit einem Bündel auch einen ME-Rucksack.
 - Upgrade in einen Upgrade-Slot des Rucksacks legen. Linksklick auf das ME-Symbol im Rucksack-Fenster zeigt den ME-Speicher **direkt im Rucksack-Fenster**, an Stelle des Rucksack-Inhalts. Crafting, die anderen Upgrades und die Einstellungen bleiben daneben sichtbar. Ein zweiter Linksklick zeigt wieder den Rucksack. Rechtsklick nimmt das Upgrade heraus.
-  - In der ME-Ansicht: Linksklick nimmt einen Stapel, Rechtsklick einen halben, Shift-Klick schiebt ihn ins Inventar. Ein Item vom Cursor oder Shift-Klick im eigenen Inventar lagert ein. Bei mehr Items als Plätzen blättern die beiden Pfeile unten rechts. Über dem Fenster steht ein Suchfeld (mit dem „J“-Schalter des ME-Terminals auch an die JEI-Suche gekoppelt).
+  - In der ME-Ansicht: Linksklick nimmt einen Stapel, Rechtsklick einen halben, Shift-Klick schiebt ihn ins Inventar. Ein Item vom Cursor oder Shift-Klick im eigenen Inventar lagert ein. Die Ansicht ist aufgebaut wie die ME-Kiste: Über dem Fenster liegt eine graue Leiste mit Suchfeld, „J“-Schalter (Suche an JEI koppeln) und Sortierung (Menge / A–Z). Unten sitzen ◀ und ▶ zum Blättern, „Einlagern“ (ganzes Inventar ohne Hotbar in den Speicher) sowie Seite, Sorten und Gesamtmenge.
 
-  ![Suchfeld über dem Rucksack-Fenster in der ME-Ansicht](docs/screenshots/rucksack-me-suche.png)
+  ![ME-Ansicht im Rucksack mit Suchleiste, Sortierung und Knöpfen wie in der ME-Kiste](docs/screenshots/rucksack-me-suche.png)
 
   ![ME-Speicher im Rucksack-Fenster, daneben das Crafting-Upgrade](docs/screenshots/rucksack-me-ansicht.png)
 
