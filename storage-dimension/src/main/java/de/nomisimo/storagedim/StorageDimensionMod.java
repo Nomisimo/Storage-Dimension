@@ -1,5 +1,6 @@
 package de.nomisimo.storagedim;
 
+import de.nomisimo.storagedim.robot.Robots;
 import de.nomisimo.storagedim.storage.StorageCommands;
 import de.nomisimo.storagedim.storage.StorageEvents;
 import de.nomisimo.storagedim.storage.TerminalNetworking;
@@ -21,6 +22,7 @@ public class StorageDimensionMod implements ModInitializer {
 	@Override
 	public void onInitialize() {
 		StorageConfig.load();
+		Robots.register();
 		StorageEvents.register();
 		StorageCommands.register();
 		TerminalNetworking.register();

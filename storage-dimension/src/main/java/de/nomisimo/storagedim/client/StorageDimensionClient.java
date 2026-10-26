@@ -1,11 +1,14 @@
 package de.nomisimo.storagedim.client;
 
+import de.nomisimo.storagedim.robot.Robots;
 import de.nomisimo.storagedim.storage.StorageMenu;
 import de.nomisimo.storagedim.storage.TerminalNetworking;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
+import net.fabricmc.fabric.api.client.rendering.v1.EntityRendererRegistry;
+import net.fabricmc.fabric.api.client.rendering.v1.ModelLayerRegistry;
 import net.fabricmc.fabric.api.client.screen.v1.ScreenEvents;
 import net.fabricmc.fabric.api.client.screen.v1.Screens;
 import net.minecraft.client.Minecraft;
@@ -34,6 +37,8 @@ public class StorageDimensionClient implements ClientModInitializer {
 
 	@Override
 	public void onInitializeClient() {
+		ModelLayerRegistry.registerModelLayer(RobotModel.LAYER, RobotModel::createBodyLayer);
+		EntityRendererRegistry.register(Robots.ROBOT, RobotRenderer::new);
 		ClientPlayNetworking.registerGlobalReceiver(TerminalNetworking.OpenedPayload.TYPE, (payload, context) -> {
 			terminalId = payload.containerId();
 			sort = parse(payload.sort());

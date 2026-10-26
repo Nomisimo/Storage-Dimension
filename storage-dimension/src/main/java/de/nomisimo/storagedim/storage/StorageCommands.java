@@ -75,6 +75,8 @@ public final class StorageCommands {
 								.executes(ctx -> give(ctx.getSource().getPlayerOrException(), StorageItems.terminal())))
 						.then(Commands.literal("filter")
 								.executes(ctx -> give(ctx.getSource().getPlayerOrException(), StorageItems.filterChest())))
+						.then(Commands.literal("robot")
+								.executes(ctx -> give(ctx.getSource().getPlayerOrException(), new ItemStack(de.nomisimo.storagedim.robot.Robots.ROBOT_ITEM))))
 						.then(Commands.argument("spieler", EntityArgument.player())
 								.executes(ctx -> give(EntityArgument.getPlayer(ctx, "spieler"), StorageItems.storageChest())))));
 	}
