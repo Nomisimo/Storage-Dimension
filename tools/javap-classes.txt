@@ -1,7 +1,9 @@
--p net.minecraft.client.resources.model.sprite.SpriteId
--p net.minecraft.client.renderer.SpriteMapper
--p net.minecraft.client.renderer.blockentity.state.ChestRenderState$ChestMaterialType
--c net.minecraft.client.model.object.chest.ChestModel
--p net.fabricmc.fabric.api.entity.event.v1.ServerEntityWorldChangeEvents
--p net.fabricmc.fabric.api.entity.event.v1.ServerEntityLevelChangeEvents
--p net.fabricmc.fabric.api.networking.v1.PlayerLookup
+-p net.fabricmc.fabric.api.client.gametest.v1.FabricClientGameTest
+-p net.fabricmc.fabric.api.client.gametest.v1.context.ClientGameTestContext
+-p net.fabricmc.fabric.api.client.gametest.v1.context.TestSingleplayerContext
+-p net.fabricmc.fabric.api.client.gametest.v1.context.TestServerContext
+-p net.fabricmc.fabric.api.client.gametest.v1.context.TestClientLevelContext
+-p net.fabricmc.fabric.api.client.gametest.v1.context.TestClientWorldContext
+-p net.fabricmc.fabric.api.client.gametest.v1.world.TestWorldBuilder
+-p net.fabricmc.fabric.api.client.gametest.v1.screenshot.TestScreenshotOptions
+-p net.fabricmc.fabric.api.client.gametest.v1.context.TestDedicatedServerContext
