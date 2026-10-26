@@ -504,8 +504,8 @@ public class RobotEntity extends PathfinderMob {
 	}
 
 	@Override
-	public Component getDisplayName() {
-		Component name = super.getDisplayName();
+	public Component getName() {
+		Component name = super.getName();
 		return hasError() ? withErrorIcons(name) : name;
 	}
 

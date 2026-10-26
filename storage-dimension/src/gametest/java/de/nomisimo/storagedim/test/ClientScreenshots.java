@@ -285,7 +285,8 @@ public class ClientScreenshots implements FabricClientGameTest {
 					.stream().findFirst().orElse(null);
 
 			if (robot != null) {
-				lookAt(player, robot.position().add(0, 0.8, 0), 3);
+				// aimed a little beside it, so the Jade tooltip does not cover the name tag
+				lookAt(player, robot.position().add(1.2, 0.8, -0.6), 3.5);
 			}
 		});
 		context.waitTicks(40);
