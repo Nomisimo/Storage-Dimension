@@ -1,0 +1,27 @@
+# Prints class signatures of Minecraft / Fabric API classes, to look up the API of this Minecraft version.
+name: javap
+on:
+  push:
+    branches: [javap]
+
+jobs:
+  javap:
+    runs-on: ubuntu-24.04
+    defaults:
+      run:
+        working-directory: storage-dimension
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-java@v5
+        with:
+          java-version: '25'
+          distribution: 'microsoft'
+      - run: chmod +x ./gradlew && ./gradlew compileJava
+      - name: javap
+        run: |
+          CP=$(find ~/.gradle /home/runner/work -name "*.jar" \( -path "*minecraft*" -o -path "*fabric-api*" -o -path "*net.fabricmc*" \) 2>/dev/null | tr '\n' ':')
+          while read -r flags cls; do
+            [ -z "$cls" ] && continue
+            echo "=================== $cls"
+            javap $flags -cp "$CP" "$cls" 2>&1 | head -400
+          done < ../tools/javap-classes.txt
