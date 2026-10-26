@@ -23,21 +23,28 @@ public class SearchMenu extends AnvilMenu {
 	private static final String PLACEHOLDER = "Suchbegriff";
 
 	private final Consumer<String> onDone;
+	private final String placeholder;
 	private String text;
 
-	private SearchMenu(int containerId, Inventory inventory, String current, Consumer<String> onDone) {
+	private SearchMenu(int containerId, Inventory inventory, String current, String placeholder, Consumer<String> onDone) {
 		super(containerId, inventory, ContainerLevelAccess.NULL);
 		this.onDone = onDone;
+		this.placeholder = placeholder;
 		this.text = current == null ? "" : current;
 		ItemStack paper = new ItemStack(Items.PAPER);
-		paper.set(DataComponents.CUSTOM_NAME, Component.literal(current.isEmpty() ? PLACEHOLDER : current));
+		paper.set(DataComponents.CUSTOM_NAME, Component.literal(text.isEmpty() ? placeholder : text));
 		inputSlots.setItem(0, paper);
 	}
 
 	public static void open(ServerPlayer player, String current, Consumer<String> onDone) {
+		open(player, current, "Suche: Text eingeben, dann rechts klicken", PLACEHOLDER, onDone);
+	}
+
+	/** The same text field for other things, e.g. a robot's name. */
+	public static void open(ServerPlayer player, String current, String title, String placeholder, Consumer<String> onDone) {
 		player.openMenu(new SimpleMenuProvider(
-				(id, inventory, p) -> new SearchMenu(id, inventory, current, onDone),
-				Component.literal("Suche: Text eingeben, dann rechts klicken")));
+				(id, inventory, p) -> new SearchMenu(id, inventory, current, placeholder, onDone),
+				Component.literal(title)));
 	}
 
 	/**
@@ -54,7 +61,7 @@ public class SearchMenu extends AnvilMenu {
 		}
 
 		ItemStack result = input.copy();
-		result.set(DataComponents.CUSTOM_NAME, Component.literal(text == null || text.isEmpty() ? PLACEHOLDER : text));
+		result.set(DataComponents.CUSTOM_NAME, Component.literal(text == null || text.isEmpty() ? placeholder : text));
 		resultSlots.setItem(0, result);
 	}
 
@@ -67,7 +74,7 @@ public class SearchMenu extends AnvilMenu {
 	@Override
 	public void clicked(int slotIndex, int buttonNum, ContainerInput input, Player player) {
 		if (slotIndex == RESULT_SLOT) {
-			String term = PLACEHOLDER.equals(text) ? "" : text;
+			String term = placeholder.equals(text) ? "" : text;
 			inputSlots.setItem(0, ItemStack.EMPTY);
 			onDone.accept(term);
 			return;

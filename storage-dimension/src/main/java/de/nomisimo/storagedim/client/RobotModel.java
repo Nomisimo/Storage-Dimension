@@ -1,6 +1,7 @@
 package de.nomisimo.storagedim.client;
 
 import de.nomisimo.storagedim.StorageDimensionMod;
+import de.nomisimo.storagedim.robot.RobotEntity;
 import net.minecraft.client.model.EntityModel;
 import net.minecraft.client.model.geom.ModelLayerLocation;
 import net.minecraft.client.model.geom.ModelPart;
@@ -106,6 +107,23 @@ public class RobotModel extends EntityModel<RobotRenderState> {
 			rightShin.xRot = leftShin.xRot = 1.45F;
 			rightFoot.xRot = leftFoot.xRot = 0;
 			neck.xRot = -0.25F;
+
+			if (state.mood == RobotEntity.MOOD_SAD) {
+				// hangs its head and stares at the ground
+				neck.xRot = 0.85F;
+				head.xRot = 0.45F;
+				head.yRot = 0;
+				neck.yRot = 0;
+				head.zRot = 0.1F;
+				body.xRot = 0.15F;
+			} else if (state.mood == RobotEntity.MOOD_HAPPY) {
+				// looks around cheerfully, bobbing its head and wiggling now and then
+				head.yRot = Mth.sin(age * 0.12F) * 0.7F;
+				neck.yRot = Mth.sin(age * 0.12F) * 0.25F;
+				neck.xRot = -0.35F + Mth.sin(age * 0.3F) * 0.1F;
+				head.zRot = Mth.sin(age * 0.24F) * 0.15F;
+				body.zRot = Mth.sin(age * 0.5F) * 0.05F;
+			}
 		}
 
 		// bend down, open the beak, close it again

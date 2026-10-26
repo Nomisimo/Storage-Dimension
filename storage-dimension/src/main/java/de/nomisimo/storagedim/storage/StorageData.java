@@ -23,6 +23,7 @@ import com.mojang.serialization.JsonOps;
 
 import de.nomisimo.storagedim.StorageConfig;
 import de.nomisimo.storagedim.StorageDimensionMod;
+import de.nomisimo.storagedim.robot.RobotConfig;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.world.item.ItemStack;
@@ -50,6 +51,8 @@ public final class StorageData {
 	public final Map<String, Map<Long, FilterChests.FilterChest>> filterChests = new HashMap<>();
 	/** Dimension id to packed positions of placed ME terminals. */
 	public final Map<String, Set<Long>> terminals = new HashMap<>();
+	/** Settings of each robot station per dimension, applied to robots configured there. */
+	public final Map<String, Map<Long, RobotConfig>> stations = new HashMap<>();
 	/** Where to send a player back to when they leave the storage room. */
 	public final Map<UUID, SavedPos> returns = new HashMap<>();
 	/**
@@ -202,6 +205,16 @@ public final class StorageData {
 
 	// ---- terminals ----
 
+	/** The settings of the station at {@code pos}, with defaults for a new one. */
+	public RobotConfig station(String dimension, BlockPos pos) {
+		return stations.getOrDefault(dimension, Map.of()).getOrDefault(pos.asLong(), RobotConfig.DEFAULT).withStation(dimension, pos);
+	}
+
+	public void setStation(String dimension, BlockPos pos, RobotConfig config) {
+		stations.computeIfAbsent(dimension, d -> new HashMap<>()).put(pos.asLong(), config);
+		markDirty();
+	}
+
 	public boolean isTerminal(String dimension, BlockPos pos) {
 		Set<Long> set = terminals.get(dimension);
 		return set != null && set.contains(pos.asLong());
@@ -302,6 +315,14 @@ public final class StorageData {
 		});
 		root.add("terminals", terminalObj);
 
+		JsonObject stationObj = new JsonObject();
+		stations.forEach((dim, map) -> {
+			JsonObject d = new JsonObject();
+			map.forEach((pos, config) -> RobotConfig.CODEC.encodeStart(ops, config).result().ifPresent(json -> d.add(Long.toString(pos), json)));
+			stationObj.add(dim, d);
+		});
+		root.add("stations", stationObj);
+
 		JsonObject returnObj = new JsonObject();
 		returns.forEach((player, pos) -> returnObj.add(player.toString(), writePos(pos)));
 		root.add("returns", returnObj);
@@ -393,6 +414,15 @@ public final class StorageData {
 				Set<Long> set = new HashSet<>();
 				dim.getValue().getAsJsonArray().forEach(e -> set.add(e.getAsLong()));
 				terminals.put(dim.getKey(), set);
+			});
+		}
+
+		if (root.has("stations")) {
+			root.getAsJsonObject("stations").entrySet().forEach(dim -> {
+				Map<Long, RobotConfig> map = new HashMap<>();
+				dim.getValue().getAsJsonObject().entrySet().forEach(e -> RobotConfig.CODEC.parse(ops, e.getValue())
+						.resultOrPartial(StorageDimensionMod.LOGGER::warn).ifPresent(config -> map.put(Long.parseLong(e.getKey()), config)));
+				stations.put(dim.getKey(), map);
 			});
 		}
 

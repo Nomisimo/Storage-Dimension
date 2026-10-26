@@ -6,6 +6,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 
@@ -40,7 +41,6 @@ import net.minecraft.world.entity.ai.goal.FloatGoal;
 import net.minecraft.world.entity.ai.goal.Goal;
 import net.minecraft.world.entity.ai.goal.LookAtPlayerGoal;
 import net.minecraft.world.entity.ai.goal.RandomLookAroundGoal;
-import net.minecraft.world.entity.ai.goal.WaterAvoidingRandomStrollGoal;
 import net.minecraft.world.entity.ai.navigation.GroundPathNavigation;
 import net.minecraft.world.entity.ai.navigation.PathNavigation;
 import net.minecraft.world.entity.item.ItemEntity;
@@ -87,6 +87,15 @@ public class RobotEntity extends PathfinderMob {
 	private static final EntityDataAccessor<Byte> ACTION = SynchedEntityData.defineId(RobotEntity.class, EntityDataSerializers.BYTE);
 	private static final EntityDataAccessor<Integer> ACTION_TIME = SynchedEntityData.defineId(RobotEntity.class, EntityDataSerializers.INT);
 	private static final EntityDataAccessor<Byte> SITTING = SynchedEntityData.defineId(RobotEntity.class, EntityDataSerializers.BYTE);
+	/** How it sits: {@link #MOOD_HAPPY} waiting at its station, {@link #MOOD_SAD} when it cannot work. */
+	private static final EntityDataAccessor<Byte> MOOD = SynchedEntityData.defineId(RobotEntity.class, EntityDataSerializers.BYTE);
+	public static final int MOOD_NONE = 0;
+	public static final int MOOD_HAPPY = 1;
+	public static final int MOOD_SAD = 2;
+	/** Close enough to its station to sit down and wait. */
+	private static final double HOME_RADIUS = 3;
+	/** How long it stays sad before trying to reach its station again. */
+	private static final int RETRY_HOME_TICKS = 600;
 
 	private UUID owner;
 	private BlockPos home;
@@ -102,6 +111,11 @@ public class RobotEntity extends PathfinderMob {
 	/** The way to the current item or chest, worked out once when it was chosen. */
 	private Path plannedPath;
 	private long nextSearch;
+	/** The robot station it belongs to, or null for a robot without one (its home is where it was placed). */
+	private BlockPos station;
+	private long homeUnreachableUntil;
+	/** No dimension chest, terminal or filter chest in its range. */
+	private boolean noChest;
 
 	public RobotEntity(EntityType<? extends PathfinderMob> type, Level level) {
 		super(type, level);
@@ -130,18 +144,13 @@ public class RobotEntity extends PathfinderMob {
 		builder.define(ACTION, (byte) 0);
 		builder.define(ACTION_TIME, 0);
 		builder.define(SITTING, (byte) 0);
+		builder.define(MOOD, (byte) MOOD_NONE);
 	}
 
 	@Override
 	protected void registerGoals() {
 		goalSelector.addGoal(0, new FloatGoal(this));
 		goalSelector.addGoal(1, new WorkGoal());
-		goalSelector.addGoal(5, new WaterAvoidingRandomStrollGoal(this, 0.6) {
-			@Override
-			public boolean canUse() {
-				return !isSitting() && super.canUse();
-			}
-		});
 		goalSelector.addGoal(6, new LookAtPlayerGoal(this, Player.class, 6));
 		goalSelector.addGoal(7, new RandomLookAroundGoal(this));
 	}
@@ -169,6 +178,98 @@ public class RobotEntity extends PathfinderMob {
 		entityData.set(SITTING, (byte) (sitting ? 1 : 0));
 	}
 
+	public int getMood() {
+		return entityData.get(MOOD);
+	}
+
+	private void setMood(int mood) {
+		entityData.set(MOOD, (byte) mood);
+	}
+
+	// ---- configuration (robot station) ----
+
+	/** Takes over range, filter, colour, name and station from a configured robot item. */
+	public void applyConfig(RobotConfig config) {
+		range = Math.clamp(config.range(), RANGES[0], RANGE);
+		applyRange();
+		filter.clear();
+		filter.addAll(config.filter());
+		entityData.set(COLOR, config.color());
+		setCustomName(config.name().isEmpty() ? null : Component.literal(config.name()));
+		setCustomNameVisible(!config.name().isEmpty());
+		boolean sameDimension = config.stationDim().map(dim -> dim.equals(Rooms.id(level()))).orElse(false);
+		station = sameDimension ? config.station().orElse(null) : null;
+
+		if (station != null) {
+			home = station;
+		}
+	}
+
+	/** Its current settings, for the item it turns into when picked up. */
+	public RobotConfig config() {
+		return new RobotConfig(range, getColor(), getCustomName() == null ? "" : getCustomName().getString(), List.copyOf(filter),
+				station == null ? Optional.empty() : Optional.of(Rooms.id(level())), Optional.ofNullable(station));
+	}
+
+	/** The robot as an item, keeping its settings. */
+	public ItemStack toItem() {
+		ItemStack item = new ItemStack(Robots.ROBOT_ITEM);
+		config().write(item, level().registryAccess());
+		return item;
+	}
+
+	/** Its station was broken (only checked where the chunk is loaded). */
+	private boolean stationMissing() {
+		return station != null && level().isLoaded(station) && !level().getBlockState(station).is(RobotStationBlock.BLOCK);
+	}
+
+	private boolean nearHome() {
+		return position().distanceTo(Vec3.atBottomCenterOf(home())) <= HOME_RADIUS + 0.5;
+	}
+
+	/** Has nothing to do right now, so another robot may take an item this one would otherwise get. */
+	private boolean isFree() {
+		return target == null && getCarried().isEmpty() && getAction() == 0;
+	}
+
+	/** Would collect this item: in range and allowed by the filter. */
+	private boolean wants(ItemEntity item) {
+		return inRange(item.position()) && (filter.isEmpty() || FilterChests.matches(filter, item.getItem()));
+	}
+
+	/** Whether any chest it could deliver to exists in its range (ignoring the filter of filter chests). */
+	private boolean hasAnyChest() {
+		StorageData data = StorageData.get();
+
+		if (data == null) {
+			return false;
+		}
+
+		String dim = Rooms.id(level());
+
+		for (long packed : data.chests.getOrDefault(dim, Map.of()).keySet()) {
+			if (inRange(Vec3.atCenterOf(BlockPos.of(packed)))) {
+				return true;
+			}
+		}
+
+		for (long packed : data.filterChests.getOrDefault(dim, Map.of()).keySet()) {
+			if (inRange(Vec3.atCenterOf(BlockPos.of(packed)))) {
+				return true;
+			}
+		}
+
+		if (owner != null) {
+			for (long packed : data.terminals.getOrDefault(dim, Set.of())) {
+				if (inRange(Vec3.atCenterOf(BlockPos.of(packed)))) {
+					return true;
+				}
+			}
+		}
+
+		return false;
+	}
+
 	public ItemStack getCarried() {
 		return getItemBySlot(EquipmentSlot.MAINHAND);
 	}
@@ -180,7 +281,7 @@ public class RobotEntity extends PathfinderMob {
 
 	/** For debugging and the client test: what the robot is doing right now. */
 	public String describe() {
-		return String.format("range=%d filter=%s ", range, filter) + String.format("pos=%.1f/%.1f/%.1f home=%s target=%s delivery=%s carried=%s action=%d sitting=%s pathDone=%s goals=%s",
+		return String.format("range=%d filter=%s station=%s mood=%d noChest=%s ", range, filter, station, getMood(), noChest) + String.format("pos=%.1f/%.1f/%.1f home=%s target=%s delivery=%s carried=%s action=%d sitting=%s pathDone=%s goals=%s",
 				getX(), getY(), getZ(), home, target == null ? null : target.position(), delivery, getCarried(), getAction(), isSitting(),
 				getNavigation().isDone(), goalSelector.getAvailableGoals().stream().filter(g -> g.isRunning()).map(g -> g.getGoal().getClass().getSimpleName()).toList());
 	}
@@ -249,6 +350,9 @@ public class RobotEntity extends PathfinderMob {
 						&& inRange(item.position()) && (filter.isEmpty() || FilterChests.matches(filter, item.getItem()))
 						&& findDelivery(item.getItem()) != null));
 		items.sort(java.util.Comparator.comparingDouble(this::distanceToSqr));
+		// swarm: an item a free robot is clearly closer to is left for that one
+		List<RobotEntity> others = level().getEntitiesOfClass(RobotEntity.class, area, robot -> robot != this && robot.isFree());
+		items.removeIf(item -> others.stream().anyMatch(other -> other.wants(item) && other.distanceToSqr(item) + 2 < distanceToSqr(item)));
 
 		for (int i = 0; i < Math.min(items.size(), PATH_CHECKS); i++) {
 			ItemEntity item = items.get(i);
@@ -452,17 +556,24 @@ public class RobotEntity extends PathfinderMob {
 				return delivery != null;
 			}
 
+			if (stationMissing()) {
+				release();
+				return false;
+			}
+
 			if ((target == null || !target.isAlive()) && level().getGameTime() >= nextSearch) {
 				nextSearch = level().getGameTime() + SEARCH_TICKS;
 				release();
-				target = findItem();
+				noChest = !hasAnyChest();
+				target = noChest ? null : findItem();
 
 				if (target != null) {
 					CLAIMED.add(target.getUUID());
 				}
 			}
 
-			return target != null || !inRange(position());
+			// nothing to collect: back to the station (or where it was placed) to wait there
+			return target != null || !nearHome() && level().getGameTime() >= homeUnreachableUntil;
 		}
 
 		@Override
@@ -507,6 +618,8 @@ public class RobotEntity extends PathfinderMob {
 			if (goalKey == delivery) {
 				ignoredChests.put(delivery, until);
 				delivery = planDelivery();
+			} else if (goalKey == home) {
+				homeUnreachableUntil = level().getGameTime() + RETRY_HOME_TICKS;
 			} else if (goalKey == target) {
 				ignoredItems.put(target.getUUID(), until);
 				release();
@@ -551,15 +664,16 @@ public class RobotEntity extends PathfinderMob {
 				goalKey = target;
 			} else {
 				goal = Vec3.atBottomCenterOf(home());
-				reach = 3;
+				reach = HOME_RADIUS;
 				goalKey = home();
 			}
 
 			getLookControl().setLookAt(goal.x, goal.y, goal.z);
 			double distance = position().distanceTo(goal);
+			boolean arrived = goalKey == target ? standsOn(target)
+					: goalKey == delivery ? distance <= reach || canReachChest(goal) : distance <= reach;
 
-			// items only when nothing is in between, so it does not grab them through a wall
-			if (distance <= reach && (goalKey != target || hasLineOfSight(target)) || goalKey == delivery && canReachChest(goal)) {
+			if (arrived) {
 				if (!getCarried().isEmpty() && delivery != null) {
 					startAction(2);
 				} else if (target != null) {
@@ -585,10 +699,28 @@ public class RobotEntity extends PathfinderMob {
 			if (plannedPath != null) {
 				getNavigation().moveTo(plannedPath, 1.0);
 				plannedPath = null;
+			} else if (getNavigation().isDone() && goalKey == home) {
+				Path path = getNavigation().createPath(home, 2);
+
+				if (path == null || !path.canReach()) {
+					// cannot get back to its station: sits down sadly and tries again later
+					homeUnreachableUntil = level().getGameTime() + RETRY_HOME_TICKS;
+					getNavigation().stop();
+				} else {
+					getNavigation().moveTo(path, 1.0);
+				}
 			} else if (getNavigation().isDone()) {
 				getNavigation().moveTo(goal.x, goal.y, goal.z, 1.0);
 			}
 		}
+	}
+
+	/** Right at the item, so it picks it up from under its beak: nothing in between, about half a block away at most. */
+	private boolean standsOn(ItemEntity item) {
+		double dx = item.getX() - getX();
+		double dz = item.getZ() - getZ();
+		double dy = item.getY() - getY();
+		return dx * dx + dz * dz <= 0.5 * 0.5 && dy > -1 && dy < 1 && hasLineOfSight(item);
 	}
 
 	/** Paths may be as long as its range, so it can work out the whole way to anything in range. */
@@ -639,16 +771,22 @@ public class RobotEntity extends PathfinderMob {
 			return;
 		}
 
-		// Sits down after a while without anything to do, like the real one.
-		if (getAction() == 0 && getNavigation().isDone() && getCarried().isEmpty() && target == null) {
-			if (++idleTicks > 200 && !isSitting()) {
+		// Sits down when there is nothing to do: happily looking around at its station, sadly staring at the ground
+		// when it cannot work (no chest in range, station broken or out of reach).
+		boolean idle = getAction() == 0 && getNavigation().isDone() && getCarried().isEmpty() && target == null;
+		boolean sad = noChest || stationMissing() || level().getGameTime() < homeUnreachableUntil;
+
+		if (idle && (sad || nearHome())) {
+			if (++idleTicks > (sad ? 20 : 40)) {
 				setSitting(true);
+				setMood(sad ? MOOD_SAD : MOOD_HAPPY);
 			}
 		} else {
 			idleTicks = 0;
 
 			if (isSitting()) {
 				setSitting(false);
+				setMood(MOOD_NONE);
 			}
 		}
 	}
@@ -676,7 +814,7 @@ public class RobotEntity extends PathfinderMob {
 
 		if (player.isSecondaryUseActive() && held.isEmpty()) {
 			if (!level().isClientSide()) {
-				ItemStack item = new ItemStack(Robots.ROBOT_ITEM);
+				ItemStack item = toItem();
 				player.getInventory().add(item);
 
 				if (!item.isEmpty()) {
@@ -770,7 +908,7 @@ public class RobotEntity extends PathfinderMob {
 	@Override
 	protected void dropCustomDeathLoot(ServerLevel level, DamageSource source, boolean recentlyHit) {
 		super.dropCustomDeathLoot(level, source, recentlyHit);
-		spawnAtLocation(level, new ItemStack(Robots.ROBOT_ITEM));
+		spawnAtLocation(level, toItem());
 
 		if (!getCarried().isEmpty()) {
 			spawnAtLocation(level, getCarried().copy());
@@ -795,6 +933,7 @@ public class RobotEntity extends PathfinderMob {
 		output.storeNullable("Home", BlockPos.CODEC, home);
 		output.putInt("Color", getColor());
 		output.putInt("Range", range);
+		output.storeNullable("Station", BlockPos.CODEC, station);
 		output.store("Filter", ItemStack.CODEC.listOf(), List.copyOf(filter));
 	}
 
@@ -804,6 +943,7 @@ public class RobotEntity extends PathfinderMob {
 		owner = input.read("Owner", UUIDUtil.CODEC).orElse(null);
 		home = input.read("Home", BlockPos.CODEC).orElse(null);
 		entityData.set(COLOR, input.getIntOr("Color", DEFAULT_COLOR));
+		station = input.read("Station", BlockPos.CODEC).orElse(null);
 		range = Math.clamp(input.getIntOr("Range", RANGE), RANGES[0], RANGE);
 		applyRange();
 		filter.clear();

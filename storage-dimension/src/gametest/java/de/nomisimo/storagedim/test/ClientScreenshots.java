@@ -1,8 +1,11 @@
 package de.nomisimo.storagedim.test;
 
 import de.nomisimo.storagedim.robot.RobotBarrierBlock;
+import de.nomisimo.storagedim.robot.RobotConfig;
+import de.nomisimo.storagedim.robot.RobotStationBlock;
 import de.nomisimo.storagedim.robot.RobotEntity;
 import de.nomisimo.storagedim.robot.Robots;
+import de.nomisimo.storagedim.robot.StationMenu;
 import de.nomisimo.storagedim.storage.FilterChests;
 import de.nomisimo.storagedim.storage.Rooms;
 import de.nomisimo.storagedim.storage.StorageData;
@@ -12,12 +15,16 @@ import net.fabricmc.fabric.api.client.gametest.v1.context.ClientGameTestContext;
 import net.fabricmc.fabric.api.client.gametest.v1.context.TestSingleplayerContext;
 import net.minecraft.client.gui.screens.inventory.InventoryScreen;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.network.chat.Component;
+import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.EntitySpawnReason;
 import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.inventory.ContainerInput;
+import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.block.Blocks;
@@ -78,6 +85,84 @@ public class ClientScreenshots implements FabricClientGameTest {
 				}
 			}
 		});
+	}
+
+	/**
+	 * A robot station in front of the camera, set up through its screen; two robots configured there, one placed far away.
+	 * They should walk to the station, split the dropped items between them, then sit at the station looking around.
+	 * A third robot belongs to a station without any chest in range and should sit sadly.
+	 */
+	private static void stationTest(ClientGameTestContext context, TestSingleplayerContext world) {
+		world.getServer().runOnServer(server -> {
+			ServerPlayer player = server.getPlayerList().getPlayers().get(0);
+			ServerLevel level = player.level();
+			BlockPos base = player.blockPosition();
+			BlockPos station = base.offset(0, 0, -2);
+			level.setBlockAndUpdate(station, RobotStationBlock.BLOCK.defaultBlockState());
+			StorageData.get().setStation(Rooms.id(level), station, StorageData.get().station(Rooms.id(level), station).withName("Quak"));
+			StationMenu.open(player, station);
+			AbstractContainerMenu menu = player.containerMenu;
+			menu.clicked(9, 1, ContainerInput.PICKUP, player);   // range one step smaller: 8 chunks
+			menu.clicked(10, 0, ContainerInput.PICKUP, player);  // colour: white
+			menu.setCarried(new ItemStack(Robots.ROBOT_ITEM, 2));
+			menu.clicked(13, 0, ContainerInput.PICKUP, player);  // two robots in
+		});
+		context.waitTicks(10);
+		context.takeScreenshot("station-menu");
+		world.getServer().runOnServer(server -> {
+			ServerPlayer player = server.getPlayerList().getPlayers().get(0);
+			ServerLevel level = player.level();
+			BlockPos base = player.blockPosition();
+			ItemStack configured = player.containerMenu.getSlot(15).getItem().copy();
+			player.containerMenu.getSlot(15).set(ItemStack.EMPTY);
+			player.closeContainer();
+			RobotConfig config = RobotConfig.read(configured, level.registryAccess());
+			System.out.println("STORAGEDIM STATION item=" + configured + " config=" + config + " lore="
+					+ configured.get(net.minecraft.core.component.DataComponents.LORE).lines().stream().map(Component::getString).toList());
+
+			// one next to the scene, one 30 blocks away: that one walks to the station first
+			for (int i = 0; i < 2; i++) {
+				RobotEntity robot = Robots.ROBOT.create(level, EntitySpawnReason.SPAWN_ITEM_USE);
+				double x = i == 0 ? base.getX() + 3.5 : base.getX() + 30.5;
+				robot.snapTo(x, base.getY(), base.getZ() + 2.5, 0, 0);
+				robot.setup(player.getUUID(), BlockPos.containing(x, base.getY(), base.getZ() + 2.5));
+				robot.applyConfig(i == 0 ? config : config.withName("Watschel"));
+				level.addFreshEntity(robot);
+			}
+
+			// a lonely station far away with no chest in its range
+			BlockPos lonely = base.offset(40, 0, 0);
+			level.setBlockAndUpdate(lonely.below(), Blocks.STONE.defaultBlockState());
+			level.setBlockAndUpdate(lonely, RobotStationBlock.BLOCK.defaultBlockState());
+			RobotConfig sad = StorageData.get().station(Rooms.id(level), lonely).withRange(16).withName("Traurig");
+			RobotEntity robot = Robots.ROBOT.create(level, EntitySpawnReason.SPAWN_ITEM_USE);
+			robot.snapTo(lonely.getX() + 2.5, lonely.getY(), lonely.getZ() + 0.5, 0, 0);
+			robot.setup(player.getUUID(), lonely);
+			robot.applyConfig(sad);
+			level.addFreshEntity(robot);
+
+			for (int i = 0; i < 4; i++) {
+				drop(level, base.getX() - 3.5 + i * 2.5, base.getY() + 0.2, base.getZ() + 4.5, new ItemStack(Items.OAK_PLANKS, 8));
+			}
+		});
+
+		for (int t = 0; t < 8; t++) {
+			context.waitTicks(60);
+			logRobots(world);
+		}
+
+		context.takeScreenshot("station-idle");
+		world.getServer().runOnServer(server -> {
+			ServerPlayer player = server.getPlayerList().getPlayers().get(0);
+			BlockPos base = player.blockPosition();
+			System.out.println("STORAGEDIM PLANKS left " + player.level().getEntitiesOfClass(ItemEntity.class, new net.minecraft.world.phys.AABB(base).inflate(20),
+					item -> item.getItem().is(Items.OAK_PLANKS)).size());
+			// look at the sad robot
+			player.teleportTo(player.level(), base.getX() + 42.5, base.getY(), base.getZ() + 4.5, java.util.Set.of(), 180, 30, true);
+		});
+		context.waitTicks(40);
+		context.takeScreenshot("robot-sad");
+		logRobots(world);
 	}
 
 	private static void drop(ServerLevel level, double x, double y, double z, ItemStack stack) {
@@ -207,6 +292,16 @@ public class ClientScreenshots implements FabricClientGameTest {
 			recipe(context, world, "me_backpack", of(Items.BUNDLE), upgrade);
 			ItemStack g = of(Items.GLASS);
 			recipe(context, world, "robot_barrier", g, g, g, g, of(Items.AMETHYST_SHARD), g, g, g, g);
+			ItemStack ironIngot = of(Items.IRON_INGOT);
+			recipe(context, world, "robot_station", null, of(Items.LIGHTNING_ROD), null, ironIngot, of(Items.REDSTONE_BLOCK), ironIngot,
+					ironIngot, of(Items.CHEST), ironIngot);
+
+			// the Traveler's Backpack add-on, when the test runs with it
+			Item blank = BuiltInRegistries.ITEM.getValue(Identifier.parse("travelersbackpack:blank_upgrade"));
+
+			if (blank != Items.AIR) {
+				recipe(context, world, "tb_me_upgrade", of(Items.ENDER_EYE), new ItemStack(blank), a, a, of(Items.REDSTONE_BLOCK));
+			}
 
 			dragInTerminal(context, world);
 			terminalCounts(context, world);
@@ -269,6 +364,8 @@ public class ClientScreenshots implements FabricClientGameTest {
 				System.out.println("STORAGEDIM ITEMS left " + level.getEntitiesOfClass(ItemEntity.class, new net.minecraft.world.phys.AABB(base).inflate(20))
 						.stream().map(item -> item.getItem() + "@" + item.blockPosition().toShortString()).toList());
 			});
+
+			stationTest(context, world);
 		}
 	}
 }

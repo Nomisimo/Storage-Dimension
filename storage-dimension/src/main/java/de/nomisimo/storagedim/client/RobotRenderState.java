@@ -8,5 +8,7 @@ public class RobotRenderState extends HoldingEntityRenderState {
 	public int action;
 	public float actionProgress;
 	public boolean sitting;
+	/** {@link de.nomisimo.storagedim.robot.RobotEntity#MOOD_HAPPY} or MOOD_SAD while sitting. */
+	public int mood;
 	public boolean carrying;
 }

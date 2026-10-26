@@ -38,6 +38,7 @@ public class RobotRenderer extends MobRenderer<RobotEntity, RobotRenderState, Ro
 		state.action = robot.getAction();
 		state.actionProgress = robot.getActionProgress();
 		state.sitting = robot.isSitting();
+		state.mood = robot.getMood();
 		state.carrying = !robot.getCarried().isEmpty();
 	}
 
