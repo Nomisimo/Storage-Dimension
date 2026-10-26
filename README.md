@@ -13,6 +13,8 @@ Ein Fabric-Mod für **Minecraft 26.1.2**. Seit Version 0.4.0 (Sammelroboter, eig
   - Linksklick nimmt einen Stapel, Rechtsklick einen halben, Shift-Klick schiebt ihn ins Inventar.
   - Item auf dem Cursor in das Terminal klicken oder Shift-Klick im eigenen Inventar lagert ein.
   - Unten im Fenster: **◀ / ▶** blättern, **Einlagern** lagert das ganze Inventar (ohne Hotbar) ein, daneben stehen Seite, Sorten und Gesamtmenge. Ohne die Mod auf dem Client sind es Item-Knöpfe (Pfeile, Trichter).
+
+  ![ME-Terminal mit Suchfeld, Sortier-Knopf und Knöpfen zum Blättern und Einlagern](docs/screenshots/terminal-knoepfe.png)
   - **Suche und Sortierung:** Oben links im Fenster sitzt ein Suchfeld, rechts daneben der Sortier-Knopf (*Menge* / *A–Z*). Gesucht wird beim Tippen.
   - Die Suche ist beim nächsten Öffnen wieder leer, die Sortierung bleibt.
   - Mit [JEI](https://modrinth.com/mod/jei) sitzt zwischen Suchfeld und Sortier-Knopf ein kleiner Schalter **J**. Ist er grün, sind die Suche im Terminal und die JEI-Suchleiste gekoppelt: was in einer steht, steht auch in der anderen. Die Einstellung bleibt gespeichert (`jeiSearchSync` in `config/storagedim.json` beim Spieler).
@@ -31,6 +33,8 @@ Ein Fabric-Mod für **Minecraft 26.1.2**. Seit Version 0.4.0 (Sammelroboter, eig
   - Nur Spieler können ihm schaden. Er arbeitet nur in geladenen Chunks.
   - Mit [Jade](https://modrinth.com/mod/jade) zeigt der Blick auf einen Roboter seine Station, Reichweite, Filter und was er gerade tut (oder warum er traurig ist). Mit [Xaero's Minimap](https://modrinth.com/mod/xaeros-minimap) erscheinen die Roboter mit ihrem Gesicht auf der Karte.
 
+  <img src="docs/screenshots/minimap-icon.png" width="64" alt="Roboter-Icon für Xaero's Minimap">
+
   ![Jade zeigt Station, Filter und Zustand eines Roboters](docs/screenshots/roboter-jade.png)
 
   ![Bei Regen spannen die Roboter ihren Schirm auf](docs/screenshots/roboter-regenschirm.png)
@@ -48,6 +52,8 @@ Ein Fabric-Mod für **Minecraft 26.1.2**. Seit Version 0.4.0 (Sammelroboter, eig
   - Ein eingestellter Roboter, der außerhalb der Reichweite seiner Station hingestellt wird, läuft zuerst zur Station und arbeitet dann los.
 
   ![Fenster der Roboter-Station mit Roboterliste](docs/screenshots/roboter-station-menu.png)
+
+  ![Nach dem Zurückrufen warten alle an der Station, auch der eingemauerte Quak3 hat sich hergeholt](docs/screenshots/roboter-station-rueckruf.png)
 
   ![Roboter warten fröhlich an ihrer Station](docs/screenshots/roboter-station.png)
 
