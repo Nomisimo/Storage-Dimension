@@ -1,4 +1,4 @@
-# Prints class signatures of Minecraft / Fabric API classes, to look up the API of this Minecraft version.
+# Prints class signatures of Minecraft / Fabric API / mod classes, to look up the API of this Minecraft version.
 name: javap
 on:
   push:
@@ -14,16 +14,26 @@ jobs:
       - uses: actions/checkout@v6
         with:
           ref: main
+      - uses: actions/checkout@v6
+        with:
+          path: jp
       - uses: actions/setup-java@v5
         with:
           java-version: '25'
           distribution: 'microsoft'
       - run: chmod +x ./gradlew && ./gradlew compileJava
-      - name: TB jar contents
+      - name: javap
         run: |
-          JAR=$(find ~/.gradle -iname "*travelersbackpack*.jar" | grep -v sources | head -1)
-          echo "JAR=$JAR"
-          for f in data/travelersbackpack/tags/item/backpack_upgrades.json data/travelersbackpack/tags/item/readme.txt; do echo "== $f"; unzip -p "$JAR" "$f"; echo; done
-          unzip -l "$JAR" | grep -iE "UpgradeSlot|upgrade/UpgradeItem|BackpackSlot" | head
-          mkdir x && cd x && unzip -q "$JAR" && javap -p -cp . com.tiviacz.travelersbackpack.inventory.menu.slot.UpgradeSlotItemHandler 2>&1 | head -40 || true
-          grep -rl "backpack_upgrades" --include=*.class . | head
+          CP=$(find ~/.gradle /home/runner/work -name "*.jar" \( -path "*minecraft*" -o -path "*fabric-api*" -o -path "*net.fabricmc*" -o -path "*maven.modrinth*" \) 2>/dev/null | tr '\n' ':')
+          while read -r flags cls; do
+            [ -z "$cls" ] && continue
+            echo "=================== $cls"
+            javap $flags -cp "$CP" "$cls" 2>&1 | head -4000
+          done < ../jp/tools/javap-classes.txt
+      - name: TB methods that open screens
+        run: |
+          JAR=$(find ~/.gradle -iname "travelersbackpack*.jar" | grep -v sources | head -1)
+          mkdir /tmp/tb && cd /tmp/tb && unzip -q "$JAR"
+          for c in $(find com -name "*.class" | sed 's/\.class$//; s#/#.#g'); do
+            javap -p -cp ".:$(find ~/.gradle /home/runner/work -name '*.jar' -path '*minecraft*' | tr '\n' ':')" "$c" 2>/dev/null | grep -iE "^(public|  public static).*(open|Screen)" | sed "s#^#$c: #"
+          done | grep -iE "open" | head -80
