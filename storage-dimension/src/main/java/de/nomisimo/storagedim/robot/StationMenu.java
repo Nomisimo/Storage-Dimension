@@ -16,6 +16,7 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.Registry;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.chat.Component;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.Container;
 import net.minecraft.world.SimpleContainer;
@@ -160,7 +161,7 @@ public class StationMenu extends AbstractContainerMenu {
 			case ACTION_RANGE -> config = config.withRange(step(RANGES, config.range(), value));
 			case ACTION_COLOR -> config = config.withColor(step(RobotConfig.colors(), config.color(), value));
 			case ACTION_MODE -> config = config.withExclude(!config.exclude());
-			case ACTION_RECALL -> RobotEntity.recall(dim, pos, viewer.level().getGameTime());
+			case ACTION_RECALL -> RobotEntity.recall((ServerLevel) viewer.level(), dim, pos);
 			case ACTION_STATION_NAME -> config = config.withStationName(clean(text));
 			case ACTION_ROBOT_NAME -> {
 				config = config.withName(clean(text));
@@ -305,7 +306,8 @@ public class StationMenu extends AbstractContainerMenu {
 
 			if (entity instanceof RobotEntity r) {
 				int distance = (int) Math.round(Math.sqrt(r.distanceToSqr(pos.getX() + 0.5, pos.getY(), pos.getZ() + 0.5)));
-				names.add(name + " · " + distance + " m");
+				String shown = r.hasError() ? RobotEntity.ERROR_ICON + " " + name + " " + RobotEntity.ERROR_ICON : name;
+				names.add(shown + " · " + distance + " m");
 				states.add(r.status());
 			} else {
 				names.add(name);

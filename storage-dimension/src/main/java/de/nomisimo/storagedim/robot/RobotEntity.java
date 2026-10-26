@@ -83,6 +83,8 @@ public class RobotEntity extends PathfinderMob {
 	private static final Map<String, Long> RECALLS = new HashMap<>();
 	/** Called back: teleports to the station after this many ticks without getting closer, then waits there this long. */
 	private static final int RECALL_STUCK_TICKS = 200;
+	/** Up to this many robots at a station, the recall gathers them within 3x3 blocks; more need 5x5. */
+	private static final int RECALL_SMALL_AREA_ROBOTS = 20;
 	private static final int RECALL_WAIT_TICKS = 1200;
 	/** A robot loaded later than this after the button press does not follow the recall any more. */
 	private static final int RECALL_VALID_TICKS = 2400;
@@ -105,6 +107,10 @@ public class RobotEntity extends PathfinderMob {
 	private static final EntityDataAccessor<Component> INFO_STATION = SynchedEntityData.defineId(RobotEntity.class, EntityDataSerializers.COMPONENT);
 	private static final EntityDataAccessor<Component> INFO_FILTER = SynchedEntityData.defineId(RobotEntity.class, EntityDataSerializers.COMPONENT);
 	private static final EntityDataAccessor<Component> INFO_STATUS = SynchedEntityData.defineId(RobotEntity.class, EntityDataSerializers.COMPONENT);
+	/** It cannot work (station gone, no chest, no way home): its name tag gets error icons. */
+	private static final EntityDataAccessor<Boolean> ERROR = SynchedEntityData.defineId(RobotEntity.class, EntityDataSerializers.BOOLEAN);
+	/** The icon on both sides of the name while it has an error. */
+	public static final String ERROR_ICON = "⛔";
 	public static final int MOOD_NONE = 0;
 	public static final int MOOD_HAPPY = 1;
 	public static final int MOOD_SAD = 2;
@@ -184,6 +190,7 @@ public class RobotEntity extends PathfinderMob {
 		builder.define(INFO_STATION, Component.empty());
 		builder.define(INFO_FILTER, Component.empty());
 		builder.define(INFO_STATUS, Component.empty());
+		builder.define(ERROR, false);
 	}
 
 	@Override
@@ -294,28 +301,66 @@ public class RobotEntity extends PathfinderMob {
 		}
 	}
 
-	/** The recall button of a station: all its robots come back, then wait there for a minute. */
-	public static void recall(String dim, BlockPos station, long gameTime) {
-		RECALLS.put(dim + "@" + station.asLong(), gameTime);
+	/** The recall button of a station: all its robots come back, then wait there for a minute. Loaded ones set off at once. */
+	public static void recall(ServerLevel level, String dim, BlockPos station) {
+		long now = level.getGameTime();
+		RECALLS.put(dim + "@" + station.asLong(), now);
+		StorageData data = StorageData.get();
+
+		if (data == null) {
+			return;
+		}
+
+		for (UUID uuid : data.stationRobots(dim, station).keySet()) {
+			if (level.getEntity(uuid) instanceof RobotEntity robot && station.equals(robot.station)) {
+				robot.recallSeen = now;
+				robot.startRecall();
+			}
+		}
+	}
+
+	/** Called back, it counts as there inside 3x3 blocks around the station, or 5x5 when the station has more than 20 robots. */
+	private boolean atStationForRecall() {
+		BlockPos h = home();
+		StorageData data = StorageData.get();
+		int count = data == null || station == null ? 0 : data.stationRobots(Rooms.id(level()), station).size();
+		double half = (count > RECALL_SMALL_AREA_ROBOTS ? 2 : 1) + 0.5;
+		return Math.abs(getX() - (h.getX() + 0.5)) <= half && Math.abs(getZ() - (h.getZ() + 0.5)) <= half
+				&& Math.abs(getY() - h.getY()) <= 1.5;
+	}
+
+	/** Called back and not getting closer: it only teleports when no way to the station can be found. */
+	private void recallStuck() {
+		Path path = getNavigation().createPath(home(), 1);
+
+		if (path == null || !path.canReach()) {
+			teleportHome();
+		} else {
+			getNavigation().moveTo(path, 1.0);
+			recallBest = Double.MAX_VALUE;
+			recallStuck = 0;
+		}
 	}
 
 	private void startRecall() {
 		release();
 		getNavigation().stop();
+		entityData.set(ACTION, (byte) 0);
+		entityData.set(ACTION_TIME, 0);
 		homeUnreachableUntil = 0;
 		recallPhase = RECALL_RETURNING;
 		recallBest = Double.MAX_VALUE;
 		recallStuck = 0;
 	}
 
-	/** Called back: on the way to the station, or waiting there; stuck for 10 seconds, it teleports to the station. */
+	/** Called back: on the way to the station, or waiting there; stuck with no way there, it teleports to the station. */
 	private void tickRecall() {
 		long now = level().getGameTime();
 
 		if (recallPhase == RECALL_RETURNING) {
 			double distance = position().distanceTo(Vec3.atBottomCenterOf(home()));
 
-			if (nearHome()) {
+			if (atStationForRecall()) {
 				recallPhase = RECALL_WAITING;
 				recallUntil = now + RECALL_WAIT_TICKS;
 				getNavigation().stop();
@@ -323,7 +368,7 @@ public class RobotEntity extends PathfinderMob {
 				recallBest = distance;
 				recallStuck = 0;
 			} else if (++recallStuck >= RECALL_STUCK_TICKS) {
-				teleportHome();
+				recallStuck();
 			}
 		} else if (recallPhase == RECALL_WAITING && now >= recallUntil) {
 			recallPhase = RECALL_NONE;
@@ -407,7 +452,7 @@ public class RobotEntity extends PathfinderMob {
 	/** What it is doing, for its station's list and the look-at tooltip. */
 	public Component status() {
 		if (recallPhase == RECALL_RETURNING) {
-			return Component.literal("Rückruf: kommt zurück").withStyle(ChatFormatting.AQUA);
+			return Component.literal("Rückruf: auf dem Weg").withStyle(ChatFormatting.AQUA);
 		}
 
 		if (recallPhase == RECALL_WAITING) {
@@ -416,15 +461,15 @@ public class RobotEntity extends PathfinderMob {
 		}
 
 		if (stationMissing()) {
-			return Component.literal("Traurig: Station fehlt").withStyle(ChatFormatting.RED);
+			return Component.literal("Fehler: Station fehlt").withStyle(ChatFormatting.RED);
 		}
 
 		if (noChest) {
-			return Component.literal("Traurig: keine Kiste da").withStyle(ChatFormatting.RED);
+			return Component.literal("Fehler: keine Kiste da").withStyle(ChatFormatting.RED);
 		}
 
 		if (level().getGameTime() < homeUnreachableUntil) {
-			return Component.literal("Traurig: Weg versperrt").withStyle(ChatFormatting.RED);
+			return Component.literal("Fehler: Weg versperrt").withStyle(ChatFormatting.RED);
 		}
 
 		if (!getCarried().isEmpty()) {
@@ -445,6 +490,23 @@ public class RobotEntity extends PathfinderMob {
 		entityData.set(INFO_FILTER, Component.literal("Sammelt: ").withStyle(ChatFormatting.GRAY)
 				.append(RobotConfig.describeFilter(filter, excludeFilter).withStyle(ChatFormatting.WHITE)));
 		entityData.set(INFO_STATUS, status());
+		entityData.set(ERROR, recallPhase == RECALL_NONE && (stationMissing() || noChest || level().getGameTime() < homeUnreachableUntil));
+	}
+
+	public boolean hasError() {
+		return entityData.get(ERROR);
+	}
+
+	/** The name with an error icon on each side while it cannot work; shown on the name tag, in Jade and in the station's list. */
+	public static Component withErrorIcons(Component name) {
+		return Component.empty().append(Component.literal(ERROR_ICON + " ").withStyle(ChatFormatting.RED)).append(name)
+				.append(Component.literal(" " + ERROR_ICON).withStyle(ChatFormatting.RED));
+	}
+
+	@Override
+	public Component getDisplayName() {
+		Component name = super.getDisplayName();
+		return hasError() ? withErrorIcons(name) : name;
 	}
 
 	/** The robot as an item, keeping its settings. */
@@ -926,7 +988,8 @@ public class RobotEntity extends PathfinderMob {
 
 			getLookControl().setLookAt(goal.x, goal.y, goal.z);
 			double distance = position().distanceTo(goal);
-			boolean arrived = goalKey == target ? standsOn(target)
+			boolean arrived = recallPhase == RECALL_RETURNING ? atStationForRecall()
+					: goalKey == target ? standsOn(target)
 					: goalKey == delivery ? distance <= reach || canReachChest(goal) : distance <= reach;
 
 			if (arrived) {
@@ -963,7 +1026,10 @@ public class RobotEntity extends PathfinderMob {
 
 				if (path == null) {
 					// no way can be worked out in mid-air; try again next tick
-				} else if (!path.canReach() && recallPhase != RECALL_RETURNING) {
+				} else if (!path.canReach() && recallPhase == RECALL_RETURNING) {
+					// called back and no way leads to the station: teleports there
+					teleportHome();
+				} else if (!path.canReach()) {
 					// cannot get back to its station: sits down sadly and tries again later
 					homeUnreachableUntil = level().getGameTime() + RETRY_HOME_TICKS;
 					getNavigation().stop();

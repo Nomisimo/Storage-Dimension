@@ -192,13 +192,17 @@ public class ClientScreenshots implements FabricClientGameTest {
 		context.waitTicks(30);
 		context.takeScreenshot("station-list");
 
-		// recall: everybody comes back, the walled-in robot teleports after 10 seconds without getting closer
+		// recall: everybody sets off at once ("auf dem Weg"), the walled-in robot has no way and teleports
 		world.getServer().runOnServer(server -> {
 			ServerPlayer player = server.getPlayerList().getPlayers().get(0);
 			BlockPos base = player.blockPosition();
 			drop(player.level(), base.getX() - 6.5, base.getY() + 0.2, base.getZ() + 6.5, new ItemStack(Items.OAK_PLANKS, 8));
 			((StationMenu) player.containerMenu).action(StationMenu.ACTION_RECALL, 0, "");
 		});
+
+		context.waitTicks(15);
+		context.takeScreenshot("station-recall-walking");
+		logRobots(world);
 
 		for (int t = 0; t < 6; t++) {
 			context.waitTicks(60);
