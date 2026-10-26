@@ -1,25 +1,29 @@
 package de.nomisimo.storagedim.tb;
 
+import java.text.Collator;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Set;
+import java.util.UUID;
 import java.util.WeakHashMap;
+import java.util.concurrent.ConcurrentHashMap;
 
 import com.tiviacz.travelersbackpack.inventory.menu.BackpackBaseMenu;
 
-import net.minecraft.core.component.DataComponents;
+import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
 import net.minecraft.core.registries.BuiltInRegistries;
-import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.SimpleContainer;
+import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.inventory.ContainerInput;
 import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.item.Items;
 
 /**
  * The ME storage shown inside the backpack window, in place of the backpack's own slots. Crafting, the other upgrades
@@ -31,6 +35,8 @@ import net.minecraft.world.item.Items;
 final class MeView {
 	static final int MAX_SEARCH = 50;
 	private static final Map<AbstractContainerMenu, MeView> VIEWS = Collections.synchronizedMap(new WeakHashMap<>());
+	/** Players who sort the ME view by name instead of amount, until the server restarts. */
+	private static final Set<UUID> BY_NAME = ConcurrentHashMap.newKeySet();
 
 	private final BackpackBaseMenu menu;
 	private final boolean client;
@@ -41,6 +47,8 @@ final class MeView {
 	private int page;
 	private boolean hasNext;
 	private String search = "";
+	/** The last row of ME slots is covered by the buttons and the page info, like the bottom row of the ME terminal. */
+	private int barSlots;
 
 	private MeView(BackpackBaseMenu menu, boolean client) {
 		this.menu = menu;
@@ -107,6 +115,32 @@ final class MeView {
 		}
 
 		originals = saved;
+		barSlots = bottomRow(saved);
+	}
+
+	/** How many of these slots lie in their bottom row; 0 when there is only one row (then nothing is covered). */
+	static int bottomRow(List<Slot> slots) {
+		int top = Integer.MAX_VALUE;
+		int bottom = Integer.MIN_VALUE;
+
+		for (Slot slot : slots) {
+			top = Math.min(top, slot.y);
+			bottom = Math.max(bottom, slot.y);
+		}
+
+		if (slots.isEmpty() || top == bottom) {
+			return 0;
+		}
+
+		int count = 0;
+
+		for (Slot slot : slots) {
+			if (slot.y == bottom) {
+				count++;
+			}
+		}
+
+		return count;
 	}
 
 	/** Gives the backpack its own slots back. */
@@ -146,9 +180,32 @@ final class MeView {
 			}
 		}
 
+		if (BY_NAME.contains(player.getUUID())) {
+			List<Integer> order = new ArrayList<>();
+
+			for (int i = 0; i < prototypes.size(); i++) {
+				order.add(i);
+			}
+
+			Collator collator = Collator.getInstance(Locale.GERMAN);
+			order.sort(Comparator.comparing(i -> prototypes.get(i).getHoverName().getString(), collator));
+			List<ItemStack> sortedItems = new ArrayList<>();
+			List<Long> sortedCounts = new ArrayList<>();
+
+			for (int i : order) {
+				sortedItems.add(prototypes.get(i));
+				sortedCounts.add(counts.get(i));
+			}
+
+			prototypes.clear();
+			prototypes.addAll(sortedItems);
+			counts.clear();
+			counts.addAll(sortedCounts);
+		}
+
 		int size = display.getContainerSize();
-		// with more items than slots the last two slots turn the pages
-		int perPage = prototypes.size() <= size ? size : Math.max(1, size - 2);
+		// the bottom row stays free for the buttons drawn over it
+		int perPage = Math.max(1, size - barSlots);
 		int pages = Math.max(1, (prototypes.size() + perPage - 1) / perPage);
 		page = Math.min(page, pages - 1);
 		hasNext = page < pages - 1;
@@ -161,11 +218,52 @@ final class MeView {
 			display.setItem(i, i < perPage && k < to ? MeBridge.icon(prototypes.get(k), counts.get(k)) : ItemStack.EMPTY);
 		}
 
-		if (pages > 1 && size >= 2) {
-			String where = " (Seite " + (page + 1) + "/" + pages + ")";
-			display.setItem(size - 2, page > 0 ? button("Vorherige Seite" + where) : ItemStack.EMPTY);
-			display.setItem(size - 1, hasNext ? button("Nächste Seite" + where) : ItemStack.EMPTY);
+		long total = 0;
+
+		for (long count : counts) {
+			total += count;
 		}
+
+		if (ServerPlayNetworking.canSend(player, MeNetworking.PagePayload.TYPE)) {
+			ServerPlayNetworking.send(player, new MeNetworking.PagePayload(menu.containerId, page, pages, prototypes.size(), total,
+					BY_NAME.contains(player.getUUID())));
+		}
+	}
+
+	/** A button of the ME view: previous or next page, deposit the inventory (without hotbar), sort order. Server only. */
+	void press(ServerPlayer player, int button) {
+		switch (button) {
+			case MeNetworking.BUTTON_PREV -> page = Math.max(0, page - 1);
+			case MeNetworking.BUTTON_NEXT -> {
+				if (hasNext) {
+					page++;
+				}
+			}
+			case MeNetworking.BUTTON_DEPOSIT -> {
+				Inventory inventory = player.getInventory();
+
+				// slots 9 to 35: the inventory above the hotbar
+				for (int i = 9; i < 36; i++) {
+					ItemStack stack = inventory.getItem(i);
+
+					if (!stack.isEmpty()) {
+						MeBridge.insert(player, stack);
+						inventory.setChanged();
+					}
+				}
+			}
+			case MeNetworking.BUTTON_SORT -> {
+				if (!BY_NAME.remove(player.getUUID())) {
+					BY_NAME.add(player.getUUID());
+				}
+			}
+			default -> {
+				return;
+			}
+		}
+
+		refresh(player);
+		menu.sendAllDataToRemote();
 	}
 
 	/** Text typed into the search field above the window. Server only. */
@@ -178,12 +276,6 @@ final class MeView {
 			refresh(player);
 			menu.sendAllDataToRemote();
 		}
-	}
-
-	private static ItemStack button(String name) {
-		ItemStack stack = new ItemStack(Items.ARROW);
-		stack.set(DataComponents.CUSTOM_NAME, Component.literal(name).withStyle(s -> s.withItalic(false)));
-		return stack;
 	}
 
 	/**
@@ -218,19 +310,8 @@ final class MeView {
 	}
 
 	private void clickMe(int k, int button, ContainerInput input, ServerPlayer player) {
-		int size = display.getContainerSize();
-		boolean paged = shown.size() < size && (page > 0 || hasNext);
-
-		if (paged && k == size - 2) {
-			page = Math.max(0, page - 1);
-			return;
-		}
-
-		if (paged && k == size - 1) {
-			if (hasNext) {
-				page++;
-			}
-
+		// the covered bottom row does nothing
+		if (k >= display.getContainerSize() - barSlots) {
 			return;
 		}
 

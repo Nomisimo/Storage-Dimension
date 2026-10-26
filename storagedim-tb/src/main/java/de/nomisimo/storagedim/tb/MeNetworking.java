@@ -56,6 +56,42 @@ final class MeNetworking {
 		}
 	}
 
+	static final int BUTTON_PREV = 0;
+	static final int BUTTON_NEXT = 1;
+	static final int BUTTON_DEPOSIT = 2;
+	static final int BUTTON_SORT = 3;
+
+	/** Client to server: a button of the ME view was pressed (pages, deposit the inventory, sort order). */
+	record ButtonPayload(int button) implements CustomPacketPayload {
+		static final Type<ButtonPayload> TYPE = new Type<>(StorageTbMod.id("me_view_button"));
+		static final StreamCodec<RegistryFriendlyByteBuf, ButtonPayload> CODEC = StreamCodec.composite(
+				ByteBufCodecs.VAR_INT, ButtonPayload::button,
+				ButtonPayload::new);
+
+		@Override
+		public Type<? extends CustomPacketPayload> type() {
+			return TYPE;
+		}
+	}
+
+	/** Server to client: page, number of pages, kinds and total amount of the (searched) ME storage, and the sort order. */
+	record PagePayload(int containerId, int page, int pages, int kinds, long total, boolean byName) implements CustomPacketPayload {
+		static final Type<PagePayload> TYPE = new Type<>(StorageTbMod.id("me_view_page"));
+		static final StreamCodec<RegistryFriendlyByteBuf, PagePayload> CODEC = StreamCodec.composite(
+				ByteBufCodecs.VAR_INT, PagePayload::containerId,
+				ByteBufCodecs.VAR_INT, PagePayload::page,
+				ByteBufCodecs.VAR_INT, PagePayload::pages,
+				ByteBufCodecs.VAR_INT, PagePayload::kinds,
+				ByteBufCodecs.VAR_LONG, PagePayload::total,
+				ByteBufCodecs.BOOL, PagePayload::byName,
+				PagePayload::new);
+
+		@Override
+		public Type<? extends CustomPacketPayload> type() {
+			return TYPE;
+		}
+	}
+
 	/** Server to client: the backpack window with this id now shows ME storage (or the backpack again). */
 	record ViewPayload(int containerId, boolean on) implements CustomPacketPayload {
 		static final Type<ViewPayload> TYPE = new Type<>(StorageTbMod.id("me_view"));
@@ -89,6 +125,15 @@ final class MeNetworking {
 		PayloadTypeRegistry.clientboundPlay().register(ViewPayload.TYPE, ViewPayload.CODEC);
 		PayloadTypeRegistry.clientboundPlay().register(StockPayload.TYPE, StockPayload.CODEC);
 		PayloadTypeRegistry.serverboundPlay().register(SearchPayload.TYPE, SearchPayload.CODEC);
+		PayloadTypeRegistry.serverboundPlay().register(ButtonPayload.TYPE, ButtonPayload.CODEC);
+		PayloadTypeRegistry.clientboundPlay().register(PagePayload.TYPE, PagePayload.CODEC);
+		ServerPlayNetworking.registerGlobalReceiver(ButtonPayload.TYPE, (payload, context) -> {
+			MeView view = MeView.of(context.player().containerMenu);
+
+			if (view != null) {
+				view.press(context.player(), payload.button());
+			}
+		});
 		ServerPlayNetworking.registerGlobalReceiver(TogglePayload.TYPE, (payload, context) -> toggle(context.player()));
 		ServerPlayNetworking.registerGlobalReceiver(SearchPayload.TYPE, (payload, context) -> {
 			MeView view = MeView.of(context.player().containerMenu);
