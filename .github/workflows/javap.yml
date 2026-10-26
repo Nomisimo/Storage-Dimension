@@ -47,7 +47,7 @@ jobs:
           mkdir /tmp/tb && cd /tmp/tb && unzip -q "$JAR"
           MC=".:$(find ~/.gradle /home/runner/work -name '*.jar' \( -path '*minecraft*' -o -path '*fabric*' -o -path '*modrinth*' \) | tr '\n' ':')"
           for c in com.tiviacz.travelersbackpack.client.screens.BackpackScreen com.tiviacz.travelersbackpack.client.screens.AbstractBackpackScreen; do
-            for m in init extractBackground extractRenderState mouseClicked; do
+            for m in renderScreen extractTooltip mouseClicked; do
               echo "=== $c.$m"; javap -c -p -cp "$MC" $c | sed -n "/ $m(/,/^$/p" | grep -E "invoke|Code|getfield|putfield|$m" | head -120
             done
           done

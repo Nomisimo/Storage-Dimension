@@ -1,2 +1,3 @@
--p com.tiviacz.travelersbackpack.client.screens.BackpackScreen
--p com.tiviacz.travelersbackpack.client.screens.AbstractBackpackScreen
+-p com.tiviacz.travelersbackpack.client.screens.widgets.SortingButtons
+-p com.tiviacz.travelersbackpack.client.screens.widgets.WidgetBase
+-p com.tiviacz.travelersbackpack.client.screens.buttons.IButton
