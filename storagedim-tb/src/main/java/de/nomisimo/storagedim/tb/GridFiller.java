@@ -2,7 +2,6 @@ package de.nomisimo.storagedim.tb;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.function.Predicate;
 
 import com.tiviacz.travelersbackpack.inventory.menu.BackpackBaseMenu;
 import com.tiviacz.travelersbackpack.inventory.menu.slot.DisabledSlot;
@@ -18,7 +17,7 @@ import net.minecraft.world.item.ItemStack;
 
 /**
  * Fills the backpack crafting grid for a recipe, taking ingredients from the backpack, the player inventory
- * and then the ME storage, the way JEI does it with the inventory alone.
+ * and then the ME storage (unless the ME upgrade is switched to "nur Inventar"), the way JEI does it with the inventory alone.
  */
 final class GridFiller {
 	private static final int GRID = 9;
@@ -33,9 +32,12 @@ final class GridFiller {
 
 		MeUpgrade me = menu.getWrapper().getUpgradeManager().getUpgrade(MeUpgrade.class).orElse(null);
 
-		if (me == null || !me.isEnabled(me)) {
+		if (me == null) {
 			return;
 		}
+
+		// switched to "nur Inventar": only backpack and inventory (this path is still used while the ME view covers the backpack slots)
+		boolean useMe = me.isEnabled(me);
 
 		CraftingUpgrade upgrade = menu.getWrapper().getUpgradeManager().getUpgrade(CraftingUpgrade.class).orElse(null);
 
@@ -50,13 +52,26 @@ final class GridFiller {
 			clearGrid(player, grid);
 
 			List<Slot> local = localSources(menu, player);
+			IngredientPool pool = new IngredientPool();
+			local.forEach(slot -> pool.add(slot.getItem()));
+
+			if (useMe) {
+				List<ItemStack> stored = new ArrayList<>();
+				List<Long> counts = new ArrayList<>();
+				MeBridge.stored(player, stored, counts);
+
+				for (int i = 0; i < stored.size(); i++) {
+					pool.add(stored.get(i), counts.get(i));
+				}
+			}
+
 			ItemStack[] types = new ItemStack[GRID];
 
 			for (int i = 0; i < GRID; i++) {
 				List<ItemStack> wanted = payload.slots().get(i);
 
 				if (!wanted.isEmpty()) {
-					types[i] = pickType(player, local, wanted);
+					types[i] = pool.take(wanted);
 
 					if (types[i].isEmpty()) {
 						missing(player);
@@ -92,7 +107,7 @@ final class GridFiller {
 
 			for (int g = 0; g < groups.size(); g++) {
 				ItemStack type = groups.get(g);
-				long available = countLocal(local, type) + MeBridge.count(player, type);
+				long available = countLocal(local, type) + (useMe ? MeBridge.count(player, type) : 0);
 				long possible = available / perCraft.get(g);
 				crafts = (int) Math.min(crafts, Math.min(possible, type.getMaxStackSize()));
 			}
@@ -106,7 +121,7 @@ final class GridFiller {
 			long[] taken = new long[groups.size()];
 
 			for (int g = 0; g < groups.size(); g++) {
-				taken[g] = take(player, local, groups.get(g), (long) crafts * perCraft.get(g));
+				taken[g] = take(player, local, groups.get(g), (long) crafts * perCraft.get(g), useMe);
 				crafts = (int) Math.min(crafts, taken[g] / perCraft.get(g));
 			}
 
@@ -163,45 +178,13 @@ final class GridFiller {
 
 	private static void addRange(List<Slot> slots, BackpackBaseMenu menu, ServerPlayer player, int from, int to) {
 		for (int i = from; i < to && i < menu.slots.size(); i++) {
-			Slot slot = menu.getSlot(i);
+			// the backpack's own slot, also while the ME view covers it
+			Slot slot = MeView.realSlot(menu, i);
 
 			if (!(slot instanceof DisabledSlot) && slot.mayPickup(player)) {
 				slots.add(slot);
 			}
 		}
-	}
-
-	/** Prefers exact matches over loose ones, and the backpack/inventory over ME storage. */
-	private static ItemStack pickType(ServerPlayer player, List<Slot> local, List<ItemStack> wanted) {
-		for (boolean exact : new boolean[] {true, false}) {
-			Predicate<ItemStack> accepts = stack -> !stack.isEmpty() && wanted.stream().anyMatch(w -> matches(stack, w, exact));
-
-			for (Slot slot : local) {
-				if (accepts.test(slot.getItem())) {
-					return slot.getItem().copyWithCount(1);
-				}
-			}
-
-			ItemStack stored = MeBridge.findMatching(player, accepts);
-
-			if (!stored.isEmpty()) {
-				return stored.copyWithCount(1);
-			}
-		}
-
-		return ItemStack.EMPTY;
-	}
-
-	/**
-	 * JEI lists plain items for tag ingredients, so a loose match only compares the item.
-	 * Candidates that carry components (potions, enchanted books, ...) always need an exact match.
-	 */
-	private static boolean matches(ItemStack stack, ItemStack wanted, boolean exact) {
-		if (ItemStack.isSameItemSameComponents(stack, wanted)) {
-			return true;
-		}
-
-		return !exact && stack.is(wanted.getItem()) && wanted.getComponentsPatch().isEmpty();
 	}
 
 	private static long countLocal(List<Slot> local, ItemStack type) {
@@ -216,7 +199,7 @@ final class GridFiller {
 		return total;
 	}
 
-	private static long take(ServerPlayer player, List<Slot> local, ItemStack type, long amount) {
+	private static long take(ServerPlayer player, List<Slot> local, ItemStack type, long amount, boolean useMe) {
 		long got = 0;
 
 		for (Slot slot : local) {
@@ -230,7 +213,7 @@ final class GridFiller {
 			}
 		}
 
-		while (got < amount) {
+		while (useMe && got < amount) {
 			ItemStack stored = MeBridge.extract(player, type, (int) Math.min(amount - got, Integer.MAX_VALUE));
 
 			if (stored.isEmpty()) {

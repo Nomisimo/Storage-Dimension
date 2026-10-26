@@ -47,13 +47,17 @@ dependencies {
 	// Fabric API. This is technically optional, but you probably want it anyway.
 	implementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_api_version}"
 
-	// JEI 29.43.0.107, only to show our recipes, which the server no longer sends to clients.
+	// JEI 29.47.0.111, only to show our recipes, which the server no longer sends to clients.
 	compileOnly "maven.modrinth:jei:${project.jei_version}"
 
 	// Client test only: Traveler's Backpack and our add-on (built by the workflow before the test), for the add-on's recipe picture.
 	gametestRuntimeOnly "maven.modrinth:travelersbackpack:NUbnGgy9"
 	gametestRuntimeOnly "maven.modrinth:forge-config-api-port:RXbL43Lt"
 	gametestRuntimeOnly fileTree(dir: '../storagedim-tb/build/libs', include: '*.jar', exclude: '*-sources.jar')
+
+	// Client test only: JEI, to check our recipes in JEI and its "+" with the backpack crafting grid and ME storage.
+	gametestImplementation "maven.modrinth:jei:${project.jei_version}"
+	gametestCompileOnly "maven.modrinth:travelersbackpack:NUbnGgy9"
 }
 
 processResources {

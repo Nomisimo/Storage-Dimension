@@ -13,8 +13,8 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 /**
- * JEI only looks at the inventory and backpack slots. When the backpack has the ME upgrade and something is
- * missing there, the transfer is handed to the server, which also takes from ME storage.
+ * JEI only looks at the inventory and backpack slots. When the backpack has the ME upgrade, {@link JeiTransfer} decides
+ * instead, counting ME storage too, and the server fills the grid.
  */
 @Pseudo
 @Mixin(targets = "mezz.jei.library.transfer.BasicRecipeTransferHandler", remap = false)
@@ -23,27 +23,26 @@ public class JeiTransferMixin {
 	@Inject(method = "transferRecipeInternal", at = @At("RETURN"), cancellable = true, remap = false, require = 0)
 	private void storagedimTb$useMeStorage(AbstractContainerMenu container, Object recipe, IRecipeSlotsView recipeSlotsView, Player player,
 			boolean maxTransfer, boolean doTransfer, IRecipeTransferContext<?, ?> context, CallbackInfoReturnable<IRecipeTransferError> cir) {
-		apply(container, recipeSlotsView, maxTransfer, doTransfer, cir);
+		apply(container, recipeSlotsView, player, maxTransfer, doTransfer, cir);
 	}
 
 	/**
-	 * Older JEI builds only have this method. On newer ones it delegates to the method above, which has already
-	 * cleared the error by then, so nothing is sent twice.
+	 * Older JEI builds only have this method. On newer ones it delegates to the method above; deciding twice gives the
+	 * same answer, and only this outer call may send the transfer, so the inner one never does.
 	 */
 	@Inject(method = "transferRecipe(Lnet/minecraft/world/inventory/AbstractContainerMenu;Ljava/lang/Object;Lmezz/jei/api/gui/ingredient/IRecipeSlotsView;Lnet/minecraft/world/entity/player/Player;ZZ)Lmezz/jei/api/recipe/transfer/IRecipeTransferError;",
 			at = @At("RETURN"), cancellable = true, remap = false, require = 0)
 	private void storagedimTb$useMeStorageLegacy(AbstractContainerMenu container, Object recipe, IRecipeSlotsView recipeSlotsView, Player player,
 			boolean maxTransfer, boolean doTransfer, CallbackInfoReturnable<IRecipeTransferError> cir) {
-		apply(container, recipeSlotsView, maxTransfer, doTransfer, cir);
+		apply(container, recipeSlotsView, player, maxTransfer, doTransfer, cir);
 	}
 
-	private static void apply(AbstractContainerMenu container, IRecipeSlotsView recipeSlotsView, boolean maxTransfer, boolean doTransfer,
+	private static void apply(AbstractContainerMenu container, IRecipeSlotsView recipeSlotsView, Player player, boolean maxTransfer, boolean doTransfer,
 			CallbackInfoReturnable<IRecipeTransferError> cir) {
-		IRecipeTransferError error = cir.getReturnValue();
+		Object result = JeiTransfer.handle(container, recipeSlotsView, player, maxTransfer, doTransfer, cir.getReturnValue());
 
-		if (error != null && error.getType() != IRecipeTransferError.Type.COSMETIC
-				&& JeiTransfer.handle(container, recipeSlotsView, maxTransfer, doTransfer)) {
-			cir.setReturnValue(null);
+		if (result != JeiTransfer.JEI_DECIDES) {
+			cir.setReturnValue((IRecipeTransferError) result);
 		}
 	}
 }

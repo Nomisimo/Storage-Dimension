@@ -187,14 +187,7 @@ public class StorageMenu extends ChestMenu {
 
 		for (int i = 0; i < shown.size(); i++) {
 			StorageNetwork.StoredItem entry = shown.get(i);
-			ItemStack icon = displayIcon(entry);
-			List<Component> lore = new ArrayList<>();
-			lore.add(Component.literal("Gespeichert: " + format(entry.count)).withStyle(ChatFormatting.GOLD));
-			lore.add(Component.literal("Linksklick: Stapel nehmen").withStyle(ChatFormatting.GRAY));
-			lore.add(Component.literal("Rechtsklick: halben Stapel nehmen").withStyle(ChatFormatting.GRAY));
-			lore.add(Component.literal("Shift-Klick: ins Inventar").withStyle(ChatFormatting.GRAY));
-			icon.set(DataComponents.LORE, new ItemLore(lore));
-			display.setItem(i, icon);
+			display.setItem(i, icon(entry.prototype, entry.count));
 		}
 
 		ItemStack filler = button(Items.GRAY_STAINED_GLASS_PANE, " ");
@@ -231,26 +224,31 @@ public class StorageMenu extends ChestMenu {
 	}
 
 	/**
-	 * The icon of a stored item. A slot can only show up to 99, so stackable items go up to 99 on the icon
-	 * and the exact amount is always part of the name. It also carries the exact amount under {@link #COUNT_KEY},
-	 * which the client mod draws in small digits instead of the 99.
+	 * The icon of a stored item, with the click help as lore. A slot can only show up to 99, so stackable items go up
+	 * to 99 on the icon and the exact amount is always part of the name. It also carries the exact amount under
+	 * {@link #COUNT_KEY}, which the client mod draws in small digits instead of the 99.
 	 */
-	private static ItemStack displayIcon(StorageNetwork.StoredItem entry) {
-		ItemStack icon = entry.prototype.copyWithCount(1);
+	public static ItemStack icon(ItemStack prototype, long count) {
+		ItemStack icon = prototype.copyWithCount(1);
 		int max = icon.getMaxStackSize();
 
 		if (max > 1) {
 			icon.set(DataComponents.MAX_STACK_SIZE, ICON_MAX);
-			icon.setCount((int) Math.min(entry.count, ICON_MAX));
+			icon.setCount((int) Math.min(count, ICON_MAX));
 		}
 
 		icon.set(DataComponents.CUSTOM_NAME, Component.empty()
-				.append(entry.prototype.getHoverName())
-				.append(Component.literal(" × " + format(entry.count)).withStyle(ChatFormatting.GOLD))
+				.append(prototype.getHoverName())
+				.append(Component.literal(" × " + format(count)).withStyle(ChatFormatting.GOLD))
 				.withStyle(s -> s.withItalic(false)));
 		CompoundTag tag = new CompoundTag();
-		tag.putLong(COUNT_KEY, entry.count);
+		tag.putLong(COUNT_KEY, count);
 		icon.set(DataComponents.CUSTOM_DATA, CustomData.of(tag));
+		icon.set(DataComponents.LORE, new ItemLore(List.of(
+				Component.literal("Gespeichert: " + format(count)).withStyle(ChatFormatting.GOLD),
+				Component.literal("Linksklick: Stapel nehmen").withStyle(ChatFormatting.GRAY),
+				Component.literal("Rechtsklick: halben Stapel nehmen").withStyle(ChatFormatting.GRAY),
+				Component.literal("Shift-Klick: ins Inventar").withStyle(ChatFormatting.GRAY))));
 		return icon;
 	}
 

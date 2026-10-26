@@ -6,7 +6,11 @@
 	"environment": "client",
 	"entrypoints": {
 		"fabric-client-gametest": [
-			"de.nomisimo.storagedim.test.ClientScreenshots"
+			"de.nomisimo.storagedim.test.ClientScreenshots",
+			"de.nomisimo.storagedim.test.BackpackJeiTest"
+		],
+		"jei_mod_plugin": [
+			"de.nomisimo.storagedim.test.TestJeiPlugin"
 		]
 	},
 	"depends": {

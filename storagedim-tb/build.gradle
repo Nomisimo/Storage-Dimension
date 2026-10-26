@@ -38,7 +38,7 @@ dependencies {
 	compileOnly "maven.modrinth:travelersbackpack:${project.travelersbackpack_version}"
 	compileOnly "maven.modrinth:forge-config-api-port:${project.forge_config_api_port_version}"
 
-	// JEI 29.43.0.107, only for the recipe transfer into the backpack crafting grid.
+	// JEI 29.47.0.111, only for the recipe transfer into the backpack crafting grid.
 	compileOnly "maven.modrinth:jei:${project.jei_version}"
 }
 

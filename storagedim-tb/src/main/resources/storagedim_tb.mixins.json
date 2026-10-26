@@ -6,6 +6,9 @@
 	"injectors": {
 		"defaultRequire": 0
 	},
+	"mixins": [
+		"BackpackMenuMixin"
+	],
 	"client": [
 		"JeiTransferMixin"
 	]

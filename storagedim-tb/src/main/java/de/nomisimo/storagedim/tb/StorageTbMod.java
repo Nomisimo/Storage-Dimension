@@ -1,7 +1,5 @@
 package de.nomisimo.storagedim.tb;
 
-import com.tiviacz.travelersbackpack.inventory.menu.BackpackBaseMenu;
-
 import net.fabricmc.api.ModInitializer;
 import net.fabricmc.fabric.api.networking.v1.PayloadTypeRegistry;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
@@ -10,13 +8,12 @@ import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.Identifier;
 import net.minecraft.resources.ResourceKey;
-import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.item.Item;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Adds an ME upgrade for Traveler's Backpack. Clicking it in the backpack screen opens the Storage Dimension terminal,
+ * Adds an ME upgrade for Traveler's Backpack. Clicking it in the backpack screen shows the Storage Dimension storage in place of the backpack slots,
  * and with its switch on "ME als Quelle", JEI's + button also takes crafting ingredients from ME storage.
  */
 public class StorageTbMod implements ModInitializer {
@@ -30,19 +27,9 @@ public class StorageTbMod implements ModInitializer {
 		ME_UPGRADE = Registry.register(BuiltInRegistries.ITEM, id,
 				new MeUpgradeItem(new Item.Properties().stacksTo(1).setId(ResourceKey.create(Registries.ITEM, id))));
 
-		PayloadTypeRegistry.serverboundPlay().register(OpenStoragePayload.TYPE, OpenStoragePayload.CODEC);
-		ServerPlayNetworking.registerGlobalReceiver(OpenStoragePayload.TYPE, (payload, context) -> open(context.player()));
+		MeNetworking.register();
 		PayloadTypeRegistry.serverboundPlay().register(FillGridPayload.TYPE, FillGridPayload.CODEC);
 		ServerPlayNetworking.registerGlobalReceiver(FillGridPayload.TYPE, (payload, context) -> GridFiller.fill(context.player(), payload));
-	}
-
-	private static void open(ServerPlayer player) {
-		if (!(player.containerMenu instanceof BackpackBaseMenu menu)
-				|| menu.getWrapper().getUpgradeManager().getUpgrade(MeUpgrade.class).isEmpty()) {
-			return;
-		}
-
-		MeBridge.openStorage(player);
 	}
 
 	public static Identifier id(String path) {

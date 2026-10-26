@@ -3,6 +3,7 @@ package de.nomisimo.storagedim.tb;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.function.Predicate;
 
@@ -27,6 +28,15 @@ final class MeBridge {
 		return call("findMatching", player, filter) instanceof ItemStack stack ? stack : ItemStack.EMPTY;
 	}
 
+	/** Every stored item (count-1 copies) and its amount, largest amount first. */
+	static void stored(ServerPlayer player, List<ItemStack> prototypes, List<Long> counts) {
+		call("stored", player, prototypes, counts);
+	}
+
+	static ItemStack icon(ItemStack prototype, long count) {
+		return call("icon", prototype, count) instanceof ItemStack stack ? stack : prototype.copyWithCount(1);
+	}
+
 	static long count(ServerPlayer player, ItemStack prototype) {
 		return call("count", player, prototype) instanceof Long value ? value : 0;
 	}
@@ -47,6 +57,8 @@ final class MeBridge {
 				Map<String, Method> found = new HashMap<>();
 				found.put("openStorage", api.getMethod("openStorage", ServerPlayer.class));
 				found.put("findMatching", api.getMethod("findMatching", ServerPlayer.class, Predicate.class));
+				found.put("stored", api.getMethod("stored", ServerPlayer.class, List.class, List.class));
+				found.put("icon", api.getMethod("icon", ItemStack.class, long.class));
 				found.put("count", api.getMethod("count", ServerPlayer.class, ItemStack.class));
 				found.put("extract", api.getMethod("extract", ServerPlayer.class, ItemStack.class, int.class));
 				found.put("insert", api.getMethod("insert", ServerPlayer.class, ItemStack.class));

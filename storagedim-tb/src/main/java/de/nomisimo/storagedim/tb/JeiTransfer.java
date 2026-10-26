@@ -11,39 +11,93 @@ import com.tiviacz.travelersbackpack.network.ServerboundActionTagPacket;
 import mezz.jei.api.gui.ingredient.IRecipeSlotView;
 import mezz.jei.api.gui.ingredient.IRecipeSlotsView;
 import mezz.jei.api.recipe.RecipeIngredientRole;
+import mezz.jei.api.recipe.transfer.IRecipeTransferError;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
+import net.minecraft.network.chat.Component;
+import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.item.ItemStack;
 
 /** Client side of the JEI recipe transfer with ME storage, called from {@code JeiTransferMixin}. */
 @Environment(EnvType.CLIENT)
 public final class JeiTransfer {
+	/** Returned when JEI's own answer stands. */
+	public static final Object JEI_DECIDES = new Object();
+
 	private JeiTransfer() {
 	}
 
 	/**
-	 * Returns true when the backpack has the crafting upgrade and the ME upgrade switched to "ME als Quelle", so JEI should treat the recipe as transferable.
-	 * With {@code doTransfer} the server is asked to fill the grid.
+	 * Decides "+" for the backpack crafting grid when the backpack has the crafting and the ME upgrade: the recipe can be
+	 * moved when backpack, inventory, crafting grid and (with "ME als Quelle") ME storage hold every ingredient at once.
+	 * Returns {@code null} (allowed, and with {@code doTransfer} the server fills the grid), an error marking the missing
+	 * ingredients, or {@link #JEI_DECIDES} when the backpack has no ME upgrade.
 	 */
-	public static boolean handle(AbstractContainerMenu container, IRecipeSlotsView view, boolean max, boolean doTransfer) {
+	public static Object handle(AbstractContainerMenu container, IRecipeSlotsView view, Player player, boolean max, boolean doTransfer,
+			IRecipeTransferError jeiError) {
 		if (!(container instanceof BackpackBaseMenu menu)) {
-			return false;
+			return JEI_DECIDES;
 		}
 
 		MeUpgrade me = menu.getWrapper().getUpgradeManager().getUpgrade(MeUpgrade.class).orElse(null);
-
-		// switch on the ME upgrade set to "nur Inventar": JEI behaves as without the upgrade
-		if (me == null || !me.isEnabled(me)) {
-			return false;
-		}
-
 		CraftingUpgrade crafting = menu.getWrapper().getUpgradeManager().getUpgrade(CraftingUpgrade.class).orElse(null);
 		List<IRecipeSlotView> inputs = view.getSlotViews(RecipeIngredientRole.INPUT);
+		boolean meView = MeView.isOpen(menu);
+		boolean useMe = me != null && me.isEnabled(me);
 
-		if (crafting == null || inputs.size() != 9 || !ClientPlayNetworking.canSend(FillGridPayload.TYPE)) {
-			return false;
+		// without the ME upgrade, or with it on "nur Inventar" and the backpack showing, JEI works as usual
+		if (me == null || crafting == null || inputs.size() != 9 || !useMe && !meView) {
+			return JEI_DECIDES;
+		}
+
+		// JEI could not even work out the recipe (not a missing item): leave that answer alone
+		if (jeiError != null && jeiError.getType() == IRecipeTransferError.Type.INTERNAL) {
+			return jeiError;
+		}
+
+		IngredientPool pool = new IngredientPool();
+		player.getInventory().getNonEquipmentItems().forEach(pool::add);
+		menu.getWrapper().getStorage().stacks.forEach(pool::add);
+
+		if (crafting.craftSlots != null) {
+			crafting.craftSlots.getItems().forEach(pool::add);
+		}
+
+		if (useMe) {
+			List<ItemStack> items = StorageTbClient.stockItems;
+			List<Long> counts = StorageTbClient.stockCounts;
+
+			for (int i = 0; i < Math.min(items.size(), counts.size()); i++) {
+				pool.add(items.get(i), counts.get(i));
+			}
+		}
+
+		List<IRecipeSlotView> missing = new ArrayList<>();
+		List<List<ItemStack>> slots = new ArrayList<>();
+
+		for (IRecipeSlotView input : inputs) {
+			List<ItemStack> wanted = input.getItemStacks().filter(stack -> !stack.isEmpty()).limit(64).map(ItemStack::copy).toList();
+			slots.add(wanted);
+
+			if (!wanted.isEmpty() && pool.take(wanted).isEmpty()) {
+				missing.add(input);
+			}
+		}
+
+		if (!missing.isEmpty()) {
+			Component message = Component.translatable("jei.tooltip.error.recipe.transfer.missing");
+
+			if (TbJeiPlugin.transferHelper != null) {
+				return TbJeiPlugin.transferHelper.createUserErrorForMissingSlots(message, missing);
+			}
+
+			return jeiError != null ? jeiError : JEI_DECIDES;
+		}
+
+		if (!ClientPlayNetworking.canSend(FillGridPayload.TYPE)) {
+			return JEI_DECIDES;
 		}
 
 		if (doTransfer) {
@@ -51,15 +105,9 @@ public final class JeiTransfer {
 				ServerboundActionTagPacket.create(ServerboundActionTagPacket.UPGRADE_TAB, crafting.getDataHolderSlot(), true, ServerActions.TAB_OPEN);
 			}
 
-			List<List<ItemStack>> slots = new ArrayList<>();
-
-			for (IRecipeSlotView input : inputs) {
-				slots.add(input.getItemStacks().filter(stack -> !stack.isEmpty()).limit(64).map(ItemStack::copy).toList());
-			}
-
 			ClientPlayNetworking.send(new FillGridPayload(slots, max));
 		}
 
-		return true;
+		return null;
 	}
 }

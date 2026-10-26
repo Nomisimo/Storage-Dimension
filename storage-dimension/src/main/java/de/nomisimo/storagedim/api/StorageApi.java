@@ -1,5 +1,6 @@
 package de.nomisimo.storagedim.api;
 
+import java.util.List;
 import java.util.function.Predicate;
 
 import de.nomisimo.storagedim.storage.StorageData;
@@ -41,6 +42,26 @@ public final class StorageApi {
 		}
 
 		return ItemStack.EMPTY;
+	}
+
+	/**
+	 * Fills the two lists with every stored item (count-1 copies) and its amount, largest amount first.
+	 * Does nothing before the server has started.
+	 */
+	public static void stored(ServerPlayer player, List<ItemStack> prototypes, List<Long> counts) {
+		StorageNetwork network = network(player);
+
+		if (network != null) {
+			for (StorageNetwork.StoredItem entry : network.sorted()) {
+				prototypes.add(entry.prototype.copyWithCount(1));
+				counts.add(entry.count);
+			}
+		}
+	}
+
+	/** The terminal icon for a stored item: amount in the name, small digits on the client and click help as lore. */
+	public static ItemStack icon(ItemStack prototype, long count) {
+		return StorageMenu.icon(prototype, count);
 	}
 
 	/** How many items exactly like the prototype (item + components) are stored. */
