@@ -105,6 +105,10 @@ public class RobotEntity extends PathfinderMob {
 	private int range = RANGE;
 	/** Items it collects; empty = everything. */
 	private final List<ItemStack> filter = new ArrayList<>();
+	/** The filter lists what it leaves lying instead of the only things it collects. */
+	private boolean excludeFilter;
+	/** A robot barrier is right next to it (checked every tick). */
+	private boolean nearBarrier;
 	/** Items and chests it could not reach, with the game time until which it leaves them alone. */
 	private final Map<UUID, Long> ignoredItems = new HashMap<>();
 	private final Map<BlockPos, Long> ignoredChests = new HashMap<>();
@@ -128,7 +132,8 @@ public class RobotEntity extends PathfinderMob {
 				.add(Attributes.MAX_HEALTH, 10)
 				.add(Attributes.MOVEMENT_SPEED, 0.28)
 				.add(Attributes.FOLLOW_RANGE, RANGE + 16)
-				.add(Attributes.STEP_HEIGHT, 1.0)
+				// hops up to two blocks, also onto fences and walls (see maxUpStep for robot barriers)
+				.add(Attributes.STEP_HEIGHT, 2.05)
 				.add(Attributes.SAFE_FALL_DISTANCE, 24);
 	}
 
@@ -194,6 +199,7 @@ public class RobotEntity extends PathfinderMob {
 		applyRange();
 		filter.clear();
 		filter.addAll(config.filter());
+		excludeFilter = config.exclude();
 		entityData.set(COLOR, config.color());
 		setCustomName(config.name().isEmpty() ? null : Component.literal(config.name()));
 		setCustomNameVisible(!config.name().isEmpty());
@@ -208,7 +214,7 @@ public class RobotEntity extends PathfinderMob {
 	/** Its current settings, for the item it turns into when picked up. */
 	public RobotConfig config() {
 		return new RobotConfig(range, getColor(), getCustomName() == null ? "" : getCustomName().getString(), List.copyOf(filter),
-				station == null ? Optional.empty() : Optional.of(Rooms.id(level())), Optional.ofNullable(station));
+				station == null ? Optional.empty() : Optional.of(Rooms.id(level())), Optional.ofNullable(station), excludeFilter);
 	}
 
 	/** The robot as an item, keeping its settings. */
@@ -234,7 +240,12 @@ public class RobotEntity extends PathfinderMob {
 
 	/** Would collect this item: in range and allowed by the filter. */
 	private boolean wants(ItemEntity item) {
-		return inRange(item.position()) && (filter.isEmpty() || FilterChests.matches(filter, item.getItem()));
+		return inRange(item.position()) && allows(item.getItem());
+	}
+
+	/** Allowed by its filter: everything without one, else only the listed items (or all but them). */
+	private boolean allows(ItemStack stack) {
+		return filter.isEmpty() || FilterChests.matches(filter, stack) != excludeFilter;
 	}
 
 	/** Whether any chest it could deliver to exists in its range (ignoring the filter of filter chests). */
@@ -281,7 +292,7 @@ public class RobotEntity extends PathfinderMob {
 
 	/** For debugging and the client test: what the robot is doing right now. */
 	public String describe() {
-		return String.format("range=%d filter=%s station=%s mood=%d noChest=%s ", range, filter, station, getMood(), noChest) + String.format("pos=%.1f/%.1f/%.1f home=%s target=%s delivery=%s carried=%s action=%d sitting=%s pathDone=%s goals=%s",
+		return String.format("range=%d filter=%s%s station=%s mood=%d noChest=%s ", range, excludeFilter ? "except " : "", filter, station, getMood(), noChest) + String.format("pos=%.1f/%.1f/%.1f home=%s target=%s delivery=%s carried=%s action=%d sitting=%s pathDone=%s goals=%s",
 				getX(), getY(), getZ(), home, target == null ? null : target.position(), delivery, getCarried(), getAction(), isSitting(),
 				getNavigation().isDone(), goalSelector.getAvailableGoals().stream().filter(g -> g.isRunning()).map(g -> g.getGoal().getClass().getSimpleName()).toList());
 	}
@@ -347,7 +358,7 @@ public class RobotEntity extends PathfinderMob {
 		ignoredItems.values().removeIf(until -> until < now);
 		List<ItemEntity> items = new ArrayList<>(level().getEntitiesOfClass(ItemEntity.class, area,
 				item -> item.isAlive() && !CLAIMED.contains(item.getUUID()) && !ignoredItems.containsKey(item.getUUID())
-						&& inRange(item.position()) && (filter.isEmpty() || FilterChests.matches(filter, item.getItem()))
+						&& inRange(item.position()) && allows(item.getItem())
 						&& findDelivery(item.getItem()) != null));
 		items.sort(java.util.Comparator.comparingDouble(this::distanceToSqr));
 		// swarm: an item a free robot is clearly closer to is left for that one
@@ -742,6 +753,7 @@ public class RobotEntity extends PathfinderMob {
 			protected PathFinder createPathFinder(int maxVisitedNodes) {
 				nodeEvaluator = new BarrierAwareEvaluator();
 				nodeEvaluator.setCanPassDoors(true);
+				nodeEvaluator.setCanWalkOverFences(true);
 				return new PathFinder(nodeEvaluator, maxVisitedNodes);
 			}
 		};
@@ -760,6 +772,24 @@ public class RobotEntity extends PathfinderMob {
 		}
 	}
 
+	/** Next to a robot barrier it only takes normal small steps, so it cannot hop over the barrier. */
+	@Override
+	public float maxUpStep() {
+		return nearBarrier ? 0.6F : super.maxUpStep();
+	}
+
+	private boolean barrierNearby() {
+		AABB box = getBoundingBox().inflate(1.2, 0, 1.2).expandTowards(0, 2, 0).expandTowards(0, -1, 0);
+
+		for (BlockPos pos : BlockPos.betweenClosed(BlockPos.containing(box.minX, box.minY, box.minZ), BlockPos.containing(box.maxX, box.maxY, box.maxZ))) {
+			if (level().getBlockState(pos).is(RobotBarrierBlock.BLOCK)) {
+				return true;
+			}
+		}
+
+		return false;
+	}
+
 	/** Chests stacked in a wall: like a player it reaches up to a few blocks above its head. */
 	private boolean canReachChest(Vec3 chest) {
 		double dx = chest.x - getX();
@@ -770,10 +800,16 @@ public class RobotEntity extends PathfinderMob {
 
 	@Override
 	public void aiStep() {
+		nearBarrier = barrierNearby();
 		super.aiStep();
 
 		if (level().isClientSide()) {
 			return;
+		}
+
+		// a boat or minecart the robot walked into would hold it forever: it climbs straight out again
+		if (isPassenger()) {
+			stopRiding();
 		}
 
 		// Sits down when there is nothing to do: happily looking around at its station, sadly staring at the ground
@@ -890,16 +926,7 @@ public class RobotEntity extends PathfinderMob {
 		}
 
 		release();
-		MutableComponent names = Component.empty();
-
-		if (filter.isEmpty()) {
-			names.append(Component.literal("alles").withStyle(ChatFormatting.GRAY));
-		}
-
-		for (int i = 0; i < filter.size(); i++) {
-			names.append(i == 0 ? Component.empty() : Component.literal(", ")).append(filter.get(i).getHoverName());
-		}
-
+		MutableComponent names = RobotConfig.describeFilter(filter, excludeFilter);
 		player.sendSystemMessage(Component.literal(removed ? "Aus dem Filter genommen: " : "Zum Filter hinzugefügt: ")
 				.append(held.getHoverName()).withStyle(ChatFormatting.GOLD));
 		player.sendSystemMessage(Component.literal("Sammelt: ").withStyle(ChatFormatting.GOLD).append(names));
@@ -945,6 +972,7 @@ public class RobotEntity extends PathfinderMob {
 		output.putInt("Range", range);
 		output.storeNullable("Station", BlockPos.CODEC, station);
 		output.store("Filter", ItemStack.CODEC.listOf(), List.copyOf(filter));
+		output.putBoolean("FilterExclude", excludeFilter);
 	}
 
 	@Override
@@ -958,5 +986,6 @@ public class RobotEntity extends PathfinderMob {
 		applyRange();
 		filter.clear();
 		filter.addAll(input.read("Filter", ItemStack.CODEC.listOf()).orElse(List.of()));
+		excludeFilter = input.getBooleanOr("FilterExclude", false);
 	}
 }

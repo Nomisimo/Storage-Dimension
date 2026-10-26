@@ -81,7 +81,7 @@ public class ClientScreenshots implements FabricClientGameTest {
 		world.getServer().runOnServer(server -> {
 			for (ServerLevel level : server.getAllLevels()) {
 				for (RobotEntity robot : level.getEntities(Robots.ROBOT, entity -> true)) {
-					System.out.println("STORAGEDIM ROBOT " + robot.describe());
+					System.out.println("STORAGEDIM ROBOT " + robot.describe() + (robot.isPassenger() ? " riding" : ""));
 				}
 			}
 		});
@@ -345,6 +345,32 @@ public class ClientScreenshots implements FabricClientGameTest {
 					for (int dy = 0; dy <= 1; dy++) {
 						level.setBlockAndUpdate(base.offset(dx, dy, -6), RobotBarrierBlock.BLOCK.defaultBlockState());
 					}
+				}
+
+				// cobblestone behind a fence ring and a wall ring: robots hop over both
+				BlockPos fence = base.offset(4, 0, 3);
+				BlockPos wall = base.offset(7, 0, 0);
+
+				for (int dx = -1; dx <= 1; dx++) {
+					for (int dz = -1; dz <= 1; dz++) {
+						if (dx != 0 || dz != 0) {
+							level.setBlockAndUpdate(fence.offset(dx, 0, dz), Blocks.OAK_FENCE.defaultBlockState());
+							level.setBlockAndUpdate(wall.offset(dx, 0, dz), Blocks.COBBLESTONE_WALL.defaultBlockState());
+						}
+					}
+				}
+
+				drop(level, fence.getX() + 0.5, fence.getY() + 0.2, fence.getZ() + 0.5, new ItemStack(Items.COBBLESTONE, 2));
+				drop(level, wall.getX() + 0.5, wall.getY() + 0.2, wall.getZ() + 0.5, new ItemStack(Items.COBBLESTONE, 4));
+
+				// a robot put into a boat climbs out again
+				net.minecraft.world.entity.Entity boat = net.minecraft.world.entity.EntityType.OAK_BOAT.create(level, EntitySpawnReason.SPAWN_ITEM_USE);
+				boat.snapTo(base.getX() + 1.5, base.getY(), base.getZ() + 3.5, 0, 0);
+				level.addFreshEntity(boat);
+
+				for (RobotEntity robot : level.getEntities(Robots.ROBOT, entity -> true)) {
+					System.out.println("STORAGEDIM BOAT ride=" + robot.startRiding(boat) + " passenger=" + robot.isPassenger());
+					break;
 				}
 
 				player.getInventory().add(new ItemStack(RobotBarrierBlock.ITEM, 16));

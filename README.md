@@ -18,7 +18,7 @@ Ein Fabric-Mod für **Minecraft 26.1.2**. Seit Version 0.4.0 (Sammelroboter, eig
   - Mit [JEI](https://modrinth.com/mod/jei) sitzt zwischen Suchfeld und Sortier-Knopf ein kleiner Schalter **J**. Ist er grün, sind die Suche im Terminal und die JEI-Suchleiste gekoppelt: was in einer steht, steht auch in der anderen. Die Einstellung bleibt gespeichert (`jeiSearchSync` in `config/storagedim.json` beim Spieler).
 - **Hopper-Eingang:** Trichter, die in eine Dimensionskiste oder Filterkiste zeigen, liefern direkt in den Speicher. Zum Anbauen mit einem Item in der Hand schleichen.
 - **Maschinen anderer Mods (z. B. Tech Reborn, Advanced Reborn):** Dimensions- und Filterkisten sind über die Fabric-Transfer-API angebunden. Was eine Maschine hineinschiebt, landet direkt im ME-Speicher, und aus einer Filterkiste können Maschinen die Filter-Items herausziehen.
-- **Sammelroboter:** Ein kleiner Roboter mit Schnabel. Mit dem Roboter-Item auf einen Block klicken stellt ihn hin. Er sammelt herumliegende Items ein, immer einen Stapel im Schnabel, und bringt ihn zur nächsten Dimensionskiste, zum ME-Terminal oder zu einer passenden Filterkiste. Er läuft Stufen hoch und runter und stellt sich zum Aufheben direkt auf das Item.
+- **Sammelroboter:** Ein kleiner Roboter mit Schnabel. Mit dem Roboter-Item auf einen Block klicken stellt ihn hin. Er sammelt herumliegende Items ein, immer einen Stapel im Schnabel, und bringt ihn zur nächsten Dimensionskiste, zum ME-Terminal oder zu einer passenden Filterkiste. Er hüpft bis zu zwei Blöcke hoch, auch über Zäune und Mauern, und stellt sich zum Aufheben direkt auf das Item. Roboter-Barrieren überspringt er nicht. Aus Booten und Loren steigt er sofort wieder aus.
   - **Ohne Station** ist die Stelle, an der er steht, sein Zuhause. Rechtsklick mit leerer Hand stellt die Reichweite um (1, 2, 4, 6, 8 oder 10 Chunks), Farbstoff färbt Schnabel und Füße, Schleichen + Rechtsklick mit einem Item setzt es auf seinen Filter oder nimmt es wieder herunter (bis zu 9 Items). Mit Filter sammelt er nur diese Items, ohne Filter alles.
   - **Mit Roboter-Station** (siehe unten) bekommt er Reichweite, Filter, Farbe und Namen von der Station. Die Reichweite zählt dann ab der Station.
   - **Schwarm:** Mehrere Roboter stimmen sich ab. Jeder holt ein anderes Item, es rennen nie alle zum selben.
@@ -29,6 +29,7 @@ Ein Fabric-Mod für **Minecraft 26.1.2**. Seit Version 0.4.0 (Sammelroboter, eig
   - Nur Spieler können ihm schaden. Er arbeitet nur in geladenen Chunks.
 - **Roboter-Station:** Ein Block, der Sammelroboter einstellt. Rechtsklick öffnet das Menü:
   - obere Reihe: bis zu 9 Filter-Items (Item draufklicken setzt, leere Hand entfernt),
+  - Trichter/Barriere: Filter-Modus. Trichter heißt „nur diese sammeln“, Barriere heißt „diese NICHT sammeln“ (alles andere schon). Klick schaltet um.
   - Kompass: Reichweite (Linksklick größer, Rechtsklick kleiner), Farbstoff: Farbe (Klick schaltet weiter), Namensschild: Name (Linksklick eingeben, Rechtsklick löschen),
   - Roboter in den Eingang (links vom Pfeil) legen, er kommt rechts im Ausgang eingestellt wieder heraus. Die Einstellungen stehen im Tooltip des Roboter-Items.
   - Ein eingestellter Roboter, der außerhalb der Reichweite seiner Station hingestellt wird, läuft zuerst zur Station und arbeitet dann los.
@@ -141,7 +142,7 @@ Im Ordner `storagedim-tb/` liegt ein kleiner Zusatz-Mod. Er fügt ein echtes **M
 
 - Rezept (formlos): Leeres Upgrade (Traveler's Backpack), Enderauge, 2× Amethystscherbe, Redstoneblock. Mit dem Zusatz-Mod ergibt auch das normale ME-Upgrade-Rezept (mit Papier) dieses Upgrade. Es gibt dann nur noch ein ME-Upgrade: Es passt in den Upgrade-Slot und macht mit einem Bündel auch einen ME-Rucksack.
 - Upgrade in einen Upgrade-Slot des Rucksacks legen. Linksklick auf das ME-Symbol im Rucksack-Fenster zeigt den ME-Speicher **direkt im Rucksack-Fenster**, an Stelle des Rucksack-Inhalts. Crafting, die anderen Upgrades und die Einstellungen bleiben daneben sichtbar. Ein zweiter Linksklick zeigt wieder den Rucksack. Rechtsklick nimmt das Upgrade heraus.
-  - In der ME-Ansicht: Linksklick nimmt einen Stapel, Rechtsklick einen halben, Shift-Klick schiebt ihn ins Inventar. Ein Item vom Cursor oder Shift-Klick im eigenen Inventar lagert ein. Bei mehr Items als Plätzen blättern die beiden Pfeile unten rechts.
+  - In der ME-Ansicht: Linksklick nimmt einen Stapel, Rechtsklick einen halben, Shift-Klick schiebt ihn ins Inventar. Ein Item vom Cursor oder Shift-Klick im eigenen Inventar lagert ein. Bei mehr Items als Plätzen blättern die beiden Pfeile unten rechts. Über dem Fenster steht ein Suchfeld (mit dem „J“-Schalter des ME-Terminals auch an die JEI-Suche gekoppelt).
 
   ![ME-Speicher im Rucksack-Fenster, daneben das Crafting-Upgrade](docs/screenshots/rucksack-me-ansicht.png)
 

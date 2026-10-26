@@ -171,23 +171,19 @@ public class BackpackJeiTest implements FabricClientGameTest {
 		setCraftingTab(context, true);
 		context.waitTicks(10);
 
-		// search above the window
-		world.getServer().runOnServer(server -> {
-			ServerPlayer player = server.getPlayerList().getPlayers().get(0);
-			Object view = null;
+		// search above the window: focus the field and type into it like a player
+		context.runOnClient(client -> {
+			net.minecraft.client.gui.components.EditBox box = client.screen.children().stream()
+					.filter(child -> child instanceof net.minecraft.client.gui.components.EditBox)
+					.map(child -> (net.minecraft.client.gui.components.EditBox) child).findFirst().orElse(null);
+			log("search field " + (box == null ? "missing" : "at " + box.getX() + "," + box.getY()));
 
-			try {
-				Class<?> type = Class.forName("de.nomisimo.storagedim.tb.MeView");
-				java.lang.reflect.Method of = type.getDeclaredMethod("of", AbstractContainerMenu.class);
-				of.setAccessible(true);
-				view = of.invoke(null, player.containerMenu);
-				java.lang.reflect.Method set = type.getDeclaredMethod("setSearch", ServerPlayer.class, String.class);
-				set.setAccessible(true);
-				set.invoke(view, player, "redst");
-			} catch (ReflectiveOperationException e) {
-				log("search failed: " + e);
+			if (box != null) {
+				client.screen.setFocused(box);
 			}
 		});
+		context.getInput().typeChars("redst");
+		context.waitTicks(10);
 		context.waitTicks(5);
 		logClientSlots(context, "view on, search redst");
 		context.takeScreenshot("backpack-me-view-search");

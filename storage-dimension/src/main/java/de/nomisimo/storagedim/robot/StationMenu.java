@@ -37,6 +37,7 @@ public class StationMenu extends ChestMenu {
 	private static final int SLOT_RANGE = 9;
 	private static final int SLOT_COLOR = 10;
 	private static final int SLOT_NAME = 11;
+	private static final int SLOT_MODE = 12;
 	private static final int SLOT_INPUT = 13;
 	private static final int SLOT_ARROW = 14;
 	private static final int SLOT_OUTPUT = 15;
@@ -99,10 +100,14 @@ public class StationMenu extends ChestMenu {
 				"Linksklick: nächste · Rechtsklick: vorige"));
 		container.setItem(SLOT_NAME, button(Items.NAME_TAG, config.name().isEmpty() ? "Name: keiner" : "Name: " + config.name(),
 				"Linksklick: Namen eingeben", "Rechtsklick: Namen löschen"));
+		container.setItem(SLOT_MODE, config.exclude()
+				? button(Items.BARRIER, "Filter: diese NICHT sammeln", "Die Roboter sammeln alles außer den Items oben", "Klick: nur diese sammeln")
+				: button(Items.HOPPER, "Filter: nur diese sammeln", "Die Roboter sammeln nur die Items oben (leer = alles)", "Klick: diese nicht sammeln"));
 		container.setItem(SLOT_ARROW, button(Items.ARROW, "Roboter links hineinlegen",
 				"rechts kommt er mit diesen Einstellungen heraus"));
 		container.setItem(SLOT_HELP, button(Items.BOOK, "Roboter-Station",
 				"Oben: Filter, was die Roboter sammeln (leer = alles)",
+				"oder, mit dem Schalter daneben, was sie liegen lassen",
 				"Die Roboter arbeiten im Umkreis dieser Station",
 				"und warten hier, wenn es nichts zu tun gibt"));
 	}
@@ -136,6 +141,9 @@ public class StationMenu extends ChestMenu {
 			setFilter(slotIndex, getCarried());
 		} else if (slotIndex == SLOT_RANGE) {
 			config = config.withRange(step(RANGES, config.range(), buttonNum == 1 ? -1 : 1));
+			save();
+		} else if (slotIndex == SLOT_MODE) {
+			config = config.withExclude(!config.exclude());
 			save();
 		} else if (slotIndex == SLOT_COLOR) {
 			config = config.withColor(step(RobotConfig.colors(), config.color(), buttonNum == 1 ? -1 : 1));

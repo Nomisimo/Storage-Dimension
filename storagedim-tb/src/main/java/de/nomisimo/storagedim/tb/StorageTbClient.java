@@ -67,6 +67,13 @@ public class StorageTbClient implements ClientModInitializer {
 				// Traveler's Backpack re-initialises its screen when upgrades change; the field must come back
 				updateSearch(backpack, MeView.isOpen(backpack.getMenu()));
 
+				// the backpack screen only draws its own widget types, so the field is drawn here
+				ScreenEvents.afterExtract(screen).register((current, graphics, mouseX, mouseY, partialTick) -> {
+					if (searchBox != null && Screens.getWidgets(current).contains(searchBox)) {
+						searchBox.extractRenderState(graphics, mouseX, mouseY, partialTick);
+					}
+				});
+
 				// with the search sync on, text typed into JEI's search bar also searches ME storage
 				ScreenEvents.afterTick(screen).register(current -> {
 					if (searchBox != null && Screens.getWidgets(current).contains(searchBox) && jeiSync()) {
