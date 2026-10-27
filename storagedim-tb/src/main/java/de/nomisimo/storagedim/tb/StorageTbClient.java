@@ -15,6 +15,7 @@ import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
 import net.fabricmc.fabric.api.client.screen.v1.ScreenEvents;
+import net.fabricmc.fabric.api.client.screen.v1.ScreenKeyboardEvents;
 import net.fabricmc.fabric.api.client.screen.v1.ScreenMouseEvents;
 import net.fabricmc.fabric.api.client.screen.v1.Screens;
 import net.fabricmc.loader.api.FabricLoader;
@@ -54,6 +55,8 @@ public class StorageTbClient implements ClientModInitializer {
 	/** The backpack window's own title while it is renamed for the ME view. */
 	private static Component backpackTitle;
 	private static SearchBox searchBox;
+	/** JEI's search text as last seen or set, to tell a change made in JEI from one made here. */
+	private static String lastJei;
 	private static MeNetworking.PagePayload pageInfo;
 	private static final Button SORT = Button.builder(Component.empty(), b -> press(MeNetworking.BUTTON_SORT)).size(51, 12).build();
 	private static final Button SYNC = Button.builder(Component.empty(), b -> toggleJeiSync()).size(13, 12).build();
@@ -106,11 +109,28 @@ public class StorageTbClient implements ClientModInitializer {
 				// Traveler's Backpack re-initialises its screen when upgrades change; the field must come back
 				updateSearch(backpack, MeView.isOpen(backpack.getMenu()));
 
-				// the backpack screen only draws its own widget types, so the field is drawn here
-				ScreenEvents.afterExtract(screen).register((current, graphics, mouseX, mouseY, partialTick) -> {
+				// the backpack screen only draws its own widget types, so the bars are drawn here: right after the window,
+				// so slot tooltips still come on top of them
+				ScreenEvents.afterBackground(screen).register((current, graphics, mouseX, mouseY, partialTick) -> {
 					if (searchBox != null && Screens.getWidgets(current).contains(searchBox)) {
 						draw(backpack, graphics, mouseX, mouseY, partialTick);
 					}
+				});
+				ScreenEvents.afterExtract(screen).register((current, graphics, mouseX, mouseY, partialTick) -> {
+					if (searchBox != null && Screens.getWidgets(current).contains(searchBox)) {
+						// the backpack's own buttons in the title row (sorting, equip) belong to the backpack, not to ME storage
+						graphics.fill(cornerX, cornerY, cornerX + 61, cornerY + 13, 0xFFC6C6C6);
+					}
+				});
+				// while typing in the search field every key is text: the backpack key (B) must not close the window
+				ScreenKeyboardEvents.allowKeyPress(screen).register((current, event) -> {
+					if (searchBox != null && searchBox.isFocused() && Screens.getWidgets(current).contains(searchBox)
+							&& event.key() != GLFW.GLFW_KEY_ESCAPE) {
+						searchBox.keyPressed(event);
+						return false;
+					}
+
+					return true;
 				});
 				ScreenMouseEvents.allowMouseClick(screen).register((current, event) ->
 						!(searchBox != null && Screens.getWidgets(current).contains(searchBox) && click(current, event)));
@@ -124,11 +144,16 @@ public class StorageTbClient implements ClientModInitializer {
 						updateSearch(backpack, true);
 					}
 
+					// only a change made in JEI comes over; otherwise clearing the field here would be undone at once
 					if (searchBox != null && Screens.getWidgets(current).contains(searchBox) && jeiSync()) {
 						String jei = TbJeiPlugin.searchText();
 
-						if (jei != null && !jei.equals(searchBox.getValue())) {
-							searchBox.setValue(jei);
+						if (jei != null && !jei.equals(lastJei)) {
+							lastJei = jei;
+
+							if (!jei.equals(searchBox.getValue())) {
+								searchBox.setValue(jei);
+							}
 						}
 					}
 				});
@@ -201,12 +226,15 @@ public class StorageTbClient implements ClientModInitializer {
 
 			if (jeiSync()) {
 				TbJeiPlugin.setSearchText(value);
+				lastJei = value;
 			}
 		});
 		searchBox = search;
 		Screens.getWidgets(screen).add(search);
 
 		String jei = jeiSync() ? TbJeiPlugin.searchText() : null;
+
+		lastJei = jei;
 
 		if (jei != null && !jei.isEmpty()) {
 			search.setValue(jei);
@@ -302,9 +330,6 @@ public class StorageTbClient implements ClientModInitializer {
 		graphics.fill(x + 3, y + 3, x + w - 3, y + h - 3, 0xFFC6C6C6);
 		searchBox.extractRenderState(graphics, mouseX, mouseY, partialTick);
 
-		// the backpack's own buttons in the title row (sorting, equip) belong to the backpack, not to ME storage
-		graphics.fill(cornerX, cornerY, cornerX + 61, cornerY + 13, 0xFFC6C6C6);
-
 		// the bottom slot row turns into the button row of the ME terminal
 		if (hasRow) {
 			graphics.fill(rowX, rowY, rowX + rowWidth, rowY + 18, 0xFFC6C6C6);
@@ -337,6 +362,14 @@ public class StorageTbClient implements ClientModInitializer {
 
 				return true;
 			}
+		}
+
+		if (searchBox.isMouseOver(event.x(), event.y()) && event.button() == GLFW.GLFW_MOUSE_BUTTON_RIGHT) {
+			// right-click empties the field, like the creative search
+			searchBox.setValue("");
+			screen.setFocused(searchBox);
+			searchBox.setFocused(true);
+			return true;
 		}
 
 		if (searchBox.isMouseOver(event.x(), event.y())) {
@@ -393,6 +426,7 @@ public class StorageTbClient implements ClientModInitializer {
 					searchBox.setValue(jei);
 				} else {
 					TbJeiPlugin.setSearchText(searchBox.getValue());
+					lastJei = searchBox.getValue();
 				}
 			}
 		} catch (ReflectiveOperationException e) {

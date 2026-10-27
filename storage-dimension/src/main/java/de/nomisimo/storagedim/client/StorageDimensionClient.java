@@ -24,6 +24,7 @@ import net.minecraft.client.gui.screens.MenuScreens;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.gui.screens.inventory.MenuAccess;
 import net.minecraft.client.input.KeyEvent;
+import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.network.chat.Component;
 import org.lwjgl.glfw.GLFW;
 
@@ -44,6 +45,8 @@ public class StorageDimensionClient implements ClientModInitializer {
 	private static Button sortButton;
 	private static Button syncButton;
 	private static SearchBox searchBox;
+	/** JEI's search text as last seen or set, to tell a change made in JEI from one made here. */
+	private static String lastJei;
 	private static Button prevButton;
 	private static Button nextButton;
 	private static Button depositButton;
@@ -89,8 +92,13 @@ public class StorageDimensionClient implements ClientModInitializer {
 				if (JEI && StorageConfig.get().jeiSearchSync && isTerminal(current) && searchBox != null) {
 					String jei = StorageJeiPlugin.searchText();
 
-					if (jei != null && !jei.equals(searchBox.getValue())) {
-						searchBox.setValue(jei);
+					// only a change made in JEI comes over; otherwise clearing the field here would be undone at once
+					if (jei != null && !jei.equals(lastJei)) {
+						lastJei = jei;
+
+						if (!jei.equals(searchBox.getValue())) {
+							searchBox.setValue(jei);
+						}
 					}
 				}
 			});
@@ -132,6 +140,7 @@ public class StorageDimensionClient implements ClientModInitializer {
 
 			if (JEI && StorageConfig.get().jeiSearchSync) {
 				StorageJeiPlugin.setSearchText(text);
+				lastJei = text;
 			}
 		});
 		searchBox = search;
@@ -153,12 +162,14 @@ public class StorageDimensionClient implements ClientModInitializer {
 						search.setValue(jei);
 					} else {
 						StorageJeiPlugin.setSearchText(search.getValue());
+						lastJei = search.getValue();
 					}
 				}
 			}).bounds(left + 103, top + 4, 13, 12).tooltip(syncTooltip()).build();
 			Screens.getWidgets(screen).add(syncButton);
 
 			String jei = StorageConfig.get().jeiSearchSync ? StorageJeiPlugin.searchText() : null;
+			lastJei = jei;
 
 			if (jei != null && !jei.isEmpty()) {
 				search.setValue(jei);
@@ -248,6 +259,18 @@ public class StorageDimensionClient implements ClientModInitializer {
 			}
 
 			return isFocused() && isVisible() && event.key() != GLFW.GLFW_KEY_ESCAPE;
+		}
+
+		/** Right-click empties the field, like the creative search. */
+		@Override
+		public boolean mouseClicked(MouseButtonEvent event, boolean doubleClick) {
+			if (event.button() == GLFW.GLFW_MOUSE_BUTTON_RIGHT && isMouseOver(event.x(), event.y())) {
+				setValue("");
+				setFocused(true);
+				return true;
+			}
+
+			return super.mouseClicked(event, doubleClick);
 		}
 	}
 }

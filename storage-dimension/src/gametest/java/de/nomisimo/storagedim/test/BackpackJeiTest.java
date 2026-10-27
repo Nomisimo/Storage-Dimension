@@ -43,12 +43,17 @@ import net.minecraft.world.item.component.ItemContainerContents;
 import net.minecraft.world.item.crafting.CraftingRecipe;
 import net.minecraft.world.item.crafting.RecipeHolder;
 
+import org.lwjgl.glfw.GLFW;
+
 /**
  * With JEI and the Traveler's Backpack add-on: are our recipes in JEI (singleplayer and on a dedicated server),
  * does JEI's "+" fill the backpack crafting grid from ME storage (normal and with shift), is "+" red when something is
  * missing, and does the ME view in the backpack window work. Everything is logged as "STORAGEDIM JEI ...".
  */
 public class BackpackJeiTest implements FabricClientGameTest {
+	private static double hoverX;
+	private static double hoverY;
+
 	@Override
 	public void runTest(ClientGameTestContext context) {
 		if (!FabricLoader.getInstance().isModLoaded("jei")) {
@@ -187,6 +192,57 @@ public class BackpackJeiTest implements FabricClientGameTest {
 		context.waitTicks(5);
 		logClientSlots(context, "view on, search redst");
 		context.takeScreenshot("backpack-me-view-search");
+
+		// the backpack hotkey is just a letter while typing, and the search can be emptied again
+		context.runOnClient(client -> StorageConfig.get().jeiSearchSync = true);
+		context.getInput().pressKey(GLFW.GLFW_KEY_B);
+		context.waitTicks(5);
+		context.runOnClient(client -> log("after B the screen is " + (client.screen instanceof BackpackScreen ? "still the backpack" : client.screen)));
+
+		for (int i = 0; i < 6; i++) {
+			context.getInput().pressKey(GLFW.GLFW_KEY_BACKSPACE);
+		}
+
+		context.waitTicks(10);
+		context.runOnClient(client -> {
+			String value = client.screen.children().stream()
+					.filter(child -> child instanceof net.minecraft.client.gui.components.EditBox)
+					.map(child -> ((net.minecraft.client.gui.components.EditBox) child).getValue()).findFirst().orElse("?");
+			log("search after clearing: '" + value + "'");
+			StorageConfig.get().jeiSearchSync = false;
+		});
+		context.waitTicks(5);
+
+		// a tooltip over the bottom row is drawn above the bar below it
+		context.runOnClient(client -> {
+			BackpackBaseMenu menu = (BackpackBaseMenu) client.player.containerMenu;
+			var bottom = menu.getSlot(menu.BACKPACK_INV_START);
+
+			for (int i = menu.BACKPACK_INV_START; i < menu.BACKPACK_INV_END; i++) {
+				var slot = menu.getSlot(i);
+
+				if (slot.isActive() && !slot.getItem().isEmpty() && slot.y >= bottom.y) {
+					bottom = slot;
+				}
+			}
+
+			try {
+				Field left = net.minecraft.client.gui.screens.inventory.AbstractContainerScreen.class.getDeclaredField("leftPos");
+				Field top = net.minecraft.client.gui.screens.inventory.AbstractContainerScreen.class.getDeclaredField("topPos");
+				left.setAccessible(true);
+				top.setAccessible(true);
+				double scale = client.getWindow().getGuiScale();
+				hoverX = (left.getInt(client.screen) + bottom.x + 8) * scale;
+				hoverY = (top.getInt(client.screen) + bottom.y + 8) * scale;
+				log("hovering " + bottom.getItem() + " at " + bottom.x + "," + bottom.y);
+			} catch (ReflectiveOperationException e) {
+				throw new RuntimeException(e);
+			}
+		});
+		context.getInput().setCursorPos(hoverX, hoverY);
+		context.waitTicks(5);
+		context.takeScreenshot("backpack-me-view-hover");
+		context.getInput().setCursorPos(0, 0);
 
 		context.runOnClient(client -> toggleView());
 		context.waitTicks(10);
