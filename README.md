@@ -130,6 +130,7 @@ Die Roboter lagern nur in Speicher, der **direkt an der Station** steht, also an
 
 ### Wie die Roboter arbeiten
 
+- **Name:** Der Name über dem Kopf, in Jade und in der Stationsliste steht in der Farbe des Roboters (sehr dunkle Farben etwas aufgehellt, damit man sie lesen kann).
 - **Einlagern:** Zum Einlagern geht ein Roboter direkt an die Kiste. Der Deckel (bei Fässern die Klappe) geht kurz auf und wieder zu, standardmäßig ohne Geräusch (siehe `robotChestSound` unter [Einstellungen](#einstellungen)).
 - **Schwarm:** Mehrere Roboter stimmen sich ab. Jeder holt ein anderes Item, es rennen nie alle zum selben.
 - **Wege:** Bevor ein Roboter losläuft, plant er den ganzen Weg. Gibt es keinen (eingemauert, hinter einer Roboter-Barriere, über Lava), lässt er das Item eine Minute in Ruhe und nimmt das nächste. Bleibt er unterwegs hängen, gibt er nach 5 Sekunden auf. Neu fallengelassene Items bemerkt er nach spätestens einer halben Sekunde.
