@@ -547,15 +547,15 @@ public class ClientScreenshots implements FabricClientGameTest {
 			egg.setDeltaMovement(Vec3.ZERO);
 			egg.setNoPickUpDelay();
 			level.addFreshEntity(egg);
-			player.teleportTo(level, pen.getX() + 2.5, pen.getY() + 2.5, pen.getZ() + 6.5, java.util.Set.of(), 180, 40, true);
+			player.teleportTo(level, pen.getX() + 2.0, pen.getY() + 3.5, pen.getZ() + 7.5, java.util.Set.of(), 170, 32, true);
 		});
 
 		for (int t = 0; t < 6; t++) {
 			context.waitTicks(20);
 			logRobots(world);
 
-			if (t == 4) {
-				context.takeScreenshot("robot-fence-corner");
+			if (t == 3 || t == 4) {
+				context.takeScreenshot("robot-fence-corner-" + t);
 			}
 		}
 
