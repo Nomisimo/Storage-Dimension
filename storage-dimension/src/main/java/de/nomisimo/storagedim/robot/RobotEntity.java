@@ -1017,6 +1017,8 @@ public class RobotEntity extends PathfinderMob {
 		private int cooldown;
 		private Object lastGoal;
 		private double bestDistance;
+		private Path lastPath;
+		private int lastNode;
 		private int stuckTicks;
 
 		WorkGoal() {
@@ -1111,6 +1113,18 @@ public class RobotEntity extends PathfinderMob {
 
 			if (distance < bestDistance - 0.5) {
 				bestDistance = distance;
+				stuckTicks = 0;
+				return false;
+			}
+
+			// a way round (out of a deep pool, up a ramp and back down) first leads away: getting on along it counts too
+			Path path = getNavigation().getPath();
+
+			if (path != lastPath) {
+				lastPath = path;
+				lastNode = path == null ? 0 : path.getNextNodeIndex();
+			} else if (path != null && path.getNextNodeIndex() > lastNode) {
+				lastNode = path.getNextNodeIndex();
 				stuckTicks = 0;
 				return false;
 			}
@@ -1248,6 +1262,13 @@ public class RobotEntity extends PathfinderMob {
 					homeUnreachableUntil = level().getGameTime() + RETRY_HOME_TICKS;
 					getNavigation().stop();
 				} else {
+					getNavigation().moveTo(path, 1.0);
+				}
+			} else if (getNavigation().isDone() && goalKey == delivery) {
+				// out of the water again (or its way ended early): a new way to the chest, like when it was chosen
+				Path path = getNavigation().createPath(delivery, 3);
+
+				if (path != null) {
 					getNavigation().moveTo(path, 1.0);
 				}
 			} else if (getNavigation().isDone()) {
