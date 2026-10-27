@@ -415,6 +415,26 @@ public class ClientScreenshots implements FabricClientGameTest {
 			System.out.println("STORAGEDIM POND slot13=" + ((net.minecraft.world.level.block.entity.ChestBlockEntity) level.getBlockEntity(chest)).getItem(13)
 					+ " left=" + level.getEntitiesOfClass(ItemEntity.class, new net.minecraft.world.phys.AABB(pond).inflate(4)).size());
 		});
+
+		// robots standing on a fence post and on a wall: feet right on the visible top, not half a block above it
+		BlockPos posts = lonely.offset(-6, 0, 3);
+		world.getServer().runOnServer(server -> {
+			ServerPlayer player = server.getPlayerList().getPlayers().get(0);
+			ServerLevel level = player.level();
+			level.setBlockAndUpdate(posts, Blocks.OAK_FENCE.defaultBlockState());
+			level.setBlockAndUpdate(posts.east(2), Blocks.COBBLESTONE_WALL.defaultBlockState());
+
+			for (BlockPos post : List.of(posts, posts.east(2))) {
+				RobotEntity robot = Robots.ROBOT.create(level, EntitySpawnReason.SPAWN_ITEM_USE);
+				robot.snapTo(post.getX() + 0.5, post.getY() + 1.5, post.getZ() + 0.5, 0, 0);
+				robot.setup(player.getUUID(), post.above());
+				level.addFreshEntity(robot);
+			}
+
+			lookAt(player, Vec3.atCenterOf(posts.east()).add(0, 0.6, 0), 3.2);
+		});
+		context.waitTicks(20);
+		context.takeScreenshot("robot-on-posts");
 	}
 
 	/** Puts the player {@code distance} blocks south-east of the point and turns them to look at it. */

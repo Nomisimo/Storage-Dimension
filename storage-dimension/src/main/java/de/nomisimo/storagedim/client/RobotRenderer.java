@@ -12,7 +12,9 @@ import net.minecraft.client.renderer.entity.RenderLayerParent;
 import net.minecraft.client.renderer.entity.layers.RenderLayer;
 import net.minecraft.client.renderer.entity.state.HoldingEntityRenderState;
 import net.minecraft.client.renderer.texture.OverlayTexture;
+import net.minecraft.core.BlockPos;
 import net.minecraft.resources.Identifier;
+import net.minecraft.tags.BlockTags;
 
 public class RobotRenderer extends MobRenderer<RobotEntity, RobotRenderState, RobotModel> {
 	private static final Identifier TEXTURE = StorageDimensionMod.id("textures/entity/robot.png");
@@ -45,7 +47,44 @@ public class RobotRenderer extends MobRenderer<RobotEntity, RobotRenderState, Ro
 		state.idlePace = 0.8F + (hash >>> 8 & 0xFF) / 255F * 0.4F;
 		state.diving = robot.isUnderWater();
 		state.umbrella = !robot.isInWater() && robot.level().isRainingAt(robot.blockPosition().above());
+		state.postDrop = onPost(robot) ? 0.5F : 0;
+		state.y -= state.postDrop;
 	}
+
+	/**
+	 * Fences, walls and fence gates are 1.5 blocks high for collisions but drawn only one block high. Standing on one,
+	 * the robot is drawn half a block lower, so its feet touch the post instead of hovering above it.
+	 */
+	private static boolean onPost(RobotEntity robot) {
+		double y = robot.getY();
+
+		if (!robot.onGround() || Math.abs(y - Math.floor(y) - 0.5) > 0.05) {
+			return false;
+		}
+
+		var level = robot.level();
+		var box = robot.getBoundingBox();
+		int below = (int) Math.floor(y) - 1;
+		boolean post = false;
+
+		for (int x = (int) Math.floor(box.minX); x <= (int) Math.floor(box.maxX - 1.0E-4); x++) {
+			for (int z = (int) Math.floor(box.minZ); z <= (int) Math.floor(box.maxZ - 1.0E-4); z++) {
+				var state = level.getBlockState(new BlockPos(x, below, z));
+
+				if (state.is(BlockTags.FENCES) || state.is(BlockTags.WALLS) || state.is(BlockTags.FENCE_GATES)) {
+					post = true;
+				} else if (!state.getCollisionShape(level, new BlockPos(x, below, z)).isEmpty()
+						&& state.getCollisionShape(level, new BlockPos(x, below, z)).max(net.minecraft.core.Direction.Axis.Y) > 1) {
+					// something else that tall holds it up too: leave it where it is
+					return false;
+				}
+			}
+		}
+
+		return post;
+	}
+
+
 
 	@Override
 	public Identifier getTextureLocation(RobotRenderState state) {

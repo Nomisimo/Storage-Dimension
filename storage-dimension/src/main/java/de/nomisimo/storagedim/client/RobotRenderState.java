@@ -18,4 +18,6 @@ public class RobotRenderState extends HoldingEntityRenderState {
 	public boolean diving;
 	/** Out in the rain (no roof above): holds up its umbrella. */
 	public boolean umbrella;
+	/** Standing on a fence or wall post: drawn this much lower, onto the visible top of the post. */
+	public float postDrop;
 }
