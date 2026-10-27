@@ -80,7 +80,7 @@ Eine Kiste, die nur ausgewählte Items aus dem ME-Speicher zeigt.
 
 ## Sammelroboter
 
-Ein kleiner Roboter mit Schnabel. Er sammelt herumliegende Items ein, immer einen Stapel im Schnabel, und bringt ihn zur nächsten Dimensionskiste, zum ME-Terminal oder zu einer passenden Filterkiste.
+Ein kleiner Roboter mit Schnabel. Er sammelt herumliegende Items ein, immer einen Stapel im Schnabel, und bringt ihn in die Kisten direkt an seiner Station.
 
 ![Der Sammelroboter holt Items und bringt sie zu den Kisten](docs/screenshots/roboter-bei-der-arbeit.png)
 
@@ -105,6 +105,18 @@ Ein eingestellter Roboter, der außerhalb der Reichweite seiner Station hingeste
 
 ![Roboter-Station mit Jade-Anzeige](docs/screenshots/roboter-station.png)
 
+### Wohin die Roboter einlagern
+
+Die Roboter lagern nur in Speicher, der **direkt an der Station** steht, also an einer der sechs Seiten (auch oben und unten). Weiter entfernte Kisten benutzen sie nicht.
+
+- **Erlaubt:** Kisten (auch Fallen- und Kupferkisten), Fässer, Shulkerkisten, Dimensionskisten, Filterkisten, ME-Terminals, Enderkisten und Speicher-Eingänge anderer Mods (Blöcke mit „chest“, „barrel“, „crate“, „drawer“, „storage“, „interface“, „importer“ oder „cabinet“ im Namen, die Items annehmen). Eine normale Enderkiste ist die des Spielers, dem der Roboter gehört, und funktioniert nur, solange dieser online ist.
+- **Nie:** Trichter, Spender, Werfer, Öfen, Braustände und andere Maschinen.
+- **Reihenfolge:** Passende Filterkisten zuerst, danach die übrigen Kisten in fester Reihenfolge (unten, oben, Norden, Süden, Westen, Osten). So wird eine Kiste nach der anderen voll. Passt nur ein Teil des Stapels, bringt der Roboter den Rest zur nächsten Kiste.
+- **Alles voll:** Hat keine Kiste mehr Platz, bringt der Roboter sein Item zurück zur Station, setzt sich traurig hin und zeigt „Fehler: Kisten voll“. Er schaut zweimal pro Sekunde nach. Sobald wieder Platz ist, räumt er ein und arbeitet weiter.
+- Mit Datapacks lässt sich die Liste erweitern: Block-Tag `storagedim:robot_storage` (erlaubt) und `storagedim:robot_storage_excluded` (verboten).
+
+![Die Kiste an der Station ist voll: Pieps sitzt mit 🚫 neben der Erde, die er nicht mehr einlagern kann](docs/screenshots/roboter-kisten-voll.png)
+
 ### Zurückrufen
 
 - Alle Roboter der Station laufen sofort los, die Station zeigt „Rückruf: auf dem Weg“.
@@ -123,13 +135,13 @@ Ein eingestellter Roboter, der außerhalb der Reichweite seiner Station hingeste
 - **Klettern:** Er hüpft bis zu zwei Blöcke hoch, auch über Zäune und Mauern, und stellt sich zum Aufheben direkt auf das Item. Kisten erreicht er bis etwa drei Blöcke über dem Boden. Aus Booten und Loren steigt er sofort wieder aus.
 - **Zurück zur Station:** Ohne Arbeit läuft er zu seiner Station. Kommt er dabei 3 Minuten lang nicht näher, teleportiert er sich hin.
 - **Warten:** An der Station setzt er sich hin und schaut sich fröhlich um, jeder Roboter in seinem eigenen Takt.
-- **Fehler:** Erreicht ein Roboter seine Station nicht, fehlt die Station oder steht in seiner Reichweite keine Kiste, setzt er sich hin, schaut auf den Boden, und links und rechts von seinem Namen steht ein rotes 🚫. Den Grund zeigen Jade und die Stationsliste („Fehler: Weg versperrt“, „Fehler: keine Kiste da“, „Fehler: Station fehlt“).
+- **Fehler:** Erreicht ein Roboter seine Station nicht, fehlt die Station, steht keine Kiste an der Station oder sind alle Kisten voll, setzt er sich hin, schaut auf den Boden, und links und rechts von seinem Namen steht ein rotes 🚫. Den Grund zeigen Jade und die Stationsliste („Fehler: Weg versperrt“, „Fehler: keine Kiste an der Station“, „Fehler: Kisten voll“, „Fehler: Station fehlt“).
 - **Wasser:** Roboter tauchen. Unter Wasser laufen sie am Grund entlang und tragen einen Glashelm um den ganzen Kopf. An der Oberfläche schwimmen sie schnell und ziehen eine Spritzspur hinter sich her. Ertrinken können sie nicht.
 - **Regen:** Draußen ohne Dach über sich spannen sie einen kleinen Regenschirm in ihrer Farbe auf.
 - **Aufheben:** Schleichen + Rechtsklick mit leerer Hand nimmt einen Roboter wieder auf, samt dem Item im Schnabel.
 - Nur Spieler können Robotern schaden. Sie arbeiten nur in geladenen Chunks.
 
-![Ein Roboter ohne Kiste in Reichweite: 🚫 links und rechts von seinem Namen](docs/screenshots/roboter-traurig.png)
+![Ein Roboter ohne Kiste an der Station: 🚫 links und rechts von seinem Namen](docs/screenshots/roboter-traurig.png)
 
 ![Ein Roboter taucht mit Glashelm](docs/screenshots/roboter-tauchen.png)
 
