@@ -130,6 +130,7 @@ Die Roboter lagern nur in Speicher, der **direkt an der Station** steht, also an
 
 ### Wie die Roboter arbeiten
 
+- **Einlagern:** Zum Einlagern geht ein Roboter direkt an die Kiste. Der Deckel (bei Fässern die Klappe) geht kurz auf und wieder zu, standardmäßig ohne Geräusch (siehe `robotChestSound` unter [Einstellungen](#einstellungen)).
 - **Schwarm:** Mehrere Roboter stimmen sich ab. Jeder holt ein anderes Item, es rennen nie alle zum selben.
 - **Wege:** Bevor ein Roboter losläuft, plant er den ganzen Weg. Gibt es keinen (eingemauert, hinter einer Roboter-Barriere, über Lava), lässt er das Item eine Minute in Ruhe und nimmt das nächste. Bleibt er unterwegs hängen, gibt er nach 5 Sekunden auf. Neu fallengelassene Items bemerkt er nach spätestens einer halben Sekunde.
 - **Klettern:** Er hüpft bis zu zwei Blöcke hoch, auch über Zäune und Mauern, und stellt sich zum Aufheben direkt auf das Item. Kisten erreicht er bis etwa drei Blöcke über dem Boden. Aus Booten und Loren steigt er sofort wieder aus.
@@ -231,6 +232,7 @@ In `config/storagedim.json`:
 | Einstellung | Standard | Wirkung |
 | --- | --- | --- |
 | `sharedStorage` | `true` | Alle Spieler teilen sich einen Speicher und einen Raum. Mit `false` bekommt jeder seinen eigenen, der sich per `/storage teilen` freigeben lässt (auf dem Server). |
+| `robotChestSound` | `false` | Geht eine Kiste beim Einlagern durch einen Roboter auf, ist sie standardmäßig still (nur der Deckel bewegt sich). Mit `true` macht sie dabei das Öffnen- und Schließen-Geräusch (auf dem Server). |
 | `jeiSearchSync` | `false` | Schalter **J**: Suche im ME-Speicher mit der JEI-Suchleiste koppeln (beim Spieler, lässt sich im Fenster umschalten). |
 
 ## Selbst bauen

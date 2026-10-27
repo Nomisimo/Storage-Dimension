@@ -10,6 +10,7 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 
+import de.nomisimo.storagedim.StorageConfig;
 import de.nomisimo.storagedim.storage.FilterChests;
 import net.fabricmc.fabric.api.transfer.v1.item.ContainerStorage;
 import net.fabricmc.fabric.api.transfer.v1.item.ItemStorage;
@@ -611,10 +612,27 @@ public class RobotEntity extends PathfinderMob {
 		return Component.literal(ERROR_ICON + " ").append(name).append(" " + ERROR_ICON);
 	}
 
+	/** The name in the robot's colour (name tag, Jade, station list); error icons keep their own colours. */
 	@Override
 	public Component getName() {
-		Component name = super.getName();
+		Component name = hasCustomName() ? super.getName().copy().withColor(nameColor(getColor())) : super.getName();
 		return hasError() ? withErrorIcons(name) : name;
+	}
+
+	/** The robot's colour for its name, lightened when very dark so it can still be read on the dark name tag. */
+	public static int nameColor(int color) {
+		int r = color >> 16 & 0xFF;
+		int g = color >> 8 & 0xFF;
+		int b = color & 0xFF;
+
+		if (0.299 * r + 0.587 * g + 0.114 * b >= 90) {
+			return color & 0xFFFFFF;
+		}
+
+		r += (255 - r) * 45 / 100;
+		g += (255 - g) * 45 / 100;
+		b += (255 - b) * 45 / 100;
+		return r << 16 | g << 8 | b;
 	}
 
 	/** The robot as an item, keeping its settings. */
@@ -795,6 +813,70 @@ public class RobotEntity extends PathfinderMob {
 		getNavigation().stop();
 		entityData.set(ACTION, (byte) action);
 		entityData.set(ACTION_TIME, ACTION_TICKS);
+
+		if (action == 2 && delivery != null) {
+			setLid(delivery, true);
+		}
+	}
+
+	/** The chest it opened to put something in, closed again when it is done (or interrupted). */
+	private BlockPos openLid;
+
+	/**
+	 * Opens or closes the lid of the chest, barrel, shulker or ender chest it hands in to, with the sound a player
+	 * makes. Blocks of other mods without a lid stay as they are.
+	 */
+	private void setLid(BlockPos pos, boolean open) {
+		if (open && openLid != null) {
+			setLid(openLid, false);
+		}
+
+		openLid = open ? pos.immutable() : null;
+
+		if (!level().isLoaded(pos)) {
+			return;
+		}
+
+		BlockState state = level().getBlockState(pos);
+
+		if (state.hasProperty(net.minecraft.world.level.block.BarrelBlock.OPEN)) {
+			level().setBlock(pos, state.setValue(net.minecraft.world.level.block.BarrelBlock.OPEN, open), Block.UPDATE_ALL);
+
+			if (StorageConfig.get().robotChestSound) {
+				level().playSound(null, pos, open ? SoundEvents.BARREL_OPEN : SoundEvents.BARREL_CLOSE, net.minecraft.sounds.SoundSource.BLOCKS, 0.5F, 1.0F);
+			}
+
+			return;
+		}
+
+		var entity = level().getBlockEntity(pos);
+		boolean shulker = entity instanceof net.minecraft.world.level.block.entity.ShulkerBoxBlockEntity;
+
+		if (!(entity instanceof net.minecraft.world.level.block.entity.LidBlockEntity) && !shulker) {
+			return;
+		}
+
+		// a player looking into it keeps it open
+		if (!open && level().getEntitiesOfClass(Player.class, new AABB(pos).inflate(8), player -> player.containerMenu != player.inventoryMenu).size() > 0) {
+			return;
+		}
+
+		level().blockEvent(pos, state.getBlock(), 1, open ? 1 : 0);
+
+		if (state.getBlock() instanceof net.minecraft.world.level.block.ChestBlock && state.getValue(net.minecraft.world.level.block.ChestBlock.TYPE)
+				!= net.minecraft.world.level.block.state.properties.ChestType.SINGLE) {
+			BlockPos other = pos.relative(net.minecraft.world.level.block.ChestBlock.getConnectedDirection(state));
+			level().blockEvent(other, level().getBlockState(other).getBlock(), 1, open ? 1 : 0);
+		}
+
+		if (!StorageConfig.get().robotChestSound) {
+			return;
+		}
+
+		var sound = shulker ? (open ? SoundEvents.SHULKER_BOX_OPEN : SoundEvents.SHULKER_BOX_CLOSE)
+				: state.is(Blocks.ENDER_CHEST) ? (open ? SoundEvents.ENDER_CHEST_OPEN : SoundEvents.ENDER_CHEST_CLOSE)
+				: open ? SoundEvents.CHEST_OPEN : SoundEvents.CHEST_CLOSE;
+		level().playSound(null, pos, sound, net.minecraft.sounds.SoundSource.BLOCKS, 0.5F, 1.0F);
 	}
 
 	private BlockPos home() {
@@ -965,10 +1047,13 @@ public class RobotEntity extends PathfinderMob {
 			ItemStack rest = carried.copy();
 			rest.shrink(stored);
 			setItemSlot(EquipmentSlot.MAINHAND, rest);
-			playSound(SoundEvents.CHEST_CLOSE, 0.3F, 1.6F);
 			// it stood at its station's chests, so the way home is clearly open again
 			homeUnreachableUntil = 0;
 			chestsFull = false;
+		}
+
+		if (openLid != null) {
+			setLid(openLid, false);
 		}
 
 		delivery = null;
@@ -1005,6 +1090,10 @@ public class RobotEntity extends PathfinderMob {
 
 	private void release() {
 		plannedPath = null;
+
+		if (openLid != null) {
+			setLid(openLid, false);
+		}
 
 		if (target != null) {
 			CLAIMED.remove(target.getUUID());
@@ -1186,7 +1275,7 @@ public class RobotEntity extends PathfinderMob {
 				goalKey = home();
 			} else if (!getCarried().isEmpty() && delivery != null) {
 				goal = Vec3.atCenterOf(delivery);
-				reach = 2.2;
+				reach = 1.2;
 				goalKey = delivery;
 			} else if (target != null) {
 				goal = target.position();
@@ -1265,8 +1354,12 @@ public class RobotEntity extends PathfinderMob {
 					getNavigation().moveTo(path, 1.0);
 				}
 			} else if (getNavigation().isDone() && goalKey == delivery) {
-				// out of the water again (or its way ended early): a new way to the chest, like when it was chosen
-				Path path = getNavigation().createPath(delivery, 3);
+				// out of the water again (or its way ended a bit off): a new way right up to the chest, or as close as it goes
+				Path path = getNavigation().createPath(delivery, 1);
+
+				if (path == null || !path.canReach()) {
+					path = getNavigation().createPath(delivery, 3);
+				}
 
 				if (path != null) {
 					getNavigation().moveTo(path, 1.0);
@@ -1382,11 +1475,16 @@ public class RobotEntity extends PathfinderMob {
 	}
 
 	/** Chests stacked in a wall: like a player it reaches up to a few blocks above its head. */
+	/**
+	 * Right next to the chest: it walks up to it to put things in. Only when it cannot get any closer (the sides are
+	 * taken by other blocks or robots) does it reach in from a little further away.
+	 */
 	private boolean canReachChest(Vec3 chest) {
 		double dx = chest.x - getX();
 		double dz = chest.z - getZ();
 		double dy = chest.y - getY();
-		return dx * dx + dz * dz <= 2.5 * 2.5 && dy > -2 && dy < 4.5;
+		double reach = getNavigation().isDone() && getDeltaMovement().horizontalDistanceSqr() < 1.0E-3 ? 2.5 : 1.5;
+		return dx * dx + dz * dz <= reach * reach && dy > -2 && dy < 4.5;
 	}
 
 	@Override

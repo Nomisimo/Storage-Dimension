@@ -297,7 +297,7 @@ public class StationMenu extends AbstractContainerMenu {
 	/** Sends the settings and the robot list to the screen, when something changed (or always when forced). */
 	private void sync(boolean force) {
 		config = StorageData.get().station(dim, pos);
-		List<String> names = new ArrayList<>();
+		List<Component> names = new ArrayList<>();
 		List<Component> states = new ArrayList<>();
 
 		for (Map.Entry<UUID, String> robot : StorageData.get().stationRobots(dim, pos).entrySet()) {
@@ -306,11 +306,12 @@ public class StationMenu extends AbstractContainerMenu {
 
 			if (entity instanceof RobotEntity r) {
 				int distance = (int) Math.round(Math.sqrt(r.distanceToSqr(pos.getX() + 0.5, pos.getY(), pos.getZ() + 0.5)));
-				String shown = r.hasError() ? RobotEntity.ERROR_ICON + " " + name + " " + RobotEntity.ERROR_ICON : name;
-				names.add(shown + " · " + distance + " m");
+				// the name in the robot's colour, like on its name tag
+				Component shown = Component.literal(name).withColor(RobotEntity.nameColor(r.getColor()));
+				names.add(Component.empty().append(r.hasError() ? RobotEntity.withErrorIcons(shown) : shown).append(" · " + distance + " m"));
 				states.add(r.status());
 			} else {
-				names.add(name);
+				names.add(Component.literal(name));
 				states.add(Component.literal("nicht geladen").withStyle(ChatFormatting.GRAY));
 			}
 		}

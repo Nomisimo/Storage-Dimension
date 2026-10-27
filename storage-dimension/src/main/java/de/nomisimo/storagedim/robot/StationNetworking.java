@@ -36,7 +36,7 @@ public final class StationNetworking {
 
 	/** Server to client: the station's settings and its robots (names and what each is doing). */
 	public record SyncPayload(int containerId, String stationName, String robotName, int range, int color, boolean exclude,
-			List<String> names, List<Component> states) implements CustomPacketPayload {
+			List<Component> names, List<Component> states) implements CustomPacketPayload {
 		public static final Type<SyncPayload> TYPE = new Type<>(StorageDimensionMod.id("station_sync"));
 		public static final StreamCodec<RegistryFriendlyByteBuf, SyncPayload> CODEC = StreamCodec.of((buf, payload) -> {
 			buf.writeVarInt(payload.containerId);
@@ -48,7 +48,7 @@ public final class StationNetworking {
 			buf.writeVarInt(payload.names.size());
 
 			for (int i = 0; i < payload.names.size(); i++) {
-				buf.writeUtf(payload.names.get(i));
+				ComponentSerialization.STREAM_CODEC.encode(buf, payload.names.get(i));
 				ComponentSerialization.STREAM_CODEC.encode(buf, payload.states.get(i));
 			}
 		}, buf -> {
@@ -59,11 +59,11 @@ public final class StationNetworking {
 			int color = buf.readInt();
 			boolean exclude = buf.readBoolean();
 			int size = buf.readVarInt();
-			List<String> names = new ArrayList<>();
+			List<Component> names = new ArrayList<>();
 			List<Component> states = new ArrayList<>();
 
 			for (int i = 0; i < size; i++) {
-				names.add(buf.readUtf());
+				names.add(ComponentSerialization.STREAM_CODEC.decode(buf));
 				states.add(ComponentSerialization.STREAM_CODEC.decode(buf));
 			}
 

@@ -153,7 +153,7 @@ public class StationScreen extends AbstractContainerScreen<StationMenu> {
 		graphics.centeredText(font, Component.literal(RobotConfig.rangeText(data.range())), 88, StationMenu.RANGE_Y + 3, 0xFFFFFFFF);
 
 		int x = imageWidth + LIST_GAP;
-		List<String> names = data.names();
+		List<Component> names = data.names();
 		graphics.text(font, "Roboter (" + names.size() + "/" + StationMenu.MAX_ROBOTS + ")", x + 6, 6, TEXT, false);
 
 		if (names.isEmpty()) {
@@ -168,8 +168,10 @@ public class StationScreen extends AbstractContainerScreen<StationMenu> {
 		for (int i = 0; i < visible && scroll + i < names.size(); i++) {
 			int index = scroll + i;
 			int y = LIST_TOP + 2 + i * ENTRY_HEIGHT;
-			String name = names.get(index).isEmpty() ? "Roboter " + (index + 1) : names.get(index);
-			graphics.text(font, font.plainSubstrByWidth(name, LIST_WIDTH - 20), x + 9, y, 0xFFFFFFFF, true);
+			Component name = names.get(index);
+			// too long for the list: cut, keeping the colour of the robot's name
+			graphics.text(font, font.width(name) <= LIST_WIDTH - 20 ? name
+					: Component.literal(font.plainSubstrByWidth(name.getString(), LIST_WIDTH - 26) + "…").withStyle(nameStyle(name)), x + 9, y, 0xFFFFFFFF, true);
 			Component state = data.states().get(index);
 			graphics.text(font, font.substrByWidth(state, LIST_WIDTH - 20).getString().equals(state.getString())
 					? state : Component.literal(font.plainSubstrByWidth(state.getString(), LIST_WIDTH - 26) + "…").withStyle(state.getStyle()),
@@ -179,6 +181,11 @@ public class StationScreen extends AbstractContainerScreen<StationMenu> {
 		if (names.size() > visible) {
 			graphics.text(font, "↕", x + LIST_WIDTH - 14, 6, TEXT, false);
 		}
+	}
+
+	private static net.minecraft.network.chat.Style nameStyle(Component name) {
+		// the coloured name is the first part (or the one after the error icon)
+		return name.toFlatList().stream().map(Component::getStyle).filter(style -> style.getColor() != null).findFirst().orElse(name.getStyle());
 	}
 
 	/** Where the robot list is on screen, for JEI to keep its item list away from it. */

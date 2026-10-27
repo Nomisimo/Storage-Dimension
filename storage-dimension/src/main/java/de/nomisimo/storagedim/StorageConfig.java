@@ -24,6 +24,9 @@ public final class StorageConfig {
 	/** Client only. true: the search field of the ME terminal and JEI's search bar always hold the same text. */
 	public boolean jeiSearchSync = false;
 
+	/** Server. true: a chest a robot puts something into also makes its opening and closing sound (the lid moves either way). */
+	public boolean robotChestSound = false;
+
 	public static StorageConfig get() {
 		if (instance == null) {
 			load();
