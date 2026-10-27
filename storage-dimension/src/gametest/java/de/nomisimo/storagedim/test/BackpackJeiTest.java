@@ -151,8 +151,6 @@ public class BackpackJeiTest implements FabricClientGameTest {
 		context.waitTicks(10);
 		logClientSlots(context, "view on");
 		context.takeScreenshot("backpack-me-view");
-		context.runOnClient(client -> client.screen.children().forEach(child -> log("child " + child.getClass().getName()
-				+ (child instanceof net.minecraft.client.gui.layouts.LayoutElement e ? " at " + e.getX() + "," + e.getY() + " " + e.getWidth() + "x" + e.getHeight() : ""))));
 		transfer(context, "minecraft:diamond_block", false);
 		transfer(context, "minecraft:chest", false);
 		context.waitTicks(10);

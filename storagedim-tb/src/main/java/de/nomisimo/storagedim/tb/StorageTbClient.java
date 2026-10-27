@@ -114,8 +114,6 @@ public class StorageTbClient implements ClientModInitializer {
 				ScreenEvents.afterBackground(screen).register((current, graphics, mouseX, mouseY, partialTick) -> {
 					if (searchBox != null && Screens.getWidgets(current).contains(searchBox)) {
 						draw(backpack, graphics, mouseX, mouseY, partialTick);
-						// the backpack's own buttons in the title row (sorting, equip) belong to the backpack, not to ME storage
-						graphics.fill(cornerX, cornerY, cornerX + 61, cornerY + 13, 0xFFC6C6C6);
 					}
 				});
 				// while typing in the search field every key is text: the backpack key (B) must not close the window
@@ -301,6 +299,13 @@ public class StorageTbClient implements ClientModInitializer {
 	}
 
 	/** Draws the bars and their buttons over the backpack window, the way the ME terminal looks. */
+	/** The backpack's own buttons in the title row (sorting, equip) belong to the backpack, not to ME storage. */
+	public static void coverCorner(BackpackScreen screen, GuiGraphicsExtractor graphics) {
+		if (searchBox != null && Screens.getWidgets(screen).contains(searchBox)) {
+			graphics.fill(cornerX, cornerY, cornerX + 61, cornerY + 13, 0xFFC6C6C6);
+		}
+	}
+
 	private static void draw(BackpackScreen screen, GuiGraphicsExtractor graphics, int mouseX, int mouseY, float partialTick) {
 		layout(screen);
 		MeNetworking.PagePayload info = pageInfo != null && pageInfo.containerId() == screen.getMenu().containerId ? pageInfo : null;
