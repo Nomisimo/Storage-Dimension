@@ -44,8 +44,7 @@ jobs:
       - name: TB screen render
         run: |
           JAR=$(find ~/.gradle -iname "travelersbackpack*.jar" | grep -v sources | head -1)
-          mkdir /tmp/tb && cd /tmp/tb && unzip -q "$JAR"
-          MC=".:$(find ~/.gradle /home/runner/work -name '*.jar' \( -path '*minecraft*' -o -path '*fabric*' -o -path '*modrinth*' \) | tr '\n' ':')"
+          MC="$JAR:$(find ~/.gradle /home/runner/work -name '*.jar' \( -path '*minecraft*' -o -path '*fabric*' -o -path '*modrinth*' \) | tr '\n' ':')"
           for c in com.tiviacz.travelersbackpack.client.screens.BackpackScreen com.tiviacz.travelersbackpack.client.screens.AbstractBackpackScreen; do
-            echo "=== $c"; javap -c -p -cp "$MC" $c | grep -nE "^  [a-z].*\(|sortingButtons|SortingButtons" | grep -B1 -E "sortingButtons|SortingButtons" | head -80
+            echo "=== $c"; javap -c -p -cp "$MC" $c | grep -E "^  [a-z].*\(|invoke|getstatic|ldc|bipush|sipush" | awk '/^  [a-z].*\(/{m=$0; keep=(m ~ /(extract|render|Render|Bg|Label|Tooltip)/); if(keep) print; next} keep{print}' | head -600
           done
