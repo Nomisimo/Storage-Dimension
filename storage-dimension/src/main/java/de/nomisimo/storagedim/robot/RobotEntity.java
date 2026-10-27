@@ -294,16 +294,21 @@ public class RobotEntity extends PathfinderMob {
 		}
 
 		entityData.set(COLOR, config.color());
+		applyName(name);
+		stationName = config.stationName();
+	}
 
+	private void applyName(String name) {
 		if (!name.equals(getCustomName() == null ? "" : getCustomName().getString())) {
 			setCustomName(name.isEmpty() ? null : Component.literal(name));
 			setCustomNameVisible(!name.isEmpty());
 		}
-
-		stationName = config.stationName();
 	}
 
-	/** Follows the settings of its station, which can be changed there at any time, and takes its name from the station's list. */
+	/**
+	 * Keeps its own range, filter and colour (from the item it was placed from); from its station it only takes the
+	 * station's name, its own entry in the station's list and the recall.
+	 */
 	private void syncWithStation() {
 		StorageData data = StorageData.get();
 
@@ -312,14 +317,14 @@ public class RobotEntity extends PathfinderMob {
 		}
 
 		String dim = Rooms.id(level());
-		RobotConfig config = data.station(dim, station);
 		String name = data.stationRobots(dim, station).get(getUUID());
 
 		if (name == null) {
-			name = StationRobots.register(dim, station, getUUID(), config.name());
+			name = StationRobots.register(dim, station, getUUID(), getCustomName() == null ? "" : getCustomName().getString());
 		}
 
-		applySettings(config, name);
+		applyName(name);
+		stationName = data.station(dim, station).stationName();
 		Long recall = RECALLS.get(dim + "@" + station.asLong());
 
 		if (recall != null && recall > recallSeen && level().getGameTime() - recall < RECALL_VALID_TICKS) {
@@ -484,16 +489,11 @@ public class RobotEntity extends PathfinderMob {
 		return level().getBlockState(pos).getCollisionShape(level(), pos).isEmpty() && level().getFluidState(pos).isEmpty();
 	}
 
-	/** Its current settings, for the item it turns into when picked up: those of its station. */
+	/** Its own settings (each robot keeps those of the item it was placed from), for the item it turns into when picked up. */
 	public RobotConfig config() {
-		StorageData data = StorageData.get();
-
-		if (station != null && data != null) {
-			return data.station(Rooms.id(level()), station);
-		}
-
-		return new RobotConfig(range, getColor(), getCustomName() == null ? "" : getCustomName().getString(), List.copyOf(filter),
-				Optional.empty(), Optional.empty(), excludeFilter, "");
+		RobotConfig config = new RobotConfig(range, getColor(), getCustomName() == null ? "" : getCustomName().getString(), List.copyOf(filter),
+				Optional.empty(), Optional.empty(), excludeFilter, stationName);
+		return station == null ? config : config.withStation(Rooms.id(level()), station);
 	}
 
 	public BlockPos station() {
@@ -513,6 +513,15 @@ public class RobotEntity extends PathfinderMob {
 
 		if (stationMissing()) {
 			return Component.literal("Fehler: Station fehlt").withStyle(ChatFormatting.RED);
+		}
+
+		// while it is busy it shows what it does; an old error from before does not count
+		if (!getCarried().isEmpty() && delivery != null) {
+			return Component.literal("Bringt ").append(getCarried().getHoverName()).append(" weg").withStyle(ChatFormatting.GREEN);
+		}
+
+		if (target != null) {
+			return Component.literal("Holt ").append(target.getItem().getHoverName()).withStyle(ChatFormatting.GREEN);
 		}
 
 		if (noChest) {
@@ -545,7 +554,13 @@ public class RobotEntity extends PathfinderMob {
 		entityData.set(INFO_FILTER, Component.literal("Sammelt: ").withStyle(ChatFormatting.GRAY)
 				.append(RobotConfig.describeFilter(filter, excludeFilter).withStyle(ChatFormatting.WHITE)));
 		entityData.set(INFO_STATUS, status());
-		entityData.set(ERROR, recallPhase == RECALL_NONE && (stationMissing() || noChest || chestsFull || level().getGameTime() < homeUnreachableUntil));
+		entityData.set(ERROR, recallPhase == RECALL_NONE && (stationMissing()
+				|| !isBusy() && (noChest || chestsFull || level().getGameTime() < homeUnreachableUntil)));
+	}
+
+	/** On its way to an item or a chest, or picking up / putting in right now. */
+	private boolean isBusy() {
+		return target != null || delivery != null || getAction() != 0;
 	}
 
 	public boolean hasError() {
@@ -709,7 +724,7 @@ public class RobotEntity extends PathfinderMob {
 
 	/** For debugging and the client test: what the robot is doing right now. */
 	public String describe() {
-		return String.format("range=%d filter=%s%s station=%s mood=%d noChest=%s full=%s ", range, excludeFilter ? "except " : "", filter, station, getMood(), noChest, chestsFull) + String.format("pos=%.1f/%.1f/%.1f home=%s target=%s delivery=%s carried=%s action=%d sitting=%s pathDone=%s goals=%s",
+		return String.format("name=%s color=%06x error=%s range=%d filter=%s%s station=%s mood=%d noChest=%s full=%s ", getCustomName() == null ? "" : getCustomName().getString(), getColor(), hasError(), range, excludeFilter ? "except " : "", filter, station, getMood(), noChest, chestsFull) + String.format("pos=%.1f/%.1f/%.1f home=%s target=%s delivery=%s carried=%s action=%d sitting=%s pathDone=%s goals=%s",
 				getX(), getY(), getZ(), home, target == null ? null : target.position(), delivery, getCarried(), getAction(), isSitting(),
 				getNavigation().isDone(), goalSelector.getAvailableGoals().stream().filter(g -> g.isRunning()).map(g -> g.getGoal().getClass().getSimpleName()).toList());
 	}
@@ -895,6 +910,9 @@ public class RobotEntity extends PathfinderMob {
 			rest.shrink(stored);
 			setItemSlot(EquipmentSlot.MAINHAND, rest);
 			playSound(SoundEvents.CHEST_CLOSE, 0.3F, 1.6F);
+			// it stood at its station's chests, so the way home is clearly open again
+			homeUnreachableUntil = 0;
+			chestsFull = false;
 		}
 
 		delivery = null;

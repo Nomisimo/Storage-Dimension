@@ -59,10 +59,10 @@ public class RobotItem extends Item {
 		float yaw = context.getPlayer() == null ? 0 : context.getPlayer().getYRot() + 180;
 		robot.snapTo(pos.getX() + 0.5, pos.getY(), pos.getZ() + 0.5, yaw, 0);
 		robot.setup(context.getPlayer() == null ? null : context.getPlayer().getUUID(), pos);
-		// works around its station and walks there first; its name comes from the station's list
+		// works around its station and walks there first; keeps the settings it was given there, its name numbered in the station's list
 		BlockPos station = config.station().get();
-		String name = StationRobots.register(dim, station, robot.getUUID(), StorageData.get().station(dim, station).name());
-		robot.applyConfig(StorageData.get().station(dim, station).withName(name));
+		String name = StationRobots.register(dim, station, robot.getUUID(), config.name());
+		robot.applyConfig(config.withName(name));
 
 		level.addFreshEntity(robot);
 

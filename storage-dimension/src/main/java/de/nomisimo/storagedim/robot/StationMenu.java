@@ -164,8 +164,8 @@ public class StationMenu extends AbstractContainerMenu {
 			case ACTION_RECALL -> RobotEntity.recall((ServerLevel) viewer.level(), dim, pos, viewer.getUUID());
 			case ACTION_STATION_NAME -> config = config.withStationName(clean(text));
 			case ACTION_ROBOT_NAME -> {
+				// for the robots set up from now on; placed ones keep their own name
 				config = config.withName(clean(text));
-				StationRobots.rename(dim, pos, config.name());
 			}
 			default -> {
 				return;
