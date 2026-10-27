@@ -121,7 +121,7 @@ Die Roboter lagern nur in Speicher, der **direkt an der Station** steht, also an
 
 - Alle Roboter der Station laufen sofort los, die Station zeigt „Rückruf: auf dem Weg“.
 - Angekommen sind sie im 3×3-Feld um die Station, ab 21 Robotern im 5×5-Feld.
-- Teleportiert wird nur, wer keinen Weg zur Station findet.
+- Teleportiert wird nur, wer keinen Weg zur Station findet. Teleportieren sich mehrere, landet jeder auf einem eigenen freien Platz neben der Station, nie alle auf demselben Block. Wer zu Fuß auf einem schon besetzten Block ankommt, rückt auf einen freien Platz daneben.
 - Danach sitzen alle eine Minute an der Station und arbeiten dann normal weiter. Bis dahin schauen sie den Spieler an, der sie gerufen hat.
 
 ![Nach dem Zurückrufen sind alle „auf dem Weg“; der eingemauerte Quak3 findet keinen Weg und zeigt 🚫, bis er sich zur Station teleportiert](docs/screenshots/roboter-station-rueckruf.png)
@@ -136,13 +136,16 @@ Die Roboter lagern nur in Speicher, der **direkt an der Station** steht, also an
 - **Zurück zur Station:** Ohne Arbeit läuft er zu seiner Station. Kommt er dabei 3 Minuten lang nicht näher, teleportiert er sich hin.
 - **Warten:** An der Station setzt er sich hin und schaut sich fröhlich um, jeder Roboter in seinem eigenen Takt.
 - **Fehler:** Erreicht ein Roboter seine Station nicht, fehlt die Station, steht keine Kiste an der Station oder sind alle Kisten voll, setzt er sich hin, schaut auf den Boden, und links und rechts von seinem Namen steht ein rotes 🚫. Den Grund zeigen Jade und die Stationsliste („Fehler: Weg versperrt“, „Fehler: keine Kiste an der Station“, „Fehler: Kisten voll“, „Fehler: Station fehlt“).
-- **Wasser:** Roboter tauchen. Unter Wasser laufen sie am Grund entlang und tragen einen Glashelm um den ganzen Kopf. Im Wasser sind sie so schnell wie an Land, ziehen unter Wasser Blasen und an der Oberfläche Spritzer und eine Bugwelle hinter sich her. Items im Wasser schnappen sie, sobald sie in Reichweite ihres Schnabels sind. Ertrinken können sie nicht.
+- **Wasser:** Roboter tauchen. Unter Wasser laufen sie am Grund entlang und tragen einen Glashelm um den ganzen Kopf. Im Wasser sind sie so schnell wie an Land, ziehen unter Wasser Blasen und an der Oberfläche Spritzer und eine Bugwelle hinter sich her. Items im Wasser schnappen sie, sobald sie in Reichweite ihres Schnabels sind, auch tief am Grund eines Beckens oder treibend an der Oberfläche (z. B. Seetang): Sie springen vom Rand hinein, tauchen hinunter oder schwimmen hinauf und bringen es danach zur Kiste. Ertrinken können sie nicht.
 - **Warteplatz:** Zum Warten setzen sie sich nur auf festen, trockenen Boden, nie ins Wasser. Steht die Station am Wasser, klettern sie zum nächsten trockenen Platz daneben.
+- **Namensschilder:** Stehen Roboter dicht beieinander, stapeln sich ihre Namen übereinander (bis zu vier Zeilen), statt sich zu überdecken.
 - **Regen:** Draußen ohne Dach über sich spannen sie einen kleinen Regenschirm in ihrer Farbe auf.
 - **Aufheben:** Schleichen + Rechtsklick mit leerer Hand nimmt einen Roboter wieder auf, samt dem Item im Schnabel.
 - Nur Spieler können Robotern schaden. Sie arbeiten nur in geladenen Chunks.
 
 ![Ein Roboter ohne Kiste an der Station: 🚫 links und rechts von seinem Namen](docs/screenshots/roboter-traurig.png)
+
+![Drei Roboter dicht beieinander: ihre Namen stehen übereinander statt sich zu überdecken](docs/screenshots/roboter-namensschilder.png)
 
 ![Ein Roboter taucht mit Glashelm](docs/screenshots/roboter-tauchen.png)
 
