@@ -9,7 +9,7 @@ jobs:
     runs-on: ubuntu-24.04
     defaults:
       run:
-        working-directory: storagedim-tb
+        working-directory: storage-dimension
     steps:
       - uses: actions/checkout@v6
         with:
@@ -21,7 +21,7 @@ jobs:
         with:
           java-version: '25'
           distribution: 'microsoft'
-      - run: chmod +x ./gradlew && ./gradlew compileJava
+      - run: chmod +x ./gradlew && ./gradlew compileJava compileGametestJava
       - name: javap
         run: |
           CP=$(find ~/.gradle /home/runner/work -name "*.jar" \( -path "*minecraft*" -o -path "*fabric-api*" -o -path "*net.fabricmc*" -o -path "*maven.modrinth*" \) 2>/dev/null | tr '\n' ':')
@@ -30,3 +30,10 @@ jobs:
             echo "=================== $cls"
             javap $flags -cp "$CP" "$cls" 2>&1 | head -4000
           done < ../jp/tools/javap-classes.txt
+      - name: Xaero config keys
+        run: |
+          JAR=$(find ~/.gradle -iname "*xaero*minimap*.jar" | grep -v sources | head -1)
+          echo "jar=$JAR"
+          mkdir -p /tmp/xa && cd /tmp/xa && unzip -q -o "$JAR"
+          find . -name "*.cfg" -o -name "*.txt" -o -name "*.json" | grep -iv lang | head -40
+          for f in $(grep -rl -a -i "radar" --include=*.class . | head -60); do strings -n 6 "$f" | grep -i -E "icon|radar|dot|display" | sed "s|^|$f: |" | head -15; done | grep -i -E "icon|dot" | sort -u | head -150

@@ -1,2 +1,0 @@
--public net.minecraft.client.renderer.entity.state.EntityRenderState
--p net.minecraft.client.renderer.entity.EntityRenderer
