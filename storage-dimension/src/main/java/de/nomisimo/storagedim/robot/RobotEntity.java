@@ -931,9 +931,13 @@ public class RobotEntity extends PathfinderMob {
 			}
 
 			// deep down in water no walking path leads there, but it can swim: as far as the water allows, then straight
-			if (item.isInWater() && path != null) {
-				plannedPath = path;
-				return item;
+			if (item.isInWater()) {
+				path = intoWater(item, path);
+
+				if (path != null) {
+					plannedPath = path;
+					return item;
+				}
 			}
 
 			ignoredItems.put(item.getUUID(), now + IGNORE_TICKS);
@@ -1364,10 +1368,45 @@ public class RobotEntity extends PathfinderMob {
 				if (path != null) {
 					getNavigation().moveTo(path, 1.0);
 				}
+			} else if (getNavigation().isDone() && goalKey == target && target.isInWater() && !isInWater()) {
+				// an item in deep water: up to the rim or the surface, then in
+				Path path = intoWater(target, getNavigation().createPath(target, 1));
+
+				if (path != null) {
+					getNavigation().moveTo(path, 1.0);
+				}
 			} else if (getNavigation().isDone()) {
 				getNavigation().moveTo(goal.x, goal.y, goal.z, 1.0);
 			}
 		}
+	}
+
+	/**
+	 * For an item in deep water: of the way to the item itself and the way to the water's surface above it, the one
+	 * that ends closer to the item (up a ramp to the rim of a pool, say), so it can jump in from there.
+	 */
+	private Path intoWater(ItemEntity item, Path direct) {
+		BlockPos surface = item.blockPosition();
+
+		while (level().getFluidState(surface.above()).is(net.minecraft.tags.FluidTags.WATER) && surface.getY() < item.getBlockY() + 64) {
+			surface = surface.above();
+		}
+
+		Path toSurface = getNavigation().createPath(surface, 1);
+
+		if (toSurface == null) {
+			return direct;
+		}
+
+		if (direct == null || direct.getEndNode() == null || toSurface.canReach()) {
+			return toSurface;
+		}
+
+		if (toSurface.getEndNode() == null) {
+			return direct;
+		}
+
+		return toSurface.getEndNode().distanceTo(item.blockPosition()) < direct.getEndNode().distanceTo(item.blockPosition()) ? toSurface : direct;
 	}
 
 	private boolean goalInWaterBelow(Vec3 goal) {
