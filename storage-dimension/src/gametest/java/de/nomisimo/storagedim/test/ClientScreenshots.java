@@ -151,12 +151,12 @@ public class ClientScreenshots implements FabricClientGameTest {
 
 			player.setItemInHand(InteractionHand.OFF_HAND, ItemStack.EMPTY);
 
-			// changing the station afterwards only affects robots set up from then on: a blue "Blau" next to the red Quaks
+			// changing the station afterwards only affects robots set up from then on: a black "Rabe" next to the red Quaks
 			BlockPos stationPos = base.offset(0, 0, -2);
 			StationMenu.open(player, stationPos);
 			StationMenu other = (StationMenu) player.containerMenu;
 			other.action(StationMenu.ACTION_COLOR, 1, "");
-			other.action(StationMenu.ACTION_ROBOT_NAME, 0, "Blau");
+			other.action(StationMenu.ACTION_ROBOT_NAME, 0, "Rabe");
 			other.setCarried(new ItemStack(Robots.ROBOT_ITEM));
 			other.clicked(StationMenu.SLOT_INPUT, 0, ContainerInput.PICKUP, player);
 			ItemStack blue = other.getSlot(StationMenu.SLOT_OUTPUT).getItem().copy();

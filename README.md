@@ -86,7 +86,7 @@ Ein kleiner Roboter mit Schnabel. Er sammelt herumliegende Items ein, immer eine
 
 ### Roboter-Station
 
-Ohne Station geht nichts: Ein Roboter lässt sich erst hinstellen, wenn er in einer Roboter-Station eingestellt wurde. Danach folgt er immer den Einstellungen seiner Station. Was dort geändert wird, gilt sofort für alle ihre Roboter, am Roboter selbst lässt sich nichts umstellen.
+Ohne Station geht nichts: Ein Roboter lässt sich erst hinstellen, wenn er in einer Roboter-Station eingestellt wurde. Jeder Roboter behält dabei seine eigenen Einstellungen (Name, Farbe, Filter, Reichweite), so wie sie beim Einstellen im Item gespeichert wurden. Änderungen an der Station gelten nur für Roboter, die danach eingestellt werden. So können an einer Station Roboter mit ganz verschiedenen Aufgaben arbeiten. Um einen gesetzten Roboter umzustellen, hebt man ihn auf (Schleichen + Rechtsklick) und legt ihn noch einmal in die Station.
 
 Rechtsklick auf die Station öffnet ihr Fenster:
 
@@ -95,7 +95,7 @@ Rechtsklick auf die Station öffnet ihr Fenster:
 - **Reichweite** mit − und +: 1 bis 10 Chunks, gemessen ab der Station.
 - **Farbe:** Klick schaltet weiter.
 - **Zurückrufen:** siehe unten.
-- **Robotername:** Bekommen mehrere Roboter denselben Namen, werden sie durchnummeriert (Quak1, Quak2 …). Das Benennen kostet keine Level.
+- **Robotername:** für die nächsten Roboter, die eingestellt werden. Bekommen mehrere Roboter einer Station denselben Namen, werden sie durchnummeriert (Quak1, Quak2 …). Das Benennen kostet keine Level.
 - **Roboter einstellen:** Roboter links in den Eingang legen, er kommt rechts eingestellt wieder heraus. Die Einstellungen stehen im Tooltip des Roboter-Items.
 - **Roboterliste** rechts daneben: alle Roboter der Station (höchstens 32) mit Entfernung und dem, was jeder gerade tut. Das Mausrad blättert.
 
