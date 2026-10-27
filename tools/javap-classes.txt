@@ -1,2 +1,2 @@
--public com.tiviacz.travelersbackpack.client.screens.widgets.UpgradeWidgetBase
--public com.tiviacz.travelersbackpack.client.screens.widgets.ToolSlotsWidget
+-public net.minecraft.client.renderer.entity.state.EntityRenderState
+-p net.minecraft.client.renderer.entity.EntityRenderer

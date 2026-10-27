@@ -30,10 +30,3 @@ jobs:
             echo "=================== $cls"
             javap $flags -cp "$CP" "$cls" 2>&1 | head -4000
           done < ../jp/tools/javap-classes.txt
-      - name: TB tab click
-        run: |
-          JAR=$(find ~/.gradle -iname "travelersbackpack*.jar" | grep -v sources | head -1)
-          MC="$JAR:$(find ~/.gradle /home/runner/work -name '*.jar' \( -path '*minecraft*' -o -path '*fabric*' -o -path '*modrinth*' \) | tr '\n' ':')"
-          for c in com.tiviacz.travelersbackpack.client.screens.widgets.UpgradeWidgetBase com.tiviacz.travelersbackpack.client.screens.widgets.WidgetBase com.tiviacz.travelersbackpack.client.screens.widgets.ToolSlotsWidget; do
-            echo "=== $c"; javap -c -p -cp "$MC" $c | awk '/^  [a-z].*\(/{m=$0; keep=(m ~ /(mouseClicked|setTabOpened|isMouseOver|renderTooltip|in\(|isTab)/); if(keep) print; next} keep' | grep -vE "aload|iload|dup|pop|ifeq|ifne|goto|return|astore|istore|iconst" | head -300
-          done
