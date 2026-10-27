@@ -314,6 +314,57 @@ public class ClientScreenshots implements FabricClientGameTest {
 		logRobots(world);
 	}
 
+	private static void logBarrel(TestSingleplayerContext world) {
+		world.getServer().runOnServer(server -> {
+			ServerLevel level = server.getPlayerList().getPlayers().get(0).level();
+			var barrel = (net.minecraft.world.level.block.entity.BarrelBlockEntity) level.getBlockEntity(stationBase.offset(0, 0, -3));
+			StringBuilder text = new StringBuilder();
+
+			for (int i = 0; i < barrel.getContainerSize(); i++) {
+				if (!barrel.getItem(i).isEmpty()) {
+					text.append(barrel.getItem(i)).append(' ');
+				}
+			}
+
+			System.out.println("STORAGEDIM BARREL " + text);
+		});
+	}
+
+	/**
+	 * The lonely station gets a full chest and an item lies next to it: Pieps sits sadly ("Kisten voll"). Once a slot is
+	 * free again it fetches the item and puts it in.
+	 */
+	private static void fullChestTest(ClientGameTestContext context, TestSingleplayerContext world) {
+		BlockPos lonely = stationBase.offset(40, 0, 0);
+		BlockPos chest = lonely.north();
+		world.getServer().runOnServer(server -> {
+			ServerPlayer player = server.getPlayerList().getPlayers().get(0);
+			ServerLevel level = player.level();
+			level.setBlockAndUpdate(chest.below(), Blocks.STONE.defaultBlockState());
+			level.setBlockAndUpdate(chest, Blocks.CHEST.defaultBlockState().setValue(ChestBlock.FACING, Direction.SOUTH));
+			var container = (net.minecraft.world.level.block.entity.ChestBlockEntity) level.getBlockEntity(chest);
+
+			for (int i = 0; i < container.getContainerSize(); i++) {
+				container.setItem(i, new ItemStack(Items.STONE, 64));
+			}
+
+			drop(level, lonely.getX() + 3.5, lonely.getY() + 0.2, lonely.getZ() + 2.5, new ItemStack(Items.DIRT, 5));
+		});
+		context.waitTicks(80);
+		logRobots(world);
+		context.takeScreenshot("robot-chests-full");
+		world.getServer().runOnServer(server -> {
+			ServerLevel level = server.getPlayerList().getPlayers().get(0).level();
+			((net.minecraft.world.level.block.entity.ChestBlockEntity) level.getBlockEntity(chest)).setItem(13, ItemStack.EMPTY);
+		});
+		context.waitTicks(160);
+		logRobots(world);
+		world.getServer().runOnServer(server -> {
+			ServerLevel level = server.getPlayerList().getPlayers().get(0).level();
+			System.out.println("STORAGEDIM FULL slot13=" + ((net.minecraft.world.level.block.entity.ChestBlockEntity) level.getBlockEntity(chest)).getItem(13));
+		});
+	}
+
 	/** Puts the player {@code distance} blocks south-east of the point and turns them to look at it. */
 	private static void lookAt(ServerPlayer player, Vec3 target, double distance) {
 		Vec3 eye = target.add(distance * 0.55, distance * 0.6, distance * 0.6);
@@ -411,6 +462,9 @@ public class ClientScreenshots implements FabricClientGameTest {
 				BlockPos terminal = base.offset(4, 0, -4);
 				level.setBlockAndUpdate(terminal, Blocks.ENDER_CHEST.defaultBlockState().setValue(net.minecraft.world.level.block.state.properties.BlockStateProperties.HORIZONTAL_FACING, net.minecraft.core.Direction.SOUTH));
 				data.setTerminal(dim, terminal, true);
+
+				// the robots fill the storage right next to their station (here: where the station will stand)
+				level.setBlockAndUpdate(base.offset(0, 0, -3), Blocks.BARREL.defaultBlockState().setValue(net.minecraft.world.level.block.BarrelBlock.FACING, net.minecraft.core.Direction.UP));
 
 				RobotEntity robot = Robots.ROBOT.create(level, EntitySpawnReason.SPAWN_ITEM_USE);
 				robot.snapTo(base.getX() - 1.5, base.getY(), base.getZ() - 1.5, 30, 0);
@@ -552,6 +606,8 @@ public class ClientScreenshots implements FabricClientGameTest {
 			});
 
 			stationTest(context, world);
+			fullChestTest(context, world);
+			logBarrel(world);
 		}
 	}
 }

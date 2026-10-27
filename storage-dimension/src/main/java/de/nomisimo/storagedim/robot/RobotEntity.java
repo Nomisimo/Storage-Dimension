@@ -11,21 +11,31 @@ import java.util.Set;
 import java.util.UUID;
 
 import de.nomisimo.storagedim.storage.FilterChests;
+import net.fabricmc.fabric.api.transfer.v1.item.ContainerStorage;
+import net.fabricmc.fabric.api.transfer.v1.item.ItemStorage;
+import net.fabricmc.fabric.api.transfer.v1.item.ItemVariant;
+import net.fabricmc.fabric.api.transfer.v1.storage.Storage;
+import net.fabricmc.fabric.api.transfer.v1.transaction.Transaction;
 import de.nomisimo.storagedim.storage.Rooms;
 import de.nomisimo.storagedim.storage.StorageData;
 import de.nomisimo.storagedim.storage.StorageMenu;
 import de.nomisimo.storagedim.storage.StorageNetwork;
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.core.registries.Registries;
 import net.minecraft.core.UUIDUtil;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.network.chat.Component;
+import net.minecraft.resources.Identifier;
 import net.minecraft.network.syncher.EntityDataAccessor;
 import net.minecraft.network.syncher.EntityDataSerializers;
 import net.minecraft.network.syncher.SynchedEntityData;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.tags.DamageTypeTags;
+import net.minecraft.tags.TagKey;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.damagesource.DamageSource;
@@ -44,7 +54,9 @@ import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.pathfinder.Path;
 import net.minecraft.world.level.pathfinder.PathFinder;
 import net.minecraft.world.level.pathfinder.PathType;
@@ -69,6 +81,13 @@ public class RobotEntity extends PathfinderMob {
 	/** Push per tick while swimming, and its top speed in water. */
 	private static final double SWIM_PUSH = 0.03;
 	private static final double SWIM_SPEED = 0.3;
+	/** Blocks next to the station the robots fill (chests, barrels, shulker boxes, ender chests); extendable by data packs. */
+	public static final TagKey<Block> STORAGE = TagKey.create(Registries.BLOCK, Identifier.fromNamespaceAndPath("storagedim", "robot_storage"));
+	/** Blocks the robots never fill, even when their name sounds like storage (hoppers, droppers, machines). */
+	public static final TagKey<Block> NOT_STORAGE = TagKey.create(Registries.BLOCK, Identifier.fromNamespaceAndPath("storagedim", "robot_storage_excluded"));
+	/** Other mods' storage blocks are recognised by their name, as long as they take items. */
+	private static final List<String> STORAGE_WORDS = List.of("chest", "barrel", "crate", "drawer", "storage", "interface", "importer", "cabinet");
+
 	/** Ticks without getting closer before it gives up on an item or chest for a while. */
 	private static final int STUCK_TICKS = 100;
 	private static final int IGNORE_TICKS = 1200;
@@ -144,8 +163,10 @@ public class RobotEntity extends PathfinderMob {
 	/** The robot station it belongs to, or null for a robot without one (its home is where it was placed). */
 	private BlockPos station;
 	private long homeUnreachableUntil;
-	/** No dimension chest, terminal or filter chest in its range. */
+	/** No chest or other storage right next to its station. */
 	private boolean noChest;
+	/** Every chest next to its station is full (for what it carries or what lies around): it waits for room. */
+	private boolean chestsFull;
 	private String stationName = "";
 	private long recallSeen;
 	/** The player who called it back, watched while coming back and waiting. */
@@ -495,7 +516,11 @@ public class RobotEntity extends PathfinderMob {
 		}
 
 		if (noChest) {
-			return Component.literal("Fehler: keine Kiste da").withStyle(ChatFormatting.RED);
+			return Component.literal("Fehler: keine Kiste an der Station").withStyle(ChatFormatting.RED);
+		}
+
+		if (chestsFull) {
+			return Component.literal("Fehler: Kisten voll").withStyle(ChatFormatting.RED);
 		}
 
 		if (level().getGameTime() < homeUnreachableUntil) {
@@ -520,7 +545,7 @@ public class RobotEntity extends PathfinderMob {
 		entityData.set(INFO_FILTER, Component.literal("Sammelt: ").withStyle(ChatFormatting.GRAY)
 				.append(RobotConfig.describeFilter(filter, excludeFilter).withStyle(ChatFormatting.WHITE)));
 		entityData.set(INFO_STATUS, status());
-		entityData.set(ERROR, recallPhase == RECALL_NONE && (stationMissing() || noChest || level().getGameTime() < homeUnreachableUntil));
+		entityData.set(ERROR, recallPhase == RECALL_NONE && (stationMissing() || noChest || chestsFull || level().getGameTime() < homeUnreachableUntil));
 	}
 
 	public boolean hasError() {
@@ -570,37 +595,107 @@ public class RobotEntity extends PathfinderMob {
 		return filter.isEmpty() || FilterChests.matches(filter, stack) != excludeFilter;
 	}
 
-	/** Whether any chest it could deliver to exists in its range (ignoring the filter of filter chests). */
-	private boolean hasAnyChest() {
-		StorageData data = StorageData.get();
+	/** Where its chests stand: around its station, or around where it was put down when it has none. */
+	private BlockPos storageCentre() {
+		return station != null ? station : home();
+	}
 
-		if (data == null) {
-			return false;
+	/** The chests and other storage blocks right next to its station (the six touching sides), in a fixed order. */
+	private List<BlockPos> stationContainers() {
+		List<BlockPos> containers = new ArrayList<>();
+		BlockPos centre = storageCentre();
+
+		for (Direction side : Direction.values()) {
+			BlockPos pos = centre.relative(side);
+
+			if (level().isLoaded(pos) && isContainer(pos, side.getOpposite())) {
+				containers.add(pos);
+			}
 		}
 
+		return containers;
+	}
+
+	/** A storage block the robots may fill: dimension, filter and ME blocks, chests, barrels, shulker boxes, ender chests, mod storage. */
+	private boolean isContainer(BlockPos pos, Direction side) {
+		StorageData data = StorageData.get();
 		String dim = Rooms.id(level());
 
-		for (long packed : data.chests.getOrDefault(dim, Map.of()).keySet()) {
-			if (inRange(Vec3.atCenterOf(BlockPos.of(packed)))) {
-				return true;
-			}
+		if (data != null && (data.chestOwner(dim, pos) != null || data.filterChest(dim, pos) != null || owner != null && data.isTerminal(dim, pos))) {
+			return true;
 		}
 
-		for (long packed : data.filterChests.getOrDefault(dim, Map.of()).keySet()) {
-			if (inRange(Vec3.atCenterOf(BlockPos.of(packed)))) {
-				return true;
-			}
+		BlockState state = level().getBlockState(pos);
+		return !state.is(NOT_STORAGE) && (state.is(Blocks.ENDER_CHEST) || looksLikeStorage(state) && ItemStorage.SIDED.find(level(), pos, side) != null);
+	}
+
+	private static boolean looksLikeStorage(BlockState state) {
+		if (state.is(STORAGE)) {
+			return true;
 		}
 
-		if (owner != null) {
-			for (long packed : data.terminals.getOrDefault(dim, Set.of())) {
-				if (inRange(Vec3.atCenterOf(BlockPos.of(packed)))) {
-					return true;
+		String name = BuiltInRegistries.BLOCK.getKey(state.getBlock()).getPath();
+		return STORAGE_WORDS.stream().anyMatch(name::contains);
+	}
+
+	/**
+	 * Puts as much of the stack as fits into the block at {@code pos} (or only works it out when simulating) and says how many
+	 * that is. ME storage takes everything; a plain ender chest is the robot owner's, so only while they are online.
+	 */
+	private int store(BlockPos pos, ItemStack stack, boolean simulate) {
+		StorageNetwork network = networkAt(pos, stack);
+
+		if (network != null) {
+			if (!simulate) {
+				network.insert(stack.copy());
+				StorageMenu.refreshAll(network);
+			}
+
+			return stack.getCount();
+		}
+
+		StorageData data = StorageData.get();
+		String dim = Rooms.id(level());
+
+		// a filter chest for other items, or a storage block whose owner is gone
+		if (data != null && (data.chestOwner(dim, pos) != null || data.filterChest(dim, pos) != null || data.isTerminal(dim, pos))) {
+			return 0;
+		}
+
+		BlockState state = level().getBlockState(pos);
+		Storage<ItemVariant> storage = null;
+
+		if (state.is(NOT_STORAGE)) {
+			return 0;
+		} else if (state.is(Blocks.ENDER_CHEST)) {
+			Player player = owner == null ? null : level().getPlayerByUUID(owner);
+			storage = player == null ? null : ContainerStorage.of(player.getEnderChestInventory(), null);
+		} else if (looksLikeStorage(state)) {
+			// filled from the side facing the station, like a hopper there would
+			Direction side = null;
+
+			for (Direction direction : Direction.values()) {
+				if (pos.relative(direction).equals(storageCentre())) {
+					side = direction;
 				}
 			}
+
+			storage = ItemStorage.SIDED.find(level(), pos, side);
 		}
 
-		return false;
+		if (storage == null || stack.isEmpty()) {
+			return 0;
+		}
+
+		try (Transaction transaction = Transaction.openOuter()) {
+			long stored = storage.insert(ItemVariant.of(stack), stack.getCount(), transaction);
+
+			if (!simulate) {
+				transaction.commit();
+			}
+
+			return (int) stored;
+		}
 	}
 
 	public ItemStack getCarried() {
@@ -614,7 +709,7 @@ public class RobotEntity extends PathfinderMob {
 
 	/** For debugging and the client test: what the robot is doing right now. */
 	public String describe() {
-		return String.format("range=%d filter=%s%s station=%s mood=%d noChest=%s ", range, excludeFilter ? "except " : "", filter, station, getMood(), noChest) + String.format("pos=%.1f/%.1f/%.1f home=%s target=%s delivery=%s carried=%s action=%d sitting=%s pathDone=%s goals=%s",
+		return String.format("range=%d filter=%s%s station=%s mood=%d noChest=%s full=%s ", range, excludeFilter ? "except " : "", filter, station, getMood(), noChest, chestsFull) + String.format("pos=%.1f/%.1f/%.1f home=%s target=%s delivery=%s carried=%s action=%d sitting=%s pathDone=%s goals=%s",
 				getX(), getY(), getZ(), home, target == null ? null : target.position(), delivery, getCarried(), getAction(), isSitting(),
 				getNavigation().isDone(), goalSelector.getAvailableGoals().stream().filter(g -> g.isRunning()).map(g -> g.getGoal().getClass().getSimpleName()).toList());
 	}
@@ -680,8 +775,12 @@ public class RobotEntity extends PathfinderMob {
 		ignoredItems.values().removeIf(until -> until < now);
 		List<ItemEntity> items = new ArrayList<>(level().getEntitiesOfClass(ItemEntity.class, area,
 				item -> item.isAlive() && !CLAIMED.contains(item.getUUID()) && !ignoredItems.containsKey(item.getUUID())
-						&& inRange(item.position()) && allows(item.getItem())
-						&& findDelivery(item.getItem()) != null));
+						&& inRange(item.position()) && allows(item.getItem())));
+		// only what a chest next to the station has room for; one check per kind of item
+		Map<ItemVariant, Boolean> fits = new HashMap<>();
+		boolean anyWanted = !items.isEmpty();
+		items.removeIf(item -> !fits.computeIfAbsent(ItemVariant.of(item.getItem()), kind -> findDelivery(item.getItem()) != null));
+		chestsFull = anyWanted && items.isEmpty();
 		items.sort(java.util.Comparator.comparingDouble(this::distanceToSqr));
 		// swarm: an item a free robot is clearly closer to is left for that one
 		List<RobotEntity> others = level().getEntitiesOfClass(RobotEntity.class, area, robot -> robot != this && robot.isFree());
@@ -710,13 +809,18 @@ public class RobotEntity extends PathfinderMob {
 		}
 
 		long now = level().getGameTime();
+		noChest = stationContainers().isEmpty();
 
 		for (int i = 0; i < PATH_CHECKS; i++) {
 			BlockPos chest = findDelivery(getCarried());
 
 			if (chest == null) {
+				// nothing next to the station has room for it: it waits there and looks again and again
+				chestsFull = i == 0 && !noChest;
 				return null;
 			}
+
+			chestsFull = false;
 
 			Path path = getNavigation().createPath(chest, 3);
 
@@ -731,53 +835,36 @@ public class RobotEntity extends PathfinderMob {
 		return null;
 	}
 
-	/** The closest chest in range that takes this stack, or null. */
+	/**
+	 * The chest next to its station that takes (some of) this stack, or null when none has room. Matching filter chests
+	 * come first, then the others in a fixed order, so they fill up one after the other.
+	 */
 	private BlockPos findDelivery(ItemStack stack) {
-		StorageData data = StorageData.get();
-
-		if (data == null || stack.isEmpty()) {
+		if (stack.isEmpty()) {
 			return null;
 		}
 
-		String dim = Rooms.id(level());
-		BlockPos best = null;
 		long now = level().getGameTime();
 		ignoredChests.values().removeIf(until -> until < now);
-		Map<Long, UUID> chests = data.chests.get(dim);
+		StorageData data = StorageData.get();
+		String dim = Rooms.id(level());
+		BlockPos fallback = null;
 
-		if (chests != null) {
-			for (long packed : chests.keySet()) {
-				best = closer(best, BlockPos.of(packed));
+		for (BlockPos pos : stationContainers()) {
+			if (ignoredChests.containsKey(pos) || store(pos, stack, true) <= 0) {
+				continue;
+			}
+
+			if (data != null && data.filterChest(dim, pos) != null) {
+				return pos;
+			}
+
+			if (fallback == null) {
+				fallback = pos;
 			}
 		}
 
-		Set<Long> terminals = data.terminals.get(dim);
-
-		if (owner != null && terminals != null) {
-			for (long packed : terminals) {
-				best = closer(best, BlockPos.of(packed));
-			}
-		}
-
-		Map<Long, FilterChests.FilterChest> filters = data.filterChests.get(dim);
-
-		if (filters != null) {
-			for (Map.Entry<Long, FilterChests.FilterChest> entry : filters.entrySet()) {
-				if (FilterChests.matches(entry.getValue().filters(), stack)) {
-					best = closer(best, BlockPos.of(entry.getKey()));
-				}
-			}
-		}
-
-		return best;
-	}
-
-	private BlockPos closer(BlockPos best, BlockPos pos) {
-		if (!inRange(Vec3.atCenterOf(pos)) || ignoredChests.containsKey(pos)) {
-			return best;
-		}
-
-		return best == null || distanceToSqr(Vec3.atCenterOf(pos)) < distanceToSqr(Vec3.atCenterOf(best)) ? pos : best;
+		return fallback;
 	}
 
 	private void finishPickup() {
@@ -800,16 +887,18 @@ public class RobotEntity extends PathfinderMob {
 
 	private void finishDelivery() {
 		ItemStack carried = getCarried();
-		StorageNetwork network = delivery == null ? null : networkAt(delivery, carried);
+		int stored = delivery == null || carried.isEmpty() ? 0 : store(delivery, carried, false);
 
-		if (network != null && !carried.isEmpty()) {
-			network.insert(carried.copy());
-			StorageMenu.refreshAll(network);
-			setItemSlot(EquipmentSlot.MAINHAND, ItemStack.EMPTY);
+		if (stored > 0) {
+			// what did not fit stays in its beak and goes to the next chest
+			ItemStack rest = carried.copy();
+			rest.shrink(stored);
+			setItemSlot(EquipmentSlot.MAINHAND, rest);
 			playSound(SoundEvents.CHEST_CLOSE, 0.3F, 1.6F);
 		}
 
 		delivery = null;
+		nextSearch = 0;
 	}
 
 	/** The network the chest at {@code pos} feeds, if it is still there and takes the stack. */
@@ -894,7 +983,8 @@ public class RobotEntity extends PathfinderMob {
 					delivery = planDelivery();
 				}
 
-				return delivery != null;
+				// no chest has room: it carries the item home and waits there until there is
+				return delivery != null || !nearHome() && level().getGameTime() >= homeUnreachableUntil;
 			}
 
 			if (stationMissing()) {
@@ -905,8 +995,12 @@ public class RobotEntity extends PathfinderMob {
 			if ((target == null || !target.isAlive()) && level().getGameTime() >= nextSearch) {
 				nextSearch = level().getGameTime() + SEARCH_TICKS;
 				release();
-				noChest = !hasAnyChest();
+				noChest = stationContainers().isEmpty();
 				target = noChest ? null : findItem();
+
+				if (noChest) {
+					chestsFull = false;
+				}
 
 				if (target != null) {
 					CLAIMED.add(target.getUUID());
@@ -1167,13 +1261,13 @@ public class RobotEntity extends PathfinderMob {
 		// Sits down when there is nothing to do: happily looking around at its station, sadly staring at the ground
 		// when it cannot work (no chest in range, station broken or out of reach).
 		boolean idle = getAction() == 0 && getNavigation().isDone()
-				&& (recallPhase == RECALL_WAITING || getCarried().isEmpty() && target == null);
+				&& (recallPhase == RECALL_WAITING || (getCarried().isEmpty() || delivery == null) && target == null);
 
 		if (nearHome()) {
 			homeUnreachableUntil = 0;
 		}
 
-		boolean sad = recallPhase == RECALL_NONE && (noChest || stationMissing() || level().getGameTime() < homeUnreachableUntil);
+		boolean sad = recallPhase == RECALL_NONE && (noChest || chestsFull || stationMissing() || level().getGameTime() < homeUnreachableUntil);
 
 		if (idle && (sad || nearHome())) {
 			if (++idleTicks > (sad ? 20 : 40)) {
