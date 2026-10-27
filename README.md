@@ -136,7 +136,8 @@ Die Roboter lagern nur in Speicher, der **direkt an der Station** steht, also an
 - **Zurück zur Station:** Ohne Arbeit läuft er zu seiner Station. Kommt er dabei 3 Minuten lang nicht näher, teleportiert er sich hin.
 - **Warten:** An der Station setzt er sich hin und schaut sich fröhlich um, jeder Roboter in seinem eigenen Takt.
 - **Fehler:** Erreicht ein Roboter seine Station nicht, fehlt die Station, steht keine Kiste an der Station oder sind alle Kisten voll, setzt er sich hin, schaut auf den Boden, und links und rechts von seinem Namen steht ein rotes 🚫. Den Grund zeigen Jade und die Stationsliste („Fehler: Weg versperrt“, „Fehler: keine Kiste an der Station“, „Fehler: Kisten voll“, „Fehler: Station fehlt“).
-- **Wasser:** Roboter tauchen. Unter Wasser laufen sie am Grund entlang und tragen einen Glashelm um den ganzen Kopf. An der Oberfläche schwimmen sie schnell und ziehen eine Spritzspur hinter sich her. Ertrinken können sie nicht.
+- **Wasser:** Roboter tauchen. Unter Wasser laufen sie am Grund entlang und tragen einen Glashelm um den ganzen Kopf. Im Wasser sind sie so schnell wie an Land, ziehen unter Wasser Blasen und an der Oberfläche Spritzer und eine Bugwelle hinter sich her. Items im Wasser schnappen sie, sobald sie in Reichweite ihres Schnabels sind. Ertrinken können sie nicht.
+- **Warteplatz:** Zum Warten setzen sie sich nur auf festen, trockenen Boden, nie ins Wasser. Steht die Station am Wasser, klettern sie zum nächsten trockenen Platz daneben.
 - **Regen:** Draußen ohne Dach über sich spannen sie einen kleinen Regenschirm in ihrer Farbe auf.
 - **Aufheben:** Schleichen + Rechtsklick mit leerer Hand nimmt einen Roboter wieder auf, samt dem Item im Schnabel.
 - Nur Spieler können Robotern schaden. Sie arbeiten nur in geladenen Chunks.
@@ -181,6 +182,10 @@ Das Add-on `storagedim-tb-0.5.0.jar` fügt ein echtes **ME-Upgrade** für den Up
 - **Installation:** `storagedim-tb-0.5.0.jar` und `storage-dimension-0.5.0.jar` auf Server und Clients, dazu Traveler's Backpack, [Forge Config API Port](https://modrinth.com/mod/forge-config-api-port) und Fabric API. JEI wird nur für „+“ und die Rezeptanzeige gebraucht.
 
 ![ME-Ansicht im Rucksack mit Suchleiste, Sortierung und Knöpfen wie im ME-Speicher](docs/screenshots/rucksack-me-suche.png)
+
+Ist über dem Fenster kein Platz (großer Rucksack, kleiner Bildschirm), wandern Suche und Sortierung in die Titelzeile des Fensters.
+
+![Suche und Sortierung in der Titelzeile](docs/screenshots/rucksack-me-titelzeile.png)
 
 ![ME-Speicher im Rucksack-Fenster, daneben das Crafting-Upgrade](docs/screenshots/rucksack-me-ansicht.png)
 
