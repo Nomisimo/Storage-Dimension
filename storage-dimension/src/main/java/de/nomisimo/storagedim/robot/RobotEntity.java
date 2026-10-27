@@ -625,7 +625,7 @@ public class RobotEntity extends PathfinderMob {
 		int g = color >> 8 & 0xFF;
 		int b = color & 0xFF;
 
-		if (0.299 * r + 0.587 * g + 0.114 * b >= 90) {
+		if (0.299 * r + 0.587 * g + 0.114 * b >= 60) {
 			return color & 0xFFFFFF;
 		}
 
