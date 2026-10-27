@@ -49,6 +49,33 @@ public class RobotRenderer extends MobRenderer<RobotEntity, RobotRenderState, Ro
 		state.umbrella = !robot.isInWater() && robot.level().isRainingAt(robot.blockPosition().above());
 		state.postDrop = onPost(robot) ? 0.5F : 0;
 		state.y -= state.postDrop;
+
+		if (state.nameTag != null && state.nameTagAttachment != null) {
+			state.nameTagAttachment = state.nameTagAttachment.add(0, nameTagRow(robot) * NAME_TAG_ROW, 0);
+		}
+	}
+
+	/** Height of one name tag line in blocks, so tags of robots standing close together stack instead of overlapping. */
+	private static final double NAME_TAG_ROW = 0.27;
+
+	/**
+	 * Robots standing close together would draw their name tags on top of each other: each one moves its tag up by one
+	 * line for every named neighbour with a lower id, so the tags stack (at most three lines up).
+	 */
+	private static int nameTagRow(RobotEntity robot) {
+		var box = robot.getBoundingBox().inflate(1.2, 1.5, 1.2);
+		int row = 0;
+
+		for (RobotEntity other : robot.level().getEntitiesOfClass(RobotEntity.class, box, other -> other != robot && other.getId() < robot.getId())) {
+			double dx = other.getX() - robot.getX();
+			double dz = other.getZ() - robot.getZ();
+
+			if (other.isCustomNameVisible() && dx * dx + dz * dz < 1.2 * 1.2) {
+				row++;
+			}
+		}
+
+		return Math.min(row, 3);
 	}
 
 	/**

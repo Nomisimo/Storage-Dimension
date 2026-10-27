@@ -144,7 +144,8 @@ public class ClientScreenshots implements FabricClientGameTest {
 			// and one walled in with glass far away, for the recall
 			player.setItemInHand(InteractionHand.OFF_HAND, configured);
 
-			for (BlockPos ground : List.of(base.offset(3, -1, 2), base.offset(30, -1, 2), base.offset(20, -1, -10))) {
+			for (BlockPos ground : List.of(base.offset(3, -1, 2), base.offset(30, -1, 2), base.offset(20, -1, -10),
+					base.offset(24, -1, -10), base.offset(28, -1, -10))) {
 				System.out.println("STORAGEDIM PLACE configured=" + configured.useOn(new UseOnContext(player, InteractionHand.OFF_HAND,
 						new BlockHitResult(Vec3.atCenterOf(ground), Direction.UP, ground, false))));
 			}
@@ -166,13 +167,16 @@ public class ClientScreenshots implements FabricClientGameTest {
 			System.out.println("STORAGEDIM PLACE blue=" + blue.useOn(new UseOnContext(player, InteractionHand.OFF_HAND,
 					new BlockHitResult(Vec3.atCenterOf(base.offset(-3, -1, 2)), Direction.UP, base.offset(-3, -1, 2), false))));
 			player.setItemInHand(InteractionHand.OFF_HAND, ItemStack.EMPTY);
-			BlockPos cage = base.offset(20, 0, -10);
+			// three walled-in robots: all teleport back on the recall and must land on different spots
+			for (int cx : new int[] {20, 24, 28}) {
+				BlockPos cage = base.offset(cx, 0, -10);
 
-			for (int dx = -1; dx <= 1; dx++) {
-				for (int dz = -1; dz <= 1; dz++) {
-					for (int dy = 0; dy <= 2; dy++) {
-						if (dx != 0 || dz != 0 || dy == 2) {
-							level.setBlockAndUpdate(cage.offset(dx, dy, dz), Blocks.GLASS.defaultBlockState());
+				for (int dx = -1; dx <= 1; dx++) {
+					for (int dz = -1; dz <= 1; dz++) {
+						for (int dy = 0; dy <= 2; dy++) {
+							if (dx != 0 || dz != 0 || dy == 2) {
+								level.setBlockAndUpdate(cage.offset(dx, dy, dz), Blocks.GLASS.defaultBlockState());
+							}
 						}
 					}
 				}
@@ -242,6 +246,14 @@ public class ClientScreenshots implements FabricClientGameTest {
 		});
 		context.waitTicks(40);
 		context.takeScreenshot("station-recall-watching");
+		world.getServer().runOnServer(server -> {
+			ServerLevel level = server.getPlayerList().getPlayers().get(0).level();
+			List<RobotEntity> robots = level.getEntitiesOfClass(RobotEntity.class, new net.minecraft.world.phys.AABB(stationBase).inflate(8));
+			java.util.Set<BlockPos> spots = new java.util.HashSet<>();
+			robots.forEach(robot -> spots.add(robot.blockPosition()));
+			System.out.println("STORAGEDIM RECALL SPREAD robots=" + robots.size() + " spots=" + spots.size() + " "
+					+ robots.stream().map(robot -> robot.getName().getString() + "@" + robot.blockPosition().toShortString()).toList());
+		});
 		world.getServer().runOnServer(server -> {
 			ServerPlayer player = server.getPlayerList().getPlayers().get(0);
 			// back to where the scene expects the player
@@ -486,6 +498,26 @@ public class ClientScreenshots implements FabricClientGameTest {
 			ServerLevel level = server.getPlayerList().getPlayers().get(0).level();
 			var barrel = (net.minecraft.world.level.block.entity.BarrelBlockEntity) level.getBlockEntity(lonely.above());
 			System.out.println("STORAGEDIM DEEP barrel=" + barrel.getItem(0) + " eggsLeft="
+					+ level.getEntitiesOfClass(ItemEntity.class, new net.minecraft.world.phys.AABB(pit).inflate(3, 8, 3)).size());
+			// kelp floating on top of the deep water, far above the bottom: it swims up to it too
+			drop(level, pit.getX() + 1.5, pit.getY() + 5.6, pit.getZ() + 1.5, new ItemStack(Items.KELP, 3));
+		});
+
+		for (int t = 0; t < 4; t++) {
+			context.waitTicks(20);
+			logRobots(world);
+
+			if (t == 1) {
+				context.takeScreenshot("robot-kelp-surface");
+			}
+		}
+
+		context.waitTicks(200);
+		logRobots(world);
+		world.getServer().runOnServer(server -> {
+			ServerLevel level = server.getPlayerList().getPlayers().get(0).level();
+			var barrel = (net.minecraft.world.level.block.entity.BarrelBlockEntity) level.getBlockEntity(lonely.above());
+			System.out.println("STORAGEDIM KELP barrel=" + barrel.getItem(0) + "," + barrel.getItem(1) + " left="
 					+ level.getEntitiesOfClass(ItemEntity.class, new net.minecraft.world.phys.AABB(pit).inflate(3, 8, 3)).size());
 		});
 	}

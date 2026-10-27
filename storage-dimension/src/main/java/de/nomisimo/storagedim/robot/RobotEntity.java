@@ -411,6 +411,11 @@ public class RobotEntity extends PathfinderMob {
 		} else if (recallPhase == RECALL_WAITING && now >= recallUntil) {
 			recallPhase = RECALL_NONE;
 			recaller = null;
+		} else if (recallPhase == RECALL_WAITING && now % 10 == getId() % 10 && getNavigation().isDone() && onGround()
+				&& takenByRobot(blockPosition())) {
+			// someone already waits on this block: it steps aside to a free spot by the station
+			BlockPos spot = spreadSpot();
+			getNavigation().moveTo(spot.getX() + 0.5, spot.getY(), spot.getZ() + 0.5, 1.0);
 		}
 	}
 
@@ -458,25 +463,55 @@ public class RobotEntity extends PathfinderMob {
 		}
 	}
 
-	private void teleportHome() {
+	/**
+	 * A spot by the station to stand on: free, on solid ground and with no other robot on it, so a recall
+	 * spreads them out instead of piling them on one block. Closest ring first, a random one within it.
+	 */
+	private BlockPos spreadSpot() {
 		BlockPos h = home();
-		BlockPos spot = h.above();
+		BlockPos fallback = null;
 
-		search:
-		for (int r = 1; r <= 2; r++) {
+		for (int r = 1; r <= 3; r++) {
+			List<BlockPos> ring = new ArrayList<>();
+
 			for (int dx = -r; dx <= r; dx++) {
 				for (int dz = -r; dz <= r; dz++) {
+					if (Math.max(Math.abs(dx), Math.abs(dz)) != r) {
+						continue;
+					}
+
 					for (int dy = -1; dy <= 1; dy++) {
 						BlockPos p = h.offset(dx, dy, dz);
 
 						if (free(p) && free(p.above()) && !free(p.below())) {
-							spot = p;
-							break search;
+							if (fallback == null) {
+								fallback = p;
+							}
+
+							if (!takenByRobot(p)) {
+								ring.add(p);
+							}
+
+							break;
 						}
 					}
 				}
 			}
+
+			if (!ring.isEmpty()) {
+				return ring.get(getRandom().nextInt(ring.size()));
+			}
 		}
+
+		return fallback != null ? fallback : h.above();
+	}
+
+	private boolean takenByRobot(BlockPos pos) {
+		return !level().getEntitiesOfClass(RobotEntity.class, new AABB(pos).inflate(-0.1, 0, -0.1), robot -> robot != this).isEmpty();
+	}
+
+	private void teleportHome() {
+		BlockPos spot = spreadSpot();
 
 		ServerLevel server = (ServerLevel) level();
 		server.sendParticles(ParticleTypes.PORTAL, getX(), getY() + 0.4, getZ(), 24, 0.3, 0.4, 0.3, 0.2);
@@ -797,7 +832,7 @@ public class RobotEntity extends PathfinderMob {
 		// only what a chest next to the station has room for; one check per kind of item
 		Map<ItemVariant, Boolean> fits = new HashMap<>();
 		boolean anyWanted = !items.isEmpty();
-		items.removeIf(item -> !fits.computeIfAbsent(ItemVariant.of(item.getItem()), kind -> findDelivery(item.getItem()) != null));
+		items.removeIf(item -> !fits.computeIfAbsent(ItemVariant.of(item.getItem()), kind -> hasRoom(item.getItem())));
 		chestsFull = anyWanted && items.isEmpty();
 		items.sort(java.util.Comparator.comparingDouble(this::distanceToSqr));
 		// swarm: an item a free robot is clearly closer to is left for that one
@@ -839,8 +874,9 @@ public class RobotEntity extends PathfinderMob {
 			BlockPos chest = findDelivery(getCarried());
 
 			if (chest == null) {
-				// nothing next to the station has room for it: it waits there and looks again and again
-				chestsFull = i == 0 && !noChest;
+				// nothing next to the station has room for it: it waits there and looks again and again (a chest it
+				// only cannot get to right now does not count as full)
+				chestsFull = !noChest && !hasRoom(getCarried());
 				return null;
 			}
 
@@ -853,10 +889,21 @@ public class RobotEntity extends PathfinderMob {
 				return chest;
 			}
 
+			// down in deep water no walking path leads out; it swims up and towards the chest instead
+			if (isInWater()) {
+				plannedPath = path;
+				return chest;
+			}
+
 			ignoredChests.put(chest, now + IGNORE_TICKS);
 		}
 
 		return null;
+	}
+
+	/** Some chest next to its station takes (some of) this stack, also one it cannot get to right now. */
+	private boolean hasRoom(ItemStack stack) {
+		return !stack.isEmpty() && stationContainers().stream().anyMatch(pos -> store(pos, stack, true) > 0);
 	}
 
 	/**
