@@ -431,7 +431,7 @@ public class ClientScreenshots implements FabricClientGameTest {
 				level.addFreshEntity(robot);
 			}
 
-			lookAt(player, Vec3.atCenterOf(posts.east()).add(0, 0.6, 0), 3.2);
+			lookAt(player, Vec3.atCenterOf(posts.east()).add(0, 1.3, 0), 4.8);
 		});
 		context.waitTicks(20);
 		context.takeScreenshot("robot-on-posts");
