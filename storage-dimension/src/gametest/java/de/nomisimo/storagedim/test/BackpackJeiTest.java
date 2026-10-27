@@ -156,14 +156,14 @@ public class BackpackJeiTest implements FabricClientGameTest {
 		context.runOnClient(client -> {
 			oldScale = client.options.guiScale().get();
 			client.options.guiScale().set(3);
-			client.resizeDisplay();
 		});
+		context.getInput().resizeWindow(856, 480);
 		context.waitTicks(5);
 		context.takeScreenshot("backpack-me-view-big");
 		context.runOnClient(client -> {
 			client.options.guiScale().set(oldScale);
-			client.resizeDisplay();
 		});
+		context.getInput().resizeWindow(854, 480);
 		context.waitTicks(5);
 		transfer(context, "minecraft:diamond_block", false);
 		transfer(context, "minecraft:chest", false);
