@@ -520,6 +520,26 @@ public class ClientScreenshots implements FabricClientGameTest {
 			System.out.println("STORAGEDIM KELP barrel=" + barrel.getItem(0) + "," + barrel.getItem(1) + " left="
 					+ level.getEntitiesOfClass(ItemEntity.class, new net.minecraft.world.phys.AABB(pit).inflate(3, 8, 3)).size());
 		});
+
+		// three named robots squeezed together: their name tags stack instead of drawing over each other
+		BlockPos crowd = lonely.offset(-12, 0, -6);
+		world.getServer().runOnServer(server -> {
+			ServerPlayer player = server.getPlayerList().getPlayers().get(0);
+			ServerLevel level = player.level();
+
+			for (int i = 0; i < 3; i++) {
+				RobotEntity robot = Robots.ROBOT.create(level, EntitySpawnReason.SPAWN_ITEM_USE);
+				robot.snapTo(crowd.getX() + 0.5 + i * 0.6, crowd.getY(), crowd.getZ() + 0.5 + (i % 2) * 0.4, 180, 0);
+				robot.setup(player.getUUID(), crowd);
+				robot.setCustomName(Component.literal("Fred" + (9 + i)));
+				robot.setCustomNameVisible(true);
+				level.addFreshEntity(robot);
+			}
+
+			player.teleportTo(level, crowd.getX() + 1.1, crowd.getY(), crowd.getZ() + 4.5, java.util.Set.of(), 180, 8, true);
+		});
+		context.waitTicks(30);
+		context.takeScreenshot("robot-name-tags");
 	}
 
 	/** Puts the player {@code distance} blocks south-east of the point and turns them to look at it. */
