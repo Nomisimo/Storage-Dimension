@@ -246,6 +246,21 @@ public class ClientScreenshots implements FabricClientGameTest {
 		});
 		context.waitTicks(40);
 		context.takeScreenshot("station-recall-watching");
+		// which Xaero's Minimap settings decide between entity dots and icons
+		try (var files = java.nio.file.Files.walk(java.nio.file.Path.of("config", "xaero"))) {
+			files.filter(java.nio.file.Files::isRegularFile).forEach(file -> {
+				try {
+					System.out.println("STORAGEDIM XAERO file " + file);
+					java.nio.file.Files.readAllLines(file).stream()
+							.filter(line -> line.toLowerCase().matches(".*(icon|dot|radar|entit|scale|size|zoom).*"))
+							.limit(80).forEach(line -> System.out.println("STORAGEDIM XAERO   " + line));
+				} catch (Exception e) {
+					System.out.println("STORAGEDIM XAERO unreadable " + file);
+				}
+			});
+		} catch (Exception e) {
+			System.out.println("STORAGEDIM XAERO no config: " + e);
+		}
 		world.getServer().runOnServer(server -> {
 			ServerLevel level = server.getPlayerList().getPlayers().get(0).level();
 			List<RobotEntity> robots = level.getEntitiesOfClass(RobotEntity.class, new net.minecraft.world.phys.AABB(stationBase).inflate(8));
