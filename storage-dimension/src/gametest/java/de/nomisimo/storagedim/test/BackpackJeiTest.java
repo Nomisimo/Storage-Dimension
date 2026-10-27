@@ -52,6 +52,7 @@ import org.lwjgl.glfw.GLFW;
  */
 public class BackpackJeiTest implements FabricClientGameTest {
 	private static double hoverX;
+	private static int oldScale;
 	private static double hoverY;
 
 	@Override
@@ -151,6 +152,19 @@ public class BackpackJeiTest implements FabricClientGameTest {
 		context.waitTicks(10);
 		logClientSlots(context, "view on");
 		context.takeScreenshot("backpack-me-view");
+		// a bigger GUI scale leaves no room above the window: search and sorting move into the title row
+		context.runOnClient(client -> {
+			oldScale = client.options.guiScale().get();
+			client.options.guiScale().set(3);
+			client.resizeDisplay();
+		});
+		context.waitTicks(5);
+		context.takeScreenshot("backpack-me-view-big");
+		context.runOnClient(client -> {
+			client.options.guiScale().set(oldScale);
+			client.resizeDisplay();
+		});
+		context.waitTicks(5);
 		transfer(context, "minecraft:diamond_block", false);
 		transfer(context, "minecraft:chest", false);
 		context.waitTicks(10);

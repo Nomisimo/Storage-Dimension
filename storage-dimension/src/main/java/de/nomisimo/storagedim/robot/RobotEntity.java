@@ -79,8 +79,6 @@ public class RobotEntity extends PathfinderMob {
 	/** Ticks between two looks at its station's settings. */
 	private static final int SYNC_TICKS = 20;
 	/** Push per tick while swimming, and its top speed in water. */
-	private static final double SWIM_PUSH = 0.03;
-	private static final double SWIM_SPEED = 0.3;
 	/** Blocks next to the station the robots fill (chests, barrels, shulker boxes, ender chests); extendable by data packs. */
 	public static final TagKey<Block> STORAGE = TagKey.create(Registries.BLOCK, Identifier.fromNamespaceAndPath("storagedim", "robot_storage"));
 	/** Blocks the robots never fill, even when their name sounds like storage (hoppers, droppers, machines). */
@@ -165,6 +163,9 @@ public class RobotEntity extends PathfinderMob {
 	private long homeUnreachableUntil;
 	/** No chest or other storage right next to its station. */
 	private boolean noChest;
+	/** Where it waits, out of the water (see {@link #restSpot()}). */
+	private BlockPos restSpot;
+	private long restSpotUntil;
 	/** Every chest next to its station is full (for what it carries or what lies around): it waits for room. */
 	private boolean chestsFull;
 	private String stationName = "";
@@ -724,7 +725,7 @@ public class RobotEntity extends PathfinderMob {
 
 	/** For debugging and the client test: what the robot is doing right now. */
 	public String describe() {
-		return String.format("name=%s color=%06x error=%s range=%d filter=%s%s station=%s mood=%d noChest=%s full=%s ", getCustomName() == null ? "" : getCustomName().getString(), getColor(), hasError(), range, excludeFilter ? "except " : "", filter, station, getMood(), noChest, chestsFull) + String.format("pos=%.1f/%.1f/%.1f home=%s target=%s delivery=%s carried=%s action=%d sitting=%s pathDone=%s goals=%s",
+		return String.format("speed=%.3f water=%s name=%s color=%06x error=%s range=%d filter=%s%s station=%s mood=%d noChest=%s full=%s ", getDeltaMovement().horizontalDistance(), isInWater(), getCustomName() == null ? "" : getCustomName().getString(), getColor(), hasError(), range, excludeFilter ? "except " : "", filter, station, getMood(), noChest, chestsFull) + String.format("pos=%.1f/%.1f/%.1f home=%s target=%s delivery=%s carried=%s action=%d sitting=%s pathDone=%s goals=%s",
 				getX(), getY(), getZ(), home, target == null ? null : target.position(), delivery, getCarried(), getAction(), isSitting(),
 				getNavigation().isDone(), goalSelector.getAvailableGoals().stream().filter(g -> g.isRunning()).map(g -> g.getGoal().getClass().getSimpleName()).toList());
 	}
@@ -1002,7 +1003,7 @@ public class RobotEntity extends PathfinderMob {
 				}
 
 				// no chest has room: it carries the item home and waits there until there is
-				return delivery != null || !nearHome() && level().getGameTime() >= homeUnreachableUntil;
+				return delivery != null || (!nearHome() || isInWater()) && level().getGameTime() >= homeUnreachableUntil;
 			}
 
 			if (stationMissing()) {
@@ -1026,7 +1027,7 @@ public class RobotEntity extends PathfinderMob {
 			}
 
 			// nothing to collect: back to the station (or where it was placed) to wait there
-			return target != null || !nearHome() && level().getGameTime() >= homeUnreachableUntil;
+			return target != null || (!nearHome() || isInWater()) && level().getGameTime() >= homeUnreachableUntil;
 		}
 
 		@Override
@@ -1122,6 +1123,11 @@ public class RobotEntity extends PathfinderMob {
 				goal = target.position();
 				reach = 1.8;
 				goalKey = target;
+			} else if (nearHome() && isInWater()) {
+				// waits only on dry, solid ground: out of the water onto the closest such spot by the station
+				goal = Vec3.atBottomCenterOf(restSpot());
+				reach = 0.6;
+				goalKey = restSpot();
 			} else {
 				goal = Vec3.atBottomCenterOf(home());
 				reach = HOME_RADIUS;
@@ -1189,7 +1195,46 @@ public class RobotEntity extends PathfinderMob {
 		double dx = item.getX() - getX();
 		double dz = item.getZ() - getZ();
 		double dy = item.getY() - getY();
+
+		// items in water drift and bob, so there anything within reach of its beak counts
+		if (isInWater() || item.isInWater()) {
+			return dx * dx + dz * dz + dy * dy <= 1.6 * 1.6 && hasLineOfSight(item);
+		}
+
 		return dx * dx + dz * dz <= 0.5 * 0.5 && dy > -1 && dy < 1 && hasLineOfSight(item);
+	}
+
+	/**
+	 * Where it waits: the closest spot by its station with solid ground below and no water, found again every ten seconds.
+	 * Falls back to the station itself when there is none.
+	 */
+	private BlockPos restSpot() {
+		long now = level().getGameTime();
+
+		if (restSpot != null && now < restSpotUntil) {
+			return restSpot;
+		}
+
+		BlockPos h = home();
+		BlockPos best = null;
+
+		for (BlockPos pos : BlockPos.betweenClosed(h.offset(-4, -2, -4), h.offset(4, 2, 4))) {
+			if (dryGround(pos) && (best == null || pos.distSqr(h) < best.distSqr(h))) {
+				best = pos.immutable();
+			}
+		}
+
+		restSpot = best == null ? h : best;
+		restSpotUntil = now + 200;
+		return restSpot;
+	}
+
+	private boolean dryGround(BlockPos pos) {
+		Level level = level();
+		return level.getBlockState(pos.below()).isFaceSturdy(level, pos.below(), Direction.UP)
+				&& level.getFluidState(pos).isEmpty() && level.getFluidState(pos.above()).isEmpty()
+				&& level.getBlockState(pos).getCollisionShape(level, pos).isEmpty()
+				&& level.getBlockState(pos.above()).getCollisionShape(level, pos.above()).isEmpty();
 	}
 
 	/** Paths may be as long as its range, so it can work out the whole way to anything in range. */
@@ -1287,7 +1332,8 @@ public class RobotEntity extends PathfinderMob {
 
 		boolean sad = recallPhase == RECALL_NONE && (noChest || chestsFull || stationMissing() || level().getGameTime() < homeUnreachableUntil);
 
-		if (idle && (sad || nearHome())) {
+		// never sits down in water: it waits on solid ground
+		if (idle && !isInWater() && (sad || nearHome())) {
 			if (++idleTicks > (sad ? 20 : 40)) {
 				setSitting(true);
 				setMood(sad ? MOOD_SAD : recallPhase == RECALL_WAITING && watchedPlayer() != null ? MOOD_WATCHING : MOOD_HAPPY);
@@ -1322,17 +1368,14 @@ public class RobotEntity extends PathfinderMob {
 			return;
 		}
 
-		Vec3 motion = getDeltaMovement().add(dx / length * SWIM_PUSH, 0, dz / length * SWIM_PUSH);
-		double speed = motion.horizontalDistance();
-
-		if (speed > SWIM_SPEED) {
-			motion = new Vec3(motion.x / speed * SWIM_SPEED, motion.y, motion.z / speed * SWIM_SPEED);
-		}
-
-		setDeltaMovement(motion);
+		// as fast as walking on land: there a mob ends up at speed² / (1 - 0.546) blocks per tick
+		double speed = getAttributeValue(Attributes.MOVEMENT_SPEED);
+		double wanted = Math.min(speed * speed / 0.454, length);
+		Vec3 motion = getDeltaMovement();
+		setDeltaMovement(motion.x + (dx / length * wanted - motion.x) * 0.6, motion.y, motion.z + (dz / length * wanted - motion.z) * 0.6);
 	}
 
-	/** A little trail of splashes behind it while it swims (client side). */
+	/** A trail of splashes and bubbles behind it while it swims or wades (client side). */
 	private void splash() {
 		double dx = getX() - xo;
 		double dz = getZ() - zo;
@@ -1341,19 +1384,37 @@ public class RobotEntity extends PathfinderMob {
 			return;
 		}
 
-		// under water only a trail of bubbles
+		// under water a stream of bubbles
 		if (isUnderWater()) {
-			level().addParticle(ParticleTypes.BUBBLE, getX() - dx * 2, getY() + getBbHeight() * 0.5, getZ() - dz * 2, 0, 0.05, 0);
+			for (int i = 0; i < 3; i++) {
+				level().addParticle(ParticleTypes.BUBBLE, getX() - dx * 2 + (random.nextDouble() - 0.5) * 0.5, getY() + getBbHeight() * random.nextDouble(),
+						getZ() - dz * 2 + (random.nextDouble() - 0.5) * 0.5, 0, 0.08, 0);
+			}
+
+			if (random.nextInt(4) == 0) {
+				level().addParticle(ParticleTypes.BUBBLE_COLUMN_UP, getX(), getY() + getBbHeight(), getZ(), 0, 0.1, 0);
+			}
+
 			return;
 		}
 
-		for (int i = 0; i < 3; i++) {
-			level().addParticle(ParticleTypes.SPLASH, getX() - dx * 2 + (random.nextDouble() - 0.5) * 0.4, getY() + getBbHeight() * 0.6,
-					getZ() - dz * 2 + (random.nextDouble() - 0.5) * 0.4, -dx, 0.1, -dz);
+		// on the surface: splashes to the sides, a wake behind it and bubbles popping
+		double surface = getY() + getBbHeight() * 0.6;
+
+		for (int i = 0; i < 6; i++) {
+			level().addParticle(ParticleTypes.SPLASH, getX() - dx * 2 + (random.nextDouble() - 0.5) * 0.6, surface,
+					getZ() - dz * 2 + (random.nextDouble() - 0.5) * 0.6, -dx, 0.15, -dz);
+		}
+
+		level().addParticle(ParticleTypes.FISHING, getX() - dx * 3, surface - 0.1, getZ() - dz * 3, 0, 0, 0);
+
+		for (int i = 0; i < 2; i++) {
+			level().addParticle(ParticleTypes.BUBBLE, getX() - dx * 3 + (random.nextDouble() - 0.5) * 0.4, getY() + 0.1,
+					getZ() - dz * 3 + (random.nextDouble() - 0.5) * 0.4, 0, 0.05, 0);
 		}
 
 		if (random.nextInt(3) == 0) {
-			level().addParticle(ParticleTypes.BUBBLE, getX() - dx * 3, getY() + 0.1, getZ() - dz * 3, 0, 0.05, 0);
+			level().addParticle(ParticleTypes.BUBBLE_POP, getX() - dx * 2, surface, getZ() - dz * 2, 0, 0.02, 0);
 		}
 	}
 

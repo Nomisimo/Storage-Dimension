@@ -74,9 +74,13 @@ public class StorageTbClient implements ClientModInitializer {
 	private static int rowY;
 	private static int rowWidth;
 	private static boolean hasRow;
-	/** The corner of the title row where the backpack's buttons sit, covered in the ME view. */
+	/** The corner of the title row where the backpack's buttons sit, covered in the ME view (the whole row in title mode). */
 	private static int cornerX;
 	private static int cornerY;
+	private static int cornerWidth;
+	private static int cornerHeight;
+	/** No room above the window (a big backpack on a small screen): search and sorting go into the title row. */
+	private static boolean titleMode;
 
 	@Override
 	public void onInitializeClient() {
@@ -109,13 +113,6 @@ public class StorageTbClient implements ClientModInitializer {
 				// Traveler's Backpack re-initialises its screen when upgrades change; the field must come back
 				updateSearch(backpack, MeView.isOpen(backpack.getMenu()));
 
-				// the backpack screen only draws its own widget types, so the bars are drawn here: right after the window,
-				// so slot tooltips still come on top of them
-				ScreenEvents.afterBackground(screen).register((current, graphics, mouseX, mouseY, partialTick) -> {
-					if (searchBox != null && Screens.getWidgets(current).contains(searchBox)) {
-						draw(backpack, graphics, mouseX, mouseY, partialTick);
-					}
-				});
 				// while typing in the search field every key is text: the backpack key (B) must not close the window
 				ScreenKeyboardEvents.allowKeyPress(screen).register((current, event) -> {
 					if (searchBox != null && searchBox.isFocused() && Screens.getWidgets(current).contains(searchBox)
@@ -263,19 +260,31 @@ public class StorageTbClient implements ClientModInitializer {
 			top = 18;
 		}
 
-		barWidth = right - left + 14;
-		barX = screen.getGuiLeft() + left - 7;
-		barY = screen.getGuiTop() - 21;
+		titleMode = screen.getGuiTop() - 21 < 1;
+
+		if (titleMode) {
+			barWidth = right - left + 2;
+			barX = screen.getGuiLeft() + left - 1;
+			barY = screen.getGuiTop() + top - 17;
+		} else {
+			barWidth = right - left + 14;
+			barX = screen.getGuiLeft() + left - 7;
+			barY = screen.getGuiTop() - 21;
+		}
+
+		int inset = titleMode ? 1 : 4;
 		hasRow = MeView.bottomRow(slots) > 0;
 		rowX = screen.getGuiLeft() + left - 1;
 		rowY = screen.getGuiTop() + bottom - 1;
 		rowWidth = right - left + 2;
-		cornerX = screen.getGuiLeft() + right - 60;
-		cornerY = screen.getGuiTop() + top - 15;
+		cornerX = titleMode ? barX : screen.getGuiLeft() + right - 60;
+		cornerY = titleMode ? barY : screen.getGuiTop() + top - 15;
+		cornerWidth = titleMode ? barWidth : 61;
+		cornerHeight = titleMode ? 15 : 13;
 
-		int sortX = barX + barWidth - 6 - SORT.getWidth();
-		SORT.setPosition(sortX, barY + 4);
-		SYNC.setPosition(sortX - 2 - SYNC.getWidth(), barY + 4);
+		int sortX = barX + barWidth - (titleMode ? 1 : 6) - SORT.getWidth();
+		SORT.setPosition(sortX, barY + inset);
+		SYNC.setPosition(sortX - 2 - SYNC.getWidth(), barY + inset);
 		PREV.setPosition(rowX, rowY + 1);
 		DEPOSIT.setPosition(rowX + 18, rowY + 1);
 		NEXT.setPosition(rowX + rowWidth - 16, rowY + 1);
@@ -285,13 +294,13 @@ public class StorageTbClient implements ClientModInitializer {
 		DEPOSIT.visible = hasRow;
 
 		if (searchBox != null) {
-			searchBox.setPosition(barX + 6, barY + 4);
+			searchBox.setPosition(barX + (titleMode ? 1 : 6), barY + inset);
 			searchBox.setWidth(searchWidth());
 		}
 	}
 
 	private static int searchWidth() {
-		return barWidth - 12 - SORT.getWidth() - 2 - (JEI ? SYNC.getWidth() + 2 : 0);
+		return barWidth - (titleMode ? 2 : 12) - SORT.getWidth() - 2 - (JEI ? SYNC.getWidth() + 2 : 0);
 	}
 
 	private static List<Button> buttons() {
@@ -300,10 +309,18 @@ public class StorageTbClient implements ClientModInitializer {
 
 	/** Draws the bars and their buttons over the backpack window, the way the ME terminal looks. */
 	/** The backpack's own buttons in the title row (sorting, equip) belong to the backpack, not to ME storage. */
-	public static void coverCorner(BackpackScreen screen, GuiGraphicsExtractor graphics) {
-		if (searchBox != null && Screens.getWidgets(screen).contains(searchBox)) {
-			graphics.fill(cornerX, cornerY, cornerX + 61, cornerY + 13, 0xFFC6C6C6);
+	/**
+	 * Draws the ME view's bars, from the backpack screen right before it queues the tooltips: on top of the backpack's own
+	 * buttons and slots, below every tooltip. Returns true when the mouse is over the covered corner, whose hidden
+	 * buttons must not show their tooltips.
+	 */
+	public static boolean drawOverBackpack(BackpackScreen screen, GuiGraphicsExtractor graphics, int mouseX, int mouseY) {
+		if (searchBox == null || !Screens.getWidgets(screen).contains(searchBox)) {
+			return false;
 		}
+
+		draw(screen, graphics, mouseX, mouseY, 0);
+		return mouseX >= cornerX && mouseX < cornerX + cornerWidth && mouseY >= cornerY && mouseY < cornerY + cornerHeight;
 	}
 
 	private static void draw(BackpackScreen screen, GuiGraphicsExtractor graphics, int mouseX, int mouseY, float partialTick) {
@@ -319,16 +336,24 @@ public class StorageTbClient implements ClientModInitializer {
 		PREV.active = info != null && info.page() > 0;
 		NEXT.active = info != null && info.page() < info.pages() - 1;
 
-		// the grey bar above the window, framed like the backpack window
-		int x = barX;
-		int y = barY;
-		int w = barWidth;
-		int h = 20;
-		graphics.fill(x + 1, y, x + w - 1, y + h, 0xFF000000);
-		graphics.fill(x, y + 1, x + w, y + h - 1, 0xFF000000);
-		graphics.fill(x + 1, y + 1, x + w - 1, y + h - 1, 0xFFFFFFFF);
-		graphics.fill(x + 3, y + 3, x + w - 1, y + h - 1, 0xFF555555);
-		graphics.fill(x + 3, y + 3, x + w - 3, y + h - 3, 0xFFC6C6C6);
+		if (titleMode) {
+			// the title row itself, with the backpack's buttons in its corner, becomes the search bar
+			graphics.fill(cornerX, cornerY, cornerX + cornerWidth, cornerY + cornerHeight, 0xFFC6C6C6);
+		} else {
+			// the grey bar above the window, framed like the backpack window
+			int x = barX;
+			int y = barY;
+			int w = barWidth;
+			int h = 20;
+			graphics.fill(x + 1, y, x + w - 1, y + h, 0xFF000000);
+			graphics.fill(x, y + 1, x + w, y + h - 1, 0xFF000000);
+			graphics.fill(x + 1, y + 1, x + w - 1, y + h - 1, 0xFFFFFFFF);
+			graphics.fill(x + 3, y + 3, x + w - 1, y + h - 1, 0xFF555555);
+			graphics.fill(x + 3, y + 3, x + w - 3, y + h - 3, 0xFFC6C6C6);
+			// the backpack's own buttons in the title row (sorting, equip, tool slots) belong to the backpack, not to ME storage
+			graphics.fill(cornerX, cornerY, cornerX + cornerWidth, cornerY + cornerHeight, 0xFFC6C6C6);
+		}
+
 		searchBox.extractRenderState(graphics, mouseX, mouseY, partialTick);
 
 		// the bottom slot row turns into the button row of the ME terminal
@@ -337,8 +362,20 @@ public class StorageTbClient implements ClientModInitializer {
 
 			if (info != null) {
 				Font font = Minecraft.getInstance().font;
+				// as much as fits between "Einlagern" and the arrow
+				int room = NEXT.getX() - (rowX + 72) - 2;
+				String kinds = info.kinds() + " Sorten · " + format(info.total());
+
+				if (font.width(kinds) > room) {
+					kinds = info.kinds() + " Sorten";
+				}
+
+				if (font.width(kinds) > room) {
+					kinds = format(info.kinds()) + " S.";
+				}
+
 				graphics.text(font, "Seite " + (info.page() + 1) + "/" + info.pages(), rowX + 72, rowY + 1, 0xFF404040, false);
-				graphics.text(font, info.kinds() + " Sorten · " + format(info.total()), rowX + 72, rowY + 10, 0xFF404040, false);
+				graphics.text(font, kinds, rowX + 72, rowY + 10, 0xFF404040, false);
 			}
 		}
 
@@ -351,10 +388,6 @@ public class StorageTbClient implements ClientModInitializer {
 
 	/** A click on the search field or one of the buttons; true when it was one of them. */
 	private static boolean click(Screen screen, MouseButtonEvent event) {
-		if (event.x() >= cornerX && event.x() < cornerX + 61 && event.y() >= cornerY && event.y() < cornerY + 13) {
-			return true;
-		}
-
 		for (Button button : buttons()) {
 			if (button.visible && button.isMouseOver(event.x(), event.y())) {
 				if (button.active) {
@@ -376,6 +409,11 @@ public class StorageTbClient implements ClientModInitializer {
 		if (searchBox.isMouseOver(event.x(), event.y())) {
 			screen.setFocused(searchBox);
 			searchBox.mouseClicked(event, false);
+			return true;
+		}
+
+		// the covered buttons of the backpack do nothing
+		if (event.x() >= cornerX && event.x() < cornerX + cornerWidth && event.y() >= cornerY && event.y() < cornerY + cornerHeight) {
 			return true;
 		}
 

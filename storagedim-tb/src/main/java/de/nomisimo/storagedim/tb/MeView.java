@@ -116,6 +116,14 @@ final class MeView {
 
 		originals = saved;
 		barSlots = bottomRow(saved);
+
+		if (barSlots > 0) {
+			int bottom = saved.stream().mapToInt(slot -> slot.y).max().orElse(0);
+
+			for (int i = start; i < end; i++) {
+				((MeSlot) menu.slots.get(i)).covered = menu.slots.get(i).y == bottom;
+			}
+		}
 	}
 
 	/** How many of these slots lie in their bottom row; 0 when there is only one row (then nothing is covered). */

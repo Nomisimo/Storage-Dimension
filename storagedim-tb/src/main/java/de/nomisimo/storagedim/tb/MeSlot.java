@@ -12,10 +12,17 @@ import net.minecraft.world.item.ItemStack;
  */
 final class MeSlot extends Slot {
 	private final boolean client;
+	/** Under the button row of the ME view: not shown, not highlighted, not clickable. */
+	boolean covered;
 
 	MeSlot(Container display, int slot, int x, int y, boolean client) {
 		super(display, slot, x, y);
 		this.client = client;
+	}
+
+	@Override
+	public boolean isActive() {
+		return !covered && super.isActive();
 	}
 
 	@Override

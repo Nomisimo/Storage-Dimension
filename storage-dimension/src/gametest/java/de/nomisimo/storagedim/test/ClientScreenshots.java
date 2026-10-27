@@ -379,6 +379,42 @@ public class ClientScreenshots implements FabricClientGameTest {
 			ServerLevel level = server.getPlayerList().getPlayers().get(0).level();
 			System.out.println("STORAGEDIM FULL slot13=" + ((net.minecraft.world.level.block.entity.ChestBlockEntity) level.getBlockEntity(chest)).getItem(13));
 		});
+
+		// a little pond by the station: Pieps fetches the dirt floating in it, then climbs out and waits on dry ground
+		BlockPos pond = lonely.offset(2, -1, 2);
+		world.getServer().runOnServer(server -> {
+			ServerLevel level = server.getPlayerList().getPlayers().get(0).level();
+
+			for (int dx = 0; dx <= 2; dx++) {
+				for (int dz = 0; dz <= 2; dz++) {
+					level.setBlockAndUpdate(pond.offset(dx, 0, dz), Blocks.WATER.defaultBlockState());
+					level.setBlockAndUpdate(pond.offset(dx, -1, dz), Blocks.STONE.defaultBlockState());
+				}
+			}
+
+			RobotEntity pieps = level.getEntities(Robots.ROBOT, r -> r.getCustomName() != null && "Pieps".equals(r.getCustomName().getString())).stream().findFirst().orElse(null);
+
+			if (pieps != null) {
+				pieps.teleportTo(pond.getX() + 0.5, pond.getY(), pond.getZ() + 0.5);
+			}
+
+			drop(level, pond.getX() + 2.5, pond.getY() + 0.5, pond.getZ() + 2.5, new ItemStack(Items.DIRT, 3));
+		});
+
+		for (int t = 0; t < 4; t++) {
+			context.waitTicks(10);
+			logRobots(world);
+		}
+
+		context.takeScreenshot("robot-pond");
+		context.waitTicks(200);
+		logRobots(world);
+		context.takeScreenshot("robot-pond-after");
+		world.getServer().runOnServer(server -> {
+			ServerLevel level = server.getPlayerList().getPlayers().get(0).level();
+			System.out.println("STORAGEDIM POND slot13=" + ((net.minecraft.world.level.block.entity.ChestBlockEntity) level.getBlockEntity(chest)).getItem(13)
+					+ " left=" + level.getEntitiesOfClass(ItemEntity.class, new net.minecraft.world.phys.AABB(pond).inflate(4)).size());
+		});
 	}
 
 	/** Puts the player {@code distance} blocks south-east of the point and turns them to look at it. */
