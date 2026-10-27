@@ -32,7 +32,7 @@ jobs:
           done < ../jp/tools/javap-classes.txt
       - name: Xaero config keys
         run: |
-          JAR=$(find ~/.gradle -iname "*xaero*minimap*.jar" | grep -v sources | head -1)
+          JAR=$(find ~/.gradle -path "*xaeros-minimap*" -name "*.jar" | grep -v sources | head -1)
           echo "jar=$JAR"
           mkdir -p /tmp/xa && cd /tmp/xa && unzip -q -o "$JAR"
           find . -name "*.cfg" -o -name "*.txt" -o -name "*.json" | grep -iv lang | head -40
