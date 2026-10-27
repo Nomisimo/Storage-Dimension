@@ -520,6 +520,53 @@ public class ClientScreenshots implements FabricClientGameTest {
 			System.out.println("STORAGEDIM KELP barrel=" + barrel.getItem(0) + "," + barrel.getItem(1) + " left="
 					+ level.getEntitiesOfClass(ItemEntity.class, new net.minecraft.world.phys.AABB(pit).inflate(3, 8, 3)).size());
 		});
+
+		// an egg tucked into the corner of a fenced pen, between the arms of the corner post: Pieps hops in and gets it
+		BlockPos pen = lonely.offset(-9, 0, -9);
+		world.getServer().runOnServer(server -> {
+			ServerPlayer player = server.getPlayerList().getPlayers().get(0);
+			ServerLevel level = player.level();
+
+			for (int dx = 0; dx <= 4; dx++) {
+				for (int dz = 0; dz <= 4; dz++) {
+					if (dx == 0 || dz == 0 || dx == 4 || dz == 4) {
+						level.setBlockAndUpdate(pen.offset(dx, 0, dz), Blocks.OAK_FENCE.defaultBlockState());
+					}
+				}
+			}
+
+			// fences connect once all of them stand
+			for (int dx = 0; dx <= 4; dx++) {
+				for (int dz = 0; dz <= 4; dz++) {
+					BlockPos fence = pen.offset(dx, 0, dz);
+					level.updateNeighborsAt(fence, Blocks.OAK_FENCE);
+				}
+			}
+
+			ItemEntity egg = new ItemEntity(level, pen.getX() + 0.85, pen.getY() + 0.1, pen.getZ() + 0.85, new ItemStack(Items.EGG));
+			egg.setDeltaMovement(Vec3.ZERO);
+			egg.setNoPickUpDelay();
+			level.addFreshEntity(egg);
+			player.teleportTo(level, pen.getX() + 2.5, pen.getY() + 2.5, pen.getZ() + 6.5, java.util.Set.of(), 180, 40, true);
+		});
+
+		for (int t = 0; t < 6; t++) {
+			context.waitTicks(20);
+			logRobots(world);
+
+			if (t == 4) {
+				context.takeScreenshot("robot-fence-corner");
+			}
+		}
+
+		context.waitTicks(240);
+		logRobots(world);
+		world.getServer().runOnServer(server -> {
+			ServerLevel level = server.getPlayerList().getPlayers().get(0).level();
+			var barrel = (net.minecraft.world.level.block.entity.BarrelBlockEntity) level.getBlockEntity(lonely.above());
+			System.out.println("STORAGEDIM CORNER barrel=" + barrel.getItem(0) + "," + barrel.getItem(1) + " left="
+					+ level.getEntitiesOfClass(ItemEntity.class, new net.minecraft.world.phys.AABB(pen).inflate(5, 2, 5)).size());
+		});
 	}
 
 	/** Puts the player {@code distance} blocks south-east of the point and turns them to look at it. */
