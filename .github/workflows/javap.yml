@@ -30,21 +30,10 @@ jobs:
             echo "=================== $cls"
             javap $flags -cp "$CP" "$cls" 2>&1 | head -4000
           done < ../jp/tools/javap-classes.txt
-      - name: Xaero
-        run: |
-          for p in xaeros-minimap xaeros-world-map; do
-            URL=$(curl -s "https://api.modrinth.com/v2/project/$p/version?game_versions=%5B%2226.1.2%22%5D&loaders=%5B%22fabric%22%5D" | python3 -c "import json,sys; v=json.load(sys.stdin)[0]; print(v['files'][0]['url']); import sys as s; s.stderr.write(v['version_number']+' '+v['id']+'\\n')")
-            echo "== $p $URL"; curl -sL -o /tmp/$p.jar "$URL"
-            unzip -l /tmp/$p.jar | grep -iE "entity/icon|icon/def|icon/sprite|/icon" | head -40
-            unzip -l /tmp/$p.jar | grep -iE "assets/.*(chicken|cow)" | head -10
-          done
-          cd /tmp && mkdir x && cd x && unzip -q /tmp/xaeros-minimap.jar
-          for f in $(find . -path "*entity/icon/definition*" -name "*.json" | grep -iE "chicken|cow|zombie|allay" | head -4); do echo "--- $f"; cat $f; echo; done
-          find . -path "*entity/icon*" | head -20
-      - name: TB screen render
+      - name: TB tab click
         run: |
           JAR=$(find ~/.gradle -iname "travelersbackpack*.jar" | grep -v sources | head -1)
           MC="$JAR:$(find ~/.gradle /home/runner/work -name '*.jar' \( -path '*minecraft*' -o -path '*fabric*' -o -path '*modrinth*' \) | tr '\n' ':')"
-          for c in com.tiviacz.travelersbackpack.client.screens.BackpackScreen com.tiviacz.travelersbackpack.client.screens.AbstractBackpackScreen; do
-            echo "=== $c"; javap -c -p -cp "$MC" $c | grep -E "^  [a-z].*\(|invoke|getstatic|ldc|bipush|sipush" | awk '/^  [a-z].*\(/{m=$0; keep=(m ~ /(extract|render|Render|Bg|Label|Tooltip)/); if(keep) print; next} keep{print}' | head -600
+          for c in com.tiviacz.travelersbackpack.client.screens.widgets.UpgradeWidgetBase com.tiviacz.travelersbackpack.client.screens.widgets.WidgetBase com.tiviacz.travelersbackpack.client.screens.widgets.ToolSlotsWidget; do
+            echo "=== $c"; javap -c -p -cp "$MC" $c | awk '/^  [a-z].*\(/{m=$0; keep=(m ~ /(mouseClicked|setTabOpened|isMouseOver|renderTooltip|in\(|isTab)/); if(keep) print; next} keep' | grep -vE "aload|iload|dup|pop|ifeq|ifne|goto|return|astore|istore|iconst" | head -300
           done

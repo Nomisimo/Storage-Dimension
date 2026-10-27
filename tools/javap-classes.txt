@@ -1,3 +1,2 @@
--public net.fabricmc.fabric.api.client.screen.v1.ScreenEvents
--public net.minecraft.client.gui.GuiGraphicsExtractor
--public net.minecraft.client.gui.screens.inventory.AbstractContainerScreen
+-public com.tiviacz.travelersbackpack.client.screens.widgets.UpgradeWidgetBase
+-public com.tiviacz.travelersbackpack.client.screens.widgets.ToolSlotsWidget
