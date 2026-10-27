@@ -166,6 +166,8 @@ public class RobotEntity extends PathfinderMob {
 	/** Where it waits, out of the water (see {@link #restSpot()}). */
 	private BlockPos restSpot;
 	private long restSpotUntil;
+	/** The last tick it was steering somewhere (for swimming at walking speed). */
+	private long steeredAt = -10;
 	/** Every chest next to its station is full (for what it carries or what lies around): it waits for room. */
 	private boolean chestsFull;
 	private String stationName = "";
@@ -1136,6 +1138,7 @@ public class RobotEntity extends PathfinderMob {
 
 			getLookControl().setLookAt(goal.x, goal.y, goal.z);
 			double distance = position().distanceTo(goal);
+			steeredAt = level().getGameTime();
 			boolean arrived = recallPhase == RECALL_RETURNING ? atStationForRecall()
 					: goalKey == target ? standsOn(target)
 					: goalKey == delivery ? distance <= reach || canReachChest(goal) : distance <= reach;
@@ -1350,7 +1353,8 @@ public class RobotEntity extends PathfinderMob {
 
 	/** Swims fast towards where it wants to go, diving down or coming up as needed. */
 	private void swim() {
-		if (!isInWater() || !getMoveControl().hasWanted()) {
+		// the move control forgets its goal as soon as it has steered once, so this follows the goal of the last tick
+		if (!isInWater() || level().getGameTime() - steeredAt > 1 || getAction() != 0) {
 			return;
 		}
 

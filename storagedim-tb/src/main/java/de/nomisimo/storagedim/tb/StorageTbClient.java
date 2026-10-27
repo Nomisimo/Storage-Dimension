@@ -260,7 +260,7 @@ public class StorageTbClient implements ClientModInitializer {
 			top = 18;
 		}
 
-		titleMode = screen.getGuiTop() - 21 < 1;
+		titleMode = screen.getGuiTop() - 21 < 1 || Boolean.getBoolean("storagedim.tb.titleRow");
 
 		if (titleMode) {
 			barWidth = right - left + 2;
