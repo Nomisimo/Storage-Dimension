@@ -1174,8 +1174,9 @@ public class RobotEntity extends PathfinderMob {
 				return;
 			}
 
-			// in water it swims straight to its goal once no walking path is left, up, down and across
-			if (isInWater() && plannedPath == null && getNavigation().isDone()) {
+			// in water it swims straight to its goal once no walking path is left, up, down and across; standing at the
+			// edge of the water with the goal below it, it jumps in
+			if (plannedPath == null && getNavigation().isDone() && (isInWater() || goalInWaterBelow(goal))) {
 				getMoveControl().setWantedPosition(goal.x, goal.y, goal.z, 1.0);
 				return;
 			}
@@ -1206,6 +1207,12 @@ public class RobotEntity extends PathfinderMob {
 				getNavigation().moveTo(goal.x, goal.y, goal.z, 1.0);
 			}
 		}
+	}
+
+	private boolean goalInWaterBelow(Vec3 goal) {
+		double dx = goal.x - getX();
+		double dz = goal.z - getZ();
+		return dx * dx + dz * dz < 3.5 * 3.5 && level().getFluidState(BlockPos.containing(goal)).is(net.minecraft.tags.FluidTags.WATER);
 	}
 
 	/** Right at the item, so it picks it up from under its beak: nothing in between, about half a block away at most. */

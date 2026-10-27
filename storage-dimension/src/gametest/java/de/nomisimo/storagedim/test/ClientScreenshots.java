@@ -431,12 +431,14 @@ public class ClientScreenshots implements FabricClientGameTest {
 				level.addFreshEntity(robot);
 			}
 
-			lookAt(player, Vec3.atCenterOf(posts.east()).add(0, 1.3, 0), 4.8);
+			// from the side, a little above the posts
+			player.teleportTo(level, posts.getX() + 1.5, posts.getY() + 0.6, posts.getZ() + 4.5, java.util.Set.of(), 180, 12, true);
 		});
 		context.waitTicks(20);
 		context.takeScreenshot("robot-on-posts");
 
-		// an egg at the bottom of a deep pit: Pieps dives down, brings it up and puts it into the barrel on its station
+		// an egg at the bottom of a deep glass tank (six blocks of water, a stone ramp up to its rim): Pieps climbs up,
+		// dives down, brings it up and puts it into the barrel on top of its station
 		BlockPos pit = lonely.offset(7, 0, -3);
 		world.getServer().runOnServer(server -> {
 			ServerPlayer player = server.getPlayerList().getPlayers().get(0);
@@ -445,15 +447,28 @@ public class ClientScreenshots implements FabricClientGameTest {
 
 			for (int dx = -2; dx <= 2; dx++) {
 				for (int dz = -2; dz <= 2; dz++) {
-					for (int dy = -7; dy <= -1; dy++) {
-						boolean wall = Math.abs(dx) == 2 || Math.abs(dz) == 2 || dy == -7;
-						level.setBlockAndUpdate(pit.offset(dx, dy, dz), wall ? Blocks.STONE.defaultBlockState() : Blocks.WATER.defaultBlockState());
+					boolean wall = Math.abs(dx) == 2 || Math.abs(dz) == 2;
+					level.setBlockAndUpdate(pit.offset(dx, -1, dz), Blocks.STONE.defaultBlockState());
+
+					for (int dy = 0; dy <= 5; dy++) {
+						level.setBlockAndUpdate(pit.offset(dx, dy, dz), wall ? Blocks.GLASS.defaultBlockState() : Blocks.WATER.defaultBlockState());
 					}
 				}
 			}
 
-			drop(level, pit.getX() + 0.5, pit.getY() - 5.8, pit.getZ() + 0.5, new ItemStack(Items.EGG));
-			player.teleportTo(level, pit.getX() + 0.5, pit.getY() + 3, pit.getZ() + 3.5, java.util.Set.of(), 180, 55, true);
+			for (int dx = -1; dx <= 1; dx++) {
+				for (int dy = 0; dy <= 3; dy++) {
+					level.setBlockAndUpdate(pit.offset(dx, dy, -3), Blocks.STONE.defaultBlockState());
+				}
+
+				for (int dy = 0; dy <= 1; dy++) {
+					level.setBlockAndUpdate(pit.offset(dx, dy, -4), Blocks.STONE.defaultBlockState());
+				}
+			}
+
+			drop(level, pit.getX() + 0.5, pit.getY() + 0.2, pit.getZ() + 0.5, new ItemStack(Items.EGG));
+			// looking at the tank's glass side from the east
+			player.teleportTo(level, pit.getX() + 7.5, pit.getY() + 3, pit.getZ() + 0.5, java.util.Set.of(), 90, 10, true);
 		});
 
 		for (int t = 0; t < 6; t++) {
