@@ -1,1 +1,3 @@
--p com.tiviacz.travelersbackpack.inventory.upgrades.Point
+-public net.fabricmc.fabric.api.client.screen.v1.ScreenEvents
+-public net.minecraft.client.gui.GuiGraphicsExtractor
+-public net.minecraft.client.gui.screens.inventory.AbstractContainerScreen
