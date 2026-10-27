@@ -1426,14 +1426,15 @@ public class RobotEntity extends PathfinderMob {
 			return dx * dx + dz * dz + dy * dy <= 1.6 * 1.6 && hasLineOfSight(item);
 		}
 
-		if (dx * dx + dz * dz <= 0.5 * 0.5 && dy > -1 && dy < 1 && hasLineOfSight(item)) {
+		// standing on a fence post or wall right above it, it is half a block further down
+		if (dx * dx + dz * dz <= 0.5 * 0.5 && dy > -1.6 && dy < 1 && hasLineOfSight(item)) {
 			return true;
 		}
 
 		// tucked into a corner (between the arms of a fence, say) where it cannot step onto it: once it cannot get any
 		// closer, it reaches over from right next to it; a whole block in between keeps it further away than that
-		return dx * dx + dz * dz <= 1.0 && dy > -1 && dy < 1 && getNavigation().isDone()
-				&& (horizontalCollision || getDeltaMovement().horizontalDistanceSqr() < 1.0E-3);
+		return dx * dx + dz * dz <= 1.0 && dy > -1.6 && dy < 1 && getNavigation().isDone()
+				&& (horizontalCollision || getDeltaMovement().horizontalDistanceSqr() < 0.0025);
 	}
 
 	/**
