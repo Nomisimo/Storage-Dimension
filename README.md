@@ -183,7 +183,7 @@ Das Add-on `storagedim-tb-0.5.0.jar` fügt ein echtes **ME-Upgrade** für den Up
 
 ![ME-Ansicht im Rucksack mit Suchleiste, Sortierung und Knöpfen wie im ME-Speicher](docs/screenshots/rucksack-me-suche.png)
 
-Ist über dem Fenster kein Platz (großer Rucksack, kleiner Bildschirm), wandern Suche und Sortierung in die Titelzeile des Fensters.
+Suche und Sortierung sitzen in der Titelzeile des Fensters, über den Knöpfen des Rucksacks.
 
 ![Suche und Sortierung in der Titelzeile](docs/screenshots/rucksack-me-titelzeile.png)
 

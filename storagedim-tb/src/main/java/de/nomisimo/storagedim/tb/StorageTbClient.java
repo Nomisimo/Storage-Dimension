@@ -74,13 +74,11 @@ public class StorageTbClient implements ClientModInitializer {
 	private static int rowY;
 	private static int rowWidth;
 	private static boolean hasRow;
-	/** The corner of the title row where the backpack's buttons sit, covered in the ME view (the whole row in title mode). */
+	/** The title row with the backpack's own buttons, covered by the search bar in the ME view. */
 	private static int cornerX;
 	private static int cornerY;
 	private static int cornerWidth;
 	private static int cornerHeight;
-	/** No room above the window (a big backpack on a small screen): search and sorting go into the title row. */
-	private static boolean titleMode;
 
 	@Override
 	public void onInitializeClient() {
@@ -260,31 +258,22 @@ public class StorageTbClient implements ClientModInitializer {
 			top = 18;
 		}
 
-		titleMode = screen.getGuiTop() - 21 < 1 || Boolean.getBoolean("storagedim.tb.titleRow");
-
-		if (titleMode) {
-			barWidth = right - left + 2;
-			barX = screen.getGuiLeft() + left - 1;
-			barY = screen.getGuiTop() + top - 17;
-		} else {
-			barWidth = right - left + 14;
-			barX = screen.getGuiLeft() + left - 7;
-			barY = screen.getGuiTop() - 21;
-		}
-
-		int inset = titleMode ? 1 : 4;
+		// search and sorting sit in the title row, over the window's title and the backpack's own buttons
+		barWidth = right - left + 2;
+		barX = screen.getGuiLeft() + left - 1;
+		barY = screen.getGuiTop() + top - 17;
 		hasRow = MeView.bottomRow(slots) > 0;
 		rowX = screen.getGuiLeft() + left - 1;
 		rowY = screen.getGuiTop() + bottom - 1;
 		rowWidth = right - left + 2;
-		cornerX = titleMode ? barX : screen.getGuiLeft() + right - 60;
-		cornerY = titleMode ? barY : screen.getGuiTop() + top - 15;
-		cornerWidth = titleMode ? barWidth : 61;
-		cornerHeight = titleMode ? 15 : 13;
+		cornerX = barX;
+		cornerY = barY;
+		cornerWidth = barWidth;
+		cornerHeight = 15;
 
-		int sortX = barX + barWidth - (titleMode ? 1 : 6) - SORT.getWidth();
-		SORT.setPosition(sortX, barY + inset);
-		SYNC.setPosition(sortX - 2 - SYNC.getWidth(), barY + inset);
+		int sortX = barX + barWidth - 1 - SORT.getWidth();
+		SORT.setPosition(sortX, barY + 1);
+		SYNC.setPosition(sortX - 2 - SYNC.getWidth(), barY + 1);
 		PREV.setPosition(rowX, rowY + 1);
 		DEPOSIT.setPosition(rowX + 18, rowY + 1);
 		NEXT.setPosition(rowX + rowWidth - 16, rowY + 1);
@@ -294,13 +283,13 @@ public class StorageTbClient implements ClientModInitializer {
 		DEPOSIT.visible = hasRow;
 
 		if (searchBox != null) {
-			searchBox.setPosition(barX + (titleMode ? 1 : 6), barY + inset);
+			searchBox.setPosition(barX + 1, barY + 1);
 			searchBox.setWidth(searchWidth());
 		}
 	}
 
 	private static int searchWidth() {
-		return barWidth - (titleMode ? 2 : 12) - SORT.getWidth() - 2 - (JEI ? SYNC.getWidth() + 2 : 0);
+		return barWidth - 2 - SORT.getWidth() - 2 - (JEI ? SYNC.getWidth() + 2 : 0);
 	}
 
 	private static List<Button> buttons() {
@@ -336,24 +325,8 @@ public class StorageTbClient implements ClientModInitializer {
 		PREV.active = info != null && info.page() > 0;
 		NEXT.active = info != null && info.page() < info.pages() - 1;
 
-		if (titleMode) {
-			// the title row itself, with the backpack's buttons in its corner, becomes the search bar
-			graphics.fill(cornerX, cornerY, cornerX + cornerWidth, cornerY + cornerHeight, 0xFFC6C6C6);
-		} else {
-			// the grey bar above the window, framed like the backpack window
-			int x = barX;
-			int y = barY;
-			int w = barWidth;
-			int h = 20;
-			graphics.fill(x + 1, y, x + w - 1, y + h, 0xFF000000);
-			graphics.fill(x, y + 1, x + w, y + h - 1, 0xFF000000);
-			graphics.fill(x + 1, y + 1, x + w - 1, y + h - 1, 0xFFFFFFFF);
-			graphics.fill(x + 3, y + 3, x + w - 1, y + h - 1, 0xFF555555);
-			graphics.fill(x + 3, y + 3, x + w - 3, y + h - 3, 0xFFC6C6C6);
-			// the backpack's own buttons in the title row (sorting, equip, tool slots) belong to the backpack, not to ME storage
-			graphics.fill(cornerX, cornerY, cornerX + cornerWidth, cornerY + cornerHeight, 0xFFC6C6C6);
-		}
-
+		// the title row itself, with the backpack's buttons in its corner, becomes the search bar
+		graphics.fill(cornerX, cornerY, cornerX + cornerWidth, cornerY + cornerHeight, 0xFFC6C6C6);
 		searchBox.extractRenderState(graphics, mouseX, mouseY, partialTick);
 
 		// the bottom slot row turns into the button row of the ME terminal

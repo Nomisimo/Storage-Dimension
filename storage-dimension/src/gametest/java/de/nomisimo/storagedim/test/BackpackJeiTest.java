@@ -151,13 +151,6 @@ public class BackpackJeiTest implements FabricClientGameTest {
 		context.waitTicks(10);
 		logClientSlots(context, "view on");
 		context.takeScreenshot("backpack-me-view");
-		// a big backpack on a small screen leaves no room above the window: search and sorting move into the title row
-		// (forced here, the test window is big enough)
-		System.setProperty("storagedim.tb.titleRow", "true");
-		context.waitTicks(3);
-		context.takeScreenshot("backpack-me-view-big");
-		System.setProperty("storagedim.tb.titleRow", "false");
-		context.waitTicks(3);
 		context.waitTicks(5);
 		transfer(context, "minecraft:diamond_block", false);
 		transfer(context, "minecraft:chest", false);
