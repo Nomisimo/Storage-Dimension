@@ -435,6 +435,44 @@ public class ClientScreenshots implements FabricClientGameTest {
 		});
 		context.waitTicks(20);
 		context.takeScreenshot("robot-on-posts");
+
+		// an egg at the bottom of a deep pit: Pieps dives down, brings it up and puts it into the barrel on its station
+		BlockPos pit = lonely.offset(7, 0, -3);
+		world.getServer().runOnServer(server -> {
+			ServerPlayer player = server.getPlayerList().getPlayers().get(0);
+			ServerLevel level = player.level();
+			level.setBlockAndUpdate(lonely.above(), Blocks.BARREL.defaultBlockState());
+
+			for (int dx = -2; dx <= 2; dx++) {
+				for (int dz = -2; dz <= 2; dz++) {
+					for (int dy = -7; dy <= -1; dy++) {
+						boolean wall = Math.abs(dx) == 2 || Math.abs(dz) == 2 || dy == -7;
+						level.setBlockAndUpdate(pit.offset(dx, dy, dz), wall ? Blocks.STONE.defaultBlockState() : Blocks.WATER.defaultBlockState());
+					}
+				}
+			}
+
+			drop(level, pit.getX() + 0.5, pit.getY() - 5.8, pit.getZ() + 0.5, new ItemStack(Items.EGG));
+			player.teleportTo(level, pit.getX() + 0.5, pit.getY() + 3, pit.getZ() + 3.5, java.util.Set.of(), 180, 55, true);
+		});
+
+		for (int t = 0; t < 6; t++) {
+			context.waitTicks(20);
+			logRobots(world);
+
+			if (t == 2) {
+				context.takeScreenshot("robot-deep-dive");
+			}
+		}
+
+		context.waitTicks(200);
+		logRobots(world);
+		world.getServer().runOnServer(server -> {
+			ServerLevel level = server.getPlayerList().getPlayers().get(0).level();
+			var barrel = (net.minecraft.world.level.block.entity.BarrelBlockEntity) level.getBlockEntity(lonely.above());
+			System.out.println("STORAGEDIM DEEP barrel=" + barrel.getItem(0) + " eggsLeft="
+					+ level.getEntitiesOfClass(ItemEntity.class, new net.minecraft.world.phys.AABB(pit).inflate(3, 8, 3)).size());
+		});
 	}
 
 	/** Puts the player {@code distance} blocks south-east of the point and turns them to look at it. */

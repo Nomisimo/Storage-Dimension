@@ -813,6 +813,12 @@ public class RobotEntity extends PathfinderMob {
 				return item;
 			}
 
+			// deep down in water no walking path leads there, but it can swim: as far as the water allows, then straight
+			if (item.isInWater() && path != null) {
+				plannedPath = path;
+				return item;
+			}
+
 			ignoredItems.put(item.getUUID(), now + IGNORE_TICKS);
 		}
 
@@ -1076,7 +1082,7 @@ public class RobotEntity extends PathfinderMob {
 				delivery = planDelivery();
 			} else if (goalKey == home) {
 				// crowded by the other robots right at the station is fine; really stuck further away is not
-				if (distance > HOME_RADIUS + 3) {
+				if (distance > HOME_RADIUS + 3 && !isInWater()) {
 					homeUnreachableUntil = level().getGameTime() + RETRY_HOME_TICKS;
 				}
 			} else if (goalKey == target) {
@@ -1168,6 +1174,12 @@ public class RobotEntity extends PathfinderMob {
 				return;
 			}
 
+			// in water it swims straight to its goal once no walking path is left, up, down and across
+			if (isInWater() && plannedPath == null && getNavigation().isDone()) {
+				getMoveControl().setWantedPosition(goal.x, goal.y, goal.z, 1.0);
+				return;
+			}
+
 			// follow the way worked out when the goal was chosen; only look for a new one when it ends early
 			if (plannedPath != null) {
 				getNavigation().moveTo(plannedPath, 1.0);
@@ -1180,6 +1192,9 @@ public class RobotEntity extends PathfinderMob {
 				} else if (!path.canReach() && recallPhase == RECALL_RETURNING) {
 					// called back and no way leads to the station: teleports there
 					teleportHome();
+				} else if (!path.canReach() && isInWater()) {
+					// deep in water: swims up and towards the station instead of giving up
+					getMoveControl().setWantedPosition(goal.x, goal.y, goal.z, 1.0);
 				} else if (!path.canReach()) {
 					// cannot get back to its station: sits down sadly and tries again later
 					homeUnreachableUntil = level().getGameTime() + RETRY_HOME_TICKS;
@@ -1362,6 +1377,9 @@ public class RobotEntity extends PathfinderMob {
 
 		if (dy > 0.4 || horizontalCollision) {
 			setDeltaMovement(getDeltaMovement().add(0, 0.05, 0));
+		} else if (dy < -0.6) {
+			// dives down to things lying on the bottom
+			setDeltaMovement(getDeltaMovement().add(0, -0.03, 0));
 		}
 
 		double dx = getMoveControl().getWantedX() - getX();
