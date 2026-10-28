@@ -337,7 +337,7 @@ public final class Islands {
 				level.setBlock(pos, state, Block.UPDATE_CLIENTS);
 			}
 
-			spawnDisplay(level, labelId(network, chest), chest.key(), pos.getX() + 0.5, pos.getY() + 1.3, pos.getZ() + 0.5, 0.55f,
+			spawnDisplay(level, labelId(network, chest), chest.key(), pos.getX() + 0.5, pos.getY() + 1.2, pos.getZ() + 0.5, 0.4f,
 					Display.BillboardConstraints.VERTICAL, false);
 		}
 

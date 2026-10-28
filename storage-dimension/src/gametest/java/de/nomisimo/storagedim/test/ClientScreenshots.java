@@ -639,11 +639,20 @@ public class ClientScreenshots implements FabricClientGameTest {
 			BlockPos centre = de.nomisimo.storagedim.storage.Islands.centre(network.room);
 			player.getAbilities().flying = true;
 			player.onUpdateAbilities();
-			player.teleportTo(player.level(), centre.getX() + 0.5, centre.getY() + 14, centre.getZ() + network.islandRadius + 8.5,
-					java.util.Set.of(), 180, 30, true);
+			player.teleportTo(player.level(), centre.getX() + 0.5, centre.getY() + 16, centre.getZ() + network.islandRadius + 4.5,
+					java.util.Set.of(), 180, 35, true);
 		});
 		context.waitTicks(40);
 		context.takeScreenshot("island-overview");
+		world.getServer().runOnServer(server -> {
+			ServerPlayer player = server.getPlayerList().getPlayers().get(0);
+			var network = StorageData.get().networkFor(player.getUUID());
+			BlockPos centre = de.nomisimo.storagedim.storage.Islands.centre(network.room);
+			player.teleportTo(player.level(), centre.getX() + network.islandRadius + 5.5, centre.getY() - 2, centre.getZ() + 0.5,
+					java.util.Set.of(), 90, 5, true);
+		});
+		context.waitTicks(30);
+		context.takeScreenshot("island-side");
 		world.getServer().runOnServer(server -> {
 			ServerPlayer player = server.getPlayerList().getPlayers().get(0);
 			var network = StorageData.get().networkFor(player.getUUID());
