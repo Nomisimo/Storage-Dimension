@@ -63,6 +63,10 @@ public final class StorageEvents {
 				return InteractionResult.PASS;
 			}
 
+			if (Rooms.isStorage(level) && player.getItemInHand(hand).getItem() instanceof net.minecraft.world.item.BucketItem) {
+				return InteractionResult.FAIL;
+			}
+
 			return Backpacks.onUseItem(serverPlayer, hand);
 		});
 		PlayerBlockBreakEvents.BEFORE.register((level, player, pos, state, blockEntity) -> onBreak(level, player, pos, state));
@@ -192,7 +196,8 @@ public final class StorageEvents {
 
 		StorageData data = StorageData.get();
 
-		if (Rooms.isStorage(level) && Rooms.isShell(pos)) {
+		if (Rooms.isStorage(level)) {
+			// The chest island cannot be taken apart.
 			return false;
 		}
 
@@ -282,23 +287,8 @@ public final class StorageEvents {
 		}
 
 		if (Rooms.isStorage(level)) {
-			int room = Rooms.roomAt(pos);
-			StorageNetwork network = data.networkByRoom(room);
-
-			if (Rooms.isTerminal(pos)) {
-				if (network != null && network.canAccess(player.getUUID())) {
-					StorageMenu.open(player, network);
-				}
-
-				return InteractionResult.SUCCESS;
-			}
-
-			if (Rooms.isExit(pos)) {
-				leaveRoom(player);
-				return InteractionResult.SUCCESS;
-			}
-
-			return InteractionResult.PASS;
+			// Chests and the exit work; nothing can be placed and the barrels stay shut.
+			return Islands.use(player, level, pos);
 		}
 
 		FilterChests.FilterChest filterChest = data.filterChest(Rooms.id(level), pos);
@@ -386,8 +376,8 @@ public final class StorageEvents {
 			StorageData.markDirty();
 		}
 
-		Rooms.teleportIntoRoom(player, network.room);
-		player.sendSystemMessage(Component.literal("Willkommen in der Storage Dimension! Enderkiste = ME-Speicher, Leuchtstein = Ausgang.")
+		Islands.teleportToSpawn(player, network);
+		player.sendSystemMessage(Component.literal("Willkommen auf deiner Kisten-Insel! Jede Kiste hält eine Item-Sorte, der Leuchtstein ist der Ausgang.")
 				.withStyle(ChatFormatting.DARK_PURPLE));
 	}
 
@@ -433,27 +423,36 @@ public final class StorageEvents {
 		}
 
 		if (tickCounter % 20 == 0) {
-			keepInsideRooms(server, data);
+			keepOnIslands(server, data);
 		}
 	}
 
-	/** Players in the storage dimension who are not inside a room they may use go back to their own. */
-	private static void keepInsideRooms(MinecraftServer server, StorageData data) {
+	/**
+	 * Players in the storage dimension who are not on an island they may use (or fell off) go back to their own.
+	 * Islands with players on them grow with newly stored kinds.
+	 */
+	private static void keepOnIslands(MinecraftServer server, StorageData data) {
 		ServerLevel level = Rooms.level(server);
 
 		if (level == null) {
 			return;
 		}
 
-		for (ServerPlayer player : level.players()) {
-			int room = Rooms.roomAt(player.blockPosition());
-			StorageNetwork here = room < 0 ? null : data.networkByRoom(room);
+		Set<StorageNetwork> visited = new java.util.HashSet<>();
 
-			if (here != null && here.canAccess(player.getUUID()) && Rooms.interior(room).inflate(0.5).contains(player.position())) {
+		for (ServerPlayer player : level.players()) {
+			StorageNetwork here = data.networkByRoom(Islands.roomAt(player.blockPosition()));
+
+			if (here != null && here.canAccess(player.getUUID()) && Islands.isOnIsland(player, here)) {
+				visited.add(here);
 				continue;
 			}
 
-			Rooms.teleportIntoRoom(player, data.networkFor(player.getUUID()).room);
+			Islands.teleportToSpawn(player, data.networkFor(player.getUUID()));
+		}
+
+		for (StorageNetwork network : visited) {
+			Islands.tickIsland(level, network);
 		}
 	}
 

@@ -3,17 +3,22 @@ package de.nomisimo.storagedim;
 import java.util.ArrayList;
 import java.util.List;
 
+import de.nomisimo.storagedim.storage.Islands;
 import de.nomisimo.storagedim.storage.Rooms;
+import de.nomisimo.storagedim.storage.StorageNetwork;
+import net.minecraft.core.BlockPos;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
 import net.minecraft.world.level.block.Blocks;
 
 /**
  * Started by CI with -Dstoragedim.smoketest=true: boots a dev server, checks that the
- * dimension, recipe and room building work, then shuts the server down.
+ * dimension, recipe and island building work, then shuts the server down.
  */
 final class SmokeTest {
 	private SmokeTest() {
@@ -36,10 +41,25 @@ final class SmokeTest {
 			if (level == null) {
 				errors.add("Dimension storagedim:storage fehlt");
 			} else {
-				Rooms.ensureBuilt(level, 0);
+				// A network that is not saved, on an island far from the real ones.
+				StorageNetwork network = new StorageNetwork(java.util.UUID.randomUUID(), 250);
+				network.insert(new ItemStack(Items.COBBLESTONE, 500));
+				network.insert(new ItemStack(Items.DIAMOND_SWORD));
+				Islands.prepare(level, network);
+				BlockPos centre = Islands.centre(network.room);
 
-				if (!level.getBlockState(Rooms.origin(0).offset(6, 1, 1)).is(Blocks.ENDER_CHEST)) {
-					errors.add("Raum wurde nicht gebaut");
+				if (!level.getBlockState(centre).is(Blocks.BARREL)) {
+					errors.add("Insel wurde nicht gebaut");
+				}
+
+				if (network.island.size() != 2) {
+					errors.add("Insel hat " + network.island.size() + " statt 2 Kisten");
+				} else {
+					Islands.IslandChest first = network.island.get(0);
+
+					if (!level.getBlockState(centre.offset(first.dx(), 1, first.dz())).is(Blocks.CHEST)) {
+						errors.add("Kiste fehlt auf der Insel");
+					}
 				}
 			}
 

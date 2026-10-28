@@ -1,6 +1,6 @@
 # Storage Dimension
 
-Ein Fabric-Mod für **Minecraft 26.1.2**: ein gemeinsamer Lagerraum in einer eigenen Dimension, ein ME-Speicher ohne Stapelgrenzen und kleine Sammelroboter, die herumliegende Items einsammeln und einlagern.
+Ein Fabric-Mod für **Minecraft 26.1.2**: eine Insel aus Kisten in einer eigenen Dimension, ein ME-Speicher ohne Stapelgrenzen und kleine Sammelroboter, die herumliegende Items einsammeln und einlagern.
 
 **Aktuelle Version: 0.5.1.** Die fertigen Dateien gibt es unter [Releases](https://github.com/Nomisimo/Storage-Dimension/releases), dort steht auch, welche Datei wohin gehört.
 
@@ -39,13 +39,25 @@ Ein Fabric-Mod für **Minecraft 26.1.2**: ein gemeinsamer Lagerraum in einer eig
 
 ![Dimensionskiste, Filterkiste, ME-Terminal und Sammelroboter im Inventar](docs/screenshots/items.png)
 
-### Dimensionskiste und Lagerraum
+### Dimensionskiste und Kisten-Insel
 
-- Eine violette Kiste mit Endsternen. Wer sie öffnet und Zugriff auf den Speicher hat, wird in den Lagerraum in der Storage Dimension gezogen. Beliebig viele Spieler können gleichzeitig drin sein.
+![Die Kisten-Insel von oben](docs/screenshots/kisten-insel.png)
+
+- Eine violette Kiste mit Endsternen. Wer sie öffnet und Zugriff auf den Speicher hat, landet auf der Kisten-Insel in der Storage Dimension. Beliebig viele Spieler können gleichzeitig dort sein.
 - Wer keinen Zugriff hat, sieht nur ein leeres Kisten-Inventar, in dem nichts gelagert werden kann.
-- Im Raum stehen das ME-Terminal (die Enderkiste), eine Werkbank und ein Ofen. Gecraftet wird direkt in der Dimension.
-- Raus geht es per Rechtsklick auf den Leuchtstein im Raum oder mit `/storage raus`.
-- Standardmäßig teilen sich alle Spieler einen Speicher und einen Raum (siehe [Einstellungen](#einstellungen)).
+- Die Insel hat die Form der End-Insel und besteht nur aus Kisten: Der Boden sind Fässer (lassen sich nicht öffnen), darauf steht für jede gespeicherte Item-Sorte eine eigene Kiste, sortiert nach Mod und Name. Über jeder Kiste schwebt ihr Item.
+- Eine Kiste hält beliebig viele Items ihrer Sorte (keine 64er-Grenze) und nimmt nur diese Sorte an. Was man herausnimmt, ist auch aus dem ME-Speicher weg. Werkzeuge und andere Items mit Haltbarkeit teilen sich eine Kiste pro Item, verzauberte Bücher, Tränke usw. bekommen je Variante eine eigene.
+- Die Insel wächst mit: Neue Sorten bekommen sofort eine Kiste am Rand. Leere Kisten verschwinden erst, wenn gerade niemand auf der Insel ist; beim nächsten Betreten wird neu sortiert.
+- Darüber liegt der End-Himmel. Die Sterne sind kleine weiße und graue Kisten, der Mond eine große Kiste.
+- Auf der Insel lässt sich nichts abbauen oder hinstellen. Wer herunterfällt, landet wieder in der Mitte.
+- Raus geht es per Rechtsklick auf den Leuchtstein in der Mitte oder mit `/storage raus`.
+- Standardmäßig teilen sich alle Spieler einen Speicher und eine Insel. Mit `sharedStorage = false` bekommt jeder Speicher seine eigene Insel (siehe [Einstellungen](#einstellungen)).
+
+| Ankunft in der Mitte | Von der Seite | Himmel |
+|---|---|---|
+| ![Ankunft auf der Insel](docs/screenshots/kisten-insel-ankunft.png) | ![Die Insel von der Seite](docs/screenshots/kisten-insel-seite.png) | ![Kisten-Sterne und Kisten-Mond](docs/screenshots/kisten-insel-himmel.png) |
+
+![Die Bruchstein-Kiste auf der Insel](docs/screenshots/kisten-insel-kiste.png)
 
 ### ME-Speicher
 
@@ -212,7 +224,7 @@ Alle Rezepte stehen auch in [JEI](https://modrinth.com/mod/jei).
 | Befehl | Wirkung |
 | --- | --- |
 | `/storage` | Infos zum eigenen Speicher |
-| `/storage raus` | Verlässt den Lagerraum |
+| `/storage raus` | Verlässt die Kisten-Insel |
 | `/storage me` | Öffnet den ME-Speicher, wenn du einen ME-Rucksack trägst oder dabeihast |
 | `/storage teilen <spieler>` | Lädt jemanden in deinen Speicher ein (nur ohne gemeinsamen Speicher) |
 | `/storage annehmen` | Nimmt eine Einladung an. Dein eigener Speicher bleibt erhalten. |
@@ -232,7 +244,7 @@ In `config/storagedim.json`:
 
 | Einstellung | Standard | Wirkung |
 | --- | --- | --- |
-| `sharedStorage` | `true` | Alle Spieler teilen sich einen Speicher und einen Raum. Mit `false` bekommt jeder seinen eigenen, der sich per `/storage teilen` freigeben lässt (auf dem Server). |
+| `sharedStorage` | `true` | Alle Spieler teilen sich einen Speicher und eine Insel. Mit `false` bekommt jeder seinen eigenen, der sich per `/storage teilen` freigeben lässt (auf dem Server). |
 | `robotChestSound` | `false` | Geht eine Kiste beim Einlagern durch einen Roboter auf, ist sie standardmäßig still (nur der Deckel bewegt sich). Mit `true` macht sie dabei das Öffnen- und Schließen-Geräusch (auf dem Server). |
 | `jeiSearchSync` | `false` | Schalter **J**: Suche im ME-Speicher mit der JEI-Suchleiste koppeln (beim Spieler, lässt sich im Fenster umschalten). |
 

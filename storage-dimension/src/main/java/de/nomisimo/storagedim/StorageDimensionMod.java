@@ -16,7 +16,7 @@ public class StorageDimensionMod implements ModInitializer {
 	public static final String MOD_ID = "storagedim";
 	public static final Logger LOGGER = LoggerFactory.getLogger(MOD_ID);
 
-	/** The void dimension that holds every storage room. Defined in data/storagedim/dimension/storage.json. */
+	/** The void dimension that holds the chest islands. Defined in data/storagedim/dimension/storage.json. */
 	public static final ResourceKey<Level> STORAGE_LEVEL = ResourceKey.create(Registries.DIMENSION, id("storage"));
 
 	@Override

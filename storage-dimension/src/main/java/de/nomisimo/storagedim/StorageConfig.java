@@ -18,7 +18,7 @@ public final class StorageConfig {
 	private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
 	private static StorageConfig instance;
 
-	/** true: every player uses the same storage and the same room. false: everyone has their own, shareable via /storage teilen. */
+	/** true: every player uses the same storage and the same island. false: everyone has their own, shareable via /storage teilen. */
 	public boolean sharedStorage = true;
 
 	/** Client only. true: the search field of the ME terminal and JEI's search bar always hold the same text. */

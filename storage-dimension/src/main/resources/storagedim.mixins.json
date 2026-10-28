@@ -3,7 +3,9 @@
 	"package": "de.nomisimo.storagedim.mixin",
 	"compatibilityLevel": "JAVA_25",
 	"mixins": [
-		"BlockItemMixin"
+		"BlockItemMixin",
+		"DisplayAccessor",
+		"ItemDisplayAccessor"
 	],
 	"client": [
 		"ChestRendererMixin",

@@ -604,6 +604,102 @@ public class ClientScreenshots implements FabricClientGameTest {
 		context.waitTicks(5);
 	}
 
+	/**
+	 * The chest island: many kinds stored, the player enters, looks over the island and up into the sky, opens the
+	 * cobblestone chest (dirt must not go in), and a kind stored while standing there gets a new chest.
+	 */
+	private static void islandTest(ClientGameTestContext context, TestSingleplayerContext world) {
+		world.getServer().runOnServer(server -> {
+			ServerPlayer player = server.getPlayerList().getPlayers().get(0);
+			var network = StorageData.get().networkFor(player.getUUID());
+			int n = 0;
+
+			for (net.minecraft.world.item.Item item : net.minecraft.core.registries.BuiltInRegistries.ITEM) {
+				if (item != Items.AIR && n++ % 7 == 0 && n < 900) {
+					network.insert(new ItemStack(item, 1 + n % 50));
+				}
+			}
+
+			network.insert(new ItemStack(Items.COBBLESTONE, 4321));
+			ItemStack worn = new ItemStack(Items.DIAMOND_PICKAXE);
+			worn.setDamageValue(500);
+			network.insert(worn);
+			network.insert(new ItemStack(Items.DIAMOND_PICKAXE));
+			player.setGameMode(net.minecraft.world.level.GameType.CREATIVE);
+			de.nomisimo.storagedim.storage.StorageEvents.enterRoom(player, network);
+			System.out.println("STORAGEDIM ISLAND chests=" + network.island.size() + " radius=" + network.islandRadius);
+		});
+		context.waitTicks(60);
+		world.getClientLevel().waitForChunksDownload();
+		context.waitTicks(20);
+		context.takeScreenshot("island-arrive");
+		world.getServer().runOnServer(server -> {
+			ServerPlayer player = server.getPlayerList().getPlayers().get(0);
+			var network = StorageData.get().networkFor(player.getUUID());
+			BlockPos centre = de.nomisimo.storagedim.storage.Islands.centre(network.room);
+			player.getAbilities().flying = true;
+			player.onUpdateAbilities();
+			player.teleportTo(player.level(), centre.getX() + 0.5, centre.getY() + 16, centre.getZ() + network.islandRadius + 4.5,
+					java.util.Set.of(), 180, 35, true);
+		});
+		context.waitTicks(40);
+		context.takeScreenshot("island-overview");
+		world.getServer().runOnServer(server -> {
+			ServerPlayer player = server.getPlayerList().getPlayers().get(0);
+			var network = StorageData.get().networkFor(player.getUUID());
+			BlockPos centre = de.nomisimo.storagedim.storage.Islands.centre(network.room);
+			player.teleportTo(player.level(), centre.getX() + network.islandRadius + 5.5, centre.getY() - 2, centre.getZ() + 0.5,
+					java.util.Set.of(), 90, 5, true);
+		});
+		context.waitTicks(30);
+		context.takeScreenshot("island-side");
+		world.getServer().runOnServer(server -> {
+			ServerPlayer player = server.getPlayerList().getPlayers().get(0);
+			var network = StorageData.get().networkFor(player.getUUID());
+			BlockPos centre = de.nomisimo.storagedim.storage.Islands.centre(network.room);
+			player.teleportTo(player.level(), centre.getX() + 0.5, centre.getY() + 1, centre.getZ() + 0.5, java.util.Set.of(), 180, -40, true);
+		});
+		context.waitTicks(30);
+		context.takeScreenshot("island-sky");
+		world.getServer().runOnServer(server -> {
+			ServerPlayer player = server.getPlayerList().getPlayers().get(0);
+			var network = StorageData.get().networkFor(player.getUUID());
+			BlockPos centre = de.nomisimo.storagedim.storage.Islands.centre(network.room);
+			var cobble = network.island.stream().filter(c -> c.key().is(Items.COBBLESTONE)).findFirst().orElseThrow();
+			BlockPos chest = centre.offset(cobble.dx(), 1, cobble.dz());
+			// stand in the aisle in front of the chest and look at it
+			int front = Math.floorMod(cobble.dz(), 3) == 0 ? -1 : 1;
+			player.teleportTo(player.level(), chest.getX() + 0.5, chest.getY(), chest.getZ() + 0.5 + front * 2.2, java.util.Set.of(),
+					front < 0 ? 0 : 180, 25, true);
+			player.getInventory().setItem(9, new ItemStack(Items.DIRT, 32));
+			player.getInventory().setItem(10, new ItemStack(Items.COBBLESTONE, 16));
+			de.nomisimo.storagedim.storage.Islands.use(player, (ServerLevel) player.level(), chest);
+			net.minecraft.world.inventory.AbstractContainerMenu menu = player.containerMenu;
+			menu.clicked(54, 0, ContainerInput.QUICK_MOVE, player);
+			menu.clicked(55, 0, ContainerInput.QUICK_MOVE, player);
+			System.out.println("STORAGEDIM ISLAND chest " + menu.getClass().getSimpleName() + " dirtLeft=" + player.getInventory().getItem(9).getCount()
+					+ " cobbleLeft=" + player.getInventory().getItem(10).getCount() + " stored=" + network.find(new ItemStack(Items.COBBLESTONE)).count);
+		});
+		context.waitTicks(15);
+		context.takeScreenshot("island-chest");
+		world.getServer().runOnServer(server -> {
+			ServerPlayer player = server.getPlayerList().getPlayers().get(0);
+			player.closeContainer();
+			var network = StorageData.get().networkFor(player.getUUID());
+			int before = network.island.size();
+			network.insert(new ItemStack(Items.DRAGON_EGG));
+			System.out.println("STORAGEDIM ISLAND grow before=" + before);
+		});
+		context.waitTicks(50);
+		world.getServer().runOnServer(server -> {
+			ServerPlayer player = server.getPlayerList().getPlayers().get(0);
+			var network = StorageData.get().networkFor(player.getUUID());
+			System.out.println("STORAGEDIM ISLAND grow after=" + network.island.size() + " egg="
+					+ network.island.stream().anyMatch(c -> c.key().is(Items.DRAGON_EGG)));
+		});
+		context.takeScreenshot("island-chest-closed");
+	}
+
 	/** Drags a stack across two inventory slots and a display slot in the open terminal, then double-click collects it again. */
 	private static void dragInTerminal(ClientGameTestContext context, TestSingleplayerContext world) {
 		world.getServer().runOnServer(server -> {
@@ -812,6 +908,7 @@ public class ClientScreenshots implements FabricClientGameTest {
 			stationTest(context, world);
 			fullChestTest(context, world);
 			logBarrel(world);
+			islandTest(context, world);
 		}
 	}
 }

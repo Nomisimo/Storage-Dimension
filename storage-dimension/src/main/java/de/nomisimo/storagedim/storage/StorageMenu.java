@@ -10,6 +10,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import java.util.WeakHashMap;
+import java.util.function.Predicate;
 
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.component.DataComponents;
@@ -33,7 +34,7 @@ import net.minecraft.world.item.component.ItemLore;
 /**
  * The ME terminal: a 6-row chest screen showing the network contents page by page.
  * The top inventory is display-only; every click is handled here and then resynced.
- * A filter chest opens the same screen limited to its filter items.
+ * A filter chest, and every chest of the chest island, opens the same screen limited to its items.
  */
 public class StorageMenu extends ChestMenu {
 	private static final int ITEM_SLOTS = 45;
@@ -54,8 +55,11 @@ public class StorageMenu extends ChestMenu {
 	private final StorageNetwork network;
 	private final SimpleContainer display;
 	private final Player viewer;
-	/** Filter items of a filter chest, or null for the full terminal. */
-	private final List<ItemStack> filter;
+	/** Items this screen shows and accepts, or null for the full terminal. */
+	private final Predicate<ItemStack> filter;
+	private final String title;
+	/** Runs when the screen closes, e.g. to shut the lid of an island chest. */
+	private final Runnable onClose;
 	/** The player has the mod on the client, which draws a search field and sort button instead of the bottom buttons. */
 	private final boolean clientUi;
 	private String search;
@@ -75,13 +79,15 @@ public class StorageMenu extends ChestMenu {
 		}
 	}
 
-	private StorageMenu(int containerId, Inventory inventory, SimpleContainer display, StorageNetwork network, List<ItemStack> filter,
-			String search, boolean clientUi) {
+	private StorageMenu(int containerId, Inventory inventory, SimpleContainer display, StorageNetwork network, Predicate<ItemStack> filter,
+			String title, Runnable onClose, String search, boolean clientUi) {
 		super(MenuType.GENERIC_9x6, containerId, inventory, display, 6);
 		this.network = network;
 		this.display = display;
 		this.viewer = inventory.player;
 		this.filter = filter;
+		this.title = title;
+		this.onClose = onClose;
 		this.search = search;
 		this.clientUi = clientUi;
 		refresh();
@@ -89,21 +95,26 @@ public class StorageMenu extends ChestMenu {
 	}
 
 	public static void open(ServerPlayer player, StorageNetwork network) {
-		open(player, network, null);
+		open(player, network, null, "ME-Speicher", null, "");
 	}
 
 	/** Opens the terminal; with a filter list only those items are shown and accepted. */
 	public static void open(ServerPlayer player, StorageNetwork network, List<ItemStack> filter) {
-		open(player, network, filter, "");
+		open(player, network, stack -> FilterChests.matches(filter, stack), "Filterkiste", null, "");
 	}
 
-	private static void open(ServerPlayer player, StorageNetwork network, List<ItemStack> filter, String search) {
+	/** Opens the terminal limited to the items {@code filter} accepts, e.g. for one chest of the chest island. */
+	public static void open(ServerPlayer player, StorageNetwork network, Predicate<ItemStack> filter, String title, Runnable onClose) {
+		open(player, network, filter, title, onClose, "");
+	}
+
+	private static void open(ServerPlayer player, StorageNetwork network, Predicate<ItemStack> filter, String title, Runnable onClose,
+			String search) {
 		boolean clientUi = TerminalNetworking.hasClientUi(player);
 		// With the client UI the search field sits where the title would be.
-		Component title = clientUi ? Component.empty() : Component.literal(filter == null ? "ME-Speicher" : "Filterkiste");
 		player.openMenu(new SimpleMenuProvider(
-				(id, inventory, p) -> new StorageMenu(id, inventory, new SimpleContainer(54), network, filter, search, clientUi),
-				title));
+				(id, inventory, p) -> new StorageMenu(id, inventory, new SimpleContainer(54), network, filter, title, onClose, search, clientUi),
+				clientUi ? Component.empty() : Component.literal(title)));
 
 		if (clientUi && player.containerMenu instanceof StorageMenu menu) {
 			TerminalNetworking.sendOpened(player, menu.containerId, menu.sort());
@@ -147,7 +158,7 @@ public class StorageMenu extends ChestMenu {
 	}
 
 	private boolean accepts(ItemStack stack) {
-		return filter == null || FilterChests.matches(filter, stack);
+		return !stack.isEmpty() && (filter == null || filter.test(stack));
 	}
 
 	private boolean matchesSearch(ItemStack stack) {
@@ -289,7 +300,7 @@ public class StorageMenu extends ChestMenu {
 				search = "";
 				page = 0;
 			} else {
-				SearchMenu.open(serverPlayer, search, text -> open(serverPlayer, network, filter, text));
+				SearchMenu.open(serverPlayer, search, text -> open(serverPlayer, network, filter, title, onClose, text));
 				return;
 			}
 		} else if (slotIndex >= 0 && slotIndex < 54) {
@@ -424,6 +435,10 @@ public class StorageMenu extends ChestMenu {
 	public void removed(Player player) {
 		super.removed(player);
 		OPEN.remove(this);
+
+		if (onClose != null) {
+			onClose.run();
+		}
 		// The display container must never drop its icons.
 		for (int i = 0; i < 54; i++) {
 			display.setItem(i, ItemStack.EMPTY);

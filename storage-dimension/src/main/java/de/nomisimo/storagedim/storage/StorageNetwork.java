@@ -18,6 +18,12 @@ public class StorageNetwork {
 	public final Set<UUID> members = new LinkedHashSet<>();
 	public int room;
 	final List<StoredItem> items = new ArrayList<>();
+	/** The chests of this network's island in the storage dimension, see {@link Islands}. */
+	public final List<Islands.IslandChest> island = new ArrayList<>();
+	/** Radius of the built island floor; 0 while nothing is built. */
+	public int islandRadius;
+	/** Counts the rebuilds, so the labels of an older build can be told apart. */
+	public int islandBuild;
 
 	public StorageNetwork(UUID owner, int room) {
 		this.owner = owner;
@@ -87,6 +93,11 @@ public class StorageNetwork {
 		List<StoredItem> list = new ArrayList<>(items);
 		list.sort(Comparator.comparingLong((StoredItem e) -> e.count).reversed());
 		return list;
+	}
+
+	/** Read-only view of the entries in storage order. */
+	public List<StoredItem> entries() {
+		return java.util.Collections.unmodifiableList(items);
 	}
 
 	public long totalCount() {

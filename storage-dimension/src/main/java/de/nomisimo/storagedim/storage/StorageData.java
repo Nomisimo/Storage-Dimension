@@ -56,7 +56,7 @@ public final class StorageData {
 	public final Map<String, Map<Long, RobotConfig>> stations = new HashMap<>();
 	/** Robots placed for each station per dimension: robot id to its name, in the order they were placed. */
 	public final Map<String, Map<Long, Map<UUID, String>>> stationRobots = new HashMap<>();
-	/** Where to send a player back to when they leave the storage room. */
+	/** Where to send a player back to when they leave the chest island. */
 	public final Map<UUID, SavedPos> returns = new HashMap<>();
 	/**
 	 * Players who were watching through a chest in an older version; they get their position and
@@ -64,6 +64,8 @@ public final class StorageData {
 	 */
 	public final Map<UUID, Viewer> viewers = new HashMap<>();
 	public int nextRoom;
+	/** The rooms of versions before the chest island were taken down. */
+	public boolean oldRoomsCleared;
 
 	public record SavedPos(String dimension, double x, double y, double z, float yRot, float xRot) {
 	}
@@ -247,6 +249,7 @@ public final class StorageData {
 		DynamicOps<JsonElement> ops = ops();
 		JsonObject root = new JsonObject();
 		root.addProperty("nextRoom", nextRoom);
+		root.addProperty("oldRoomsCleared", oldRoomsCleared);
 
 		JsonArray nets = new JsonArray();
 
@@ -269,6 +272,21 @@ public final class StorageData {
 			}
 
 			n.add("items", items);
+			JsonArray island = new JsonArray();
+
+			for (Islands.IslandChest chest : network.island) {
+				ItemStack.CODEC.encodeStart(ops, chest.key()).result().ifPresent(json -> {
+					JsonObject c = new JsonObject();
+					c.addProperty("x", chest.dx());
+					c.addProperty("z", chest.dz());
+					c.add("key", json);
+					island.add(c);
+				});
+			}
+
+			n.add("island", island);
+			n.addProperty("islandRadius", network.islandRadius);
+			n.addProperty("islandBuild", network.islandBuild);
 			nets.add(n);
 		}
 
@@ -366,6 +384,7 @@ public final class StorageData {
 
 		DynamicOps<JsonElement> ops = ops();
 		nextRoom = root.has("nextRoom") ? root.get("nextRoom").getAsInt() : 0;
+		oldRoomsCleared = root.has("oldRoomsCleared") && root.get("oldRoomsCleared").getAsBoolean();
 
 		if (root.has("networks")) {
 			for (JsonElement el : root.getAsJsonArray("networks")) {
@@ -383,6 +402,18 @@ public final class StorageData {
 							.ifPresent(stack -> network.items.add(new StorageNetwork.StoredItem(stack.copyWithCount(1), count)));
 				}
 
+				if (n.has("island")) {
+					for (JsonElement c : n.getAsJsonArray("island")) {
+						JsonObject chest = c.getAsJsonObject();
+						int dx = chest.get("x").getAsInt();
+						int dz = chest.get("z").getAsInt();
+						ItemStack.CODEC.parse(ops, chest.get("key")).resultOrPartial(StorageDimensionMod.LOGGER::warn)
+								.ifPresent(stack -> network.island.add(new Islands.IslandChest(dx, dz, stack.copyWithCount(1))));
+					}
+				}
+
+				network.islandRadius = n.has("islandRadius") ? n.get("islandRadius").getAsInt() : 0;
+				network.islandBuild = n.has("islandBuild") ? n.get("islandBuild").getAsInt() : 0;
 				networks.put(network.owner, network);
 				nextRoom = Math.max(nextRoom, network.room + 1);
 			}
