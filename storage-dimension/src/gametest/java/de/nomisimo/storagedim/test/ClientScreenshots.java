@@ -648,12 +648,13 @@ public class ClientScreenshots implements FabricClientGameTest {
 		});
 		for (int t = 0; t < 15; t++) {
 			context.waitTicks(20);
+			int tick = t;
 			world.getServer().runOnServer(server -> {
 				ServerLevel level = server.getPlayerList().getPlayers().get(0).level();
 				var box = (net.minecraft.world.level.block.entity.ChestBlockEntity) level.getBlockEntity(chest);
 				RobotEntity platsch = level.getEntities(Robots.ROBOT, r -> r.getCustomName() != null && "Platsch".equals(r.getCustomName().getString()))
 						.stream().findFirst().orElse(null);
-				System.out.println("STORAGEDIM SLAB t=" + t + " chest=" + box.getItem(0) + " robotDy=" + (platsch == null ? "-" : String.format(java.util.Locale.ROOT, "%.2f", platsch.getY() - chest.getY())));
+				System.out.println("STORAGEDIM SLAB t=" + tick + " chest=" + box.getItem(0) + " robotDy=" + (platsch == null ? "-" : String.format(java.util.Locale.ROOT, "%.2f", platsch.getY() - chest.getY())));
 			});
 
 			if (t == 6) {
