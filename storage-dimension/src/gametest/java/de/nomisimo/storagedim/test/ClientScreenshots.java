@@ -605,6 +605,64 @@ public class ClientScreenshots implements FabricClientGameTest {
 	}
 
 	/**
+	 * A chest standing on slabs on a pool, like in Momo's test world: the robot fetches an egg from the bottom and
+	 * must climb onto the slabs to put it in, not hand it up through the slab from below.
+	 */
+	private static void slabChestTest(ClientGameTestContext context, TestSingleplayerContext world) {
+		BlockPos pool = stationBase.offset(-60, 0, 0);
+		BlockPos chest = pool.offset(3, 0, 3);
+		world.getServer().runOnServer(server -> {
+			ServerPlayer player = server.getPlayerList().getPlayers().get(0);
+			ServerLevel level = player.level();
+
+			for (int dx = 0; dx <= 6; dx++) {
+				for (int dz = 0; dz <= 6; dz++) {
+					level.setBlockAndUpdate(pool.offset(dx, -4, dz), Blocks.STONE.defaultBlockState());
+
+					for (int dy = -3; dy <= -1; dy++) {
+						level.setBlockAndUpdate(pool.offset(dx, dy, dz), Blocks.WATER.defaultBlockState());
+					}
+
+					if (dx >= 2 && dx <= 4 && dz >= 2 && dz <= 4) {
+						level.setBlockAndUpdate(pool.offset(dx, -1, dz), Blocks.OAK_SLAB.defaultBlockState()
+								.setValue(net.minecraft.world.level.block.SlabBlock.WATERLOGGED, true));
+					}
+				}
+			}
+
+			level.setBlockAndUpdate(chest, Blocks.CHEST.defaultBlockState().setValue(ChestBlock.FACING, Direction.SOUTH));
+			BlockPos station = chest.east();
+			level.setBlockAndUpdate(station, RobotStationBlock.BLOCK.defaultBlockState());
+			String dim = Rooms.id(level);
+			StorageData.get().setStation(dim, station, StorageData.get().station(dim, station).withRange(16).withName("Platsch").withStationName("Steg"));
+			RobotEntity robot = Robots.ROBOT.create(level, EntitySpawnReason.SPAWN_ITEM_USE);
+			robot.snapTo(chest.getX() + 0.5, chest.getY(), chest.getZ() + 1.5, 0, 0);
+			robot.setup(player.getUUID(), station);
+			robot.applyConfig(StorageData.get().station(dim, station));
+			level.addFreshEntity(robot);
+			ItemEntity egg = new ItemEntity(level, chest.getX() + 0.5, chest.getY() - 3.0, chest.getZ() + 0.5, new ItemStack(Items.EGG));
+			egg.setDeltaMovement(Vec3.ZERO);
+			egg.setNoPickUpDelay();
+			level.addFreshEntity(egg);
+			player.teleportTo(level, pool.getX() + 9.5, pool.getY() + 1.5, pool.getZ() + 3.5, java.util.Set.of(), 90, 25, true);
+		});
+		for (int t = 0; t < 15; t++) {
+			context.waitTicks(20);
+			world.getServer().runOnServer(server -> {
+				ServerLevel level = server.getPlayerList().getPlayers().get(0).level();
+				var box = (net.minecraft.world.level.block.entity.ChestBlockEntity) level.getBlockEntity(chest);
+				RobotEntity platsch = level.getEntities(Robots.ROBOT, r -> r.getCustomName() != null && "Platsch".equals(r.getCustomName().getString()))
+						.stream().findFirst().orElse(null);
+				System.out.println("STORAGEDIM SLAB t=" + t + " chest=" + box.getItem(0) + " robotDy=" + (platsch == null ? "-" : String.format(java.util.Locale.ROOT, "%.2f", platsch.getY() - chest.getY())));
+			});
+
+			if (t == 6) {
+				context.takeScreenshot("robot-slab-chest");
+			}
+		}
+	}
+
+	/**
 	 * The chest island: many kinds stored, the player enters, looks over the island and up into the sky, opens the
 	 * cobblestone chest (dirt must not go in), and a kind stored while standing there gets a new chest.
 	 */
@@ -908,6 +966,7 @@ public class ClientScreenshots implements FabricClientGameTest {
 			stationTest(context, world);
 			fullChestTest(context, world);
 			logBarrel(world);
+			slabChestTest(context, world);
 			islandTest(context, world);
 		}
 	}

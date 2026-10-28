@@ -1317,7 +1317,7 @@ public class RobotEntity extends PathfinderMob {
 			steeredAt = level().getGameTime();
 			boolean arrived = recallPhase == RECALL_RETURNING ? atStationForRecall()
 					: goalKey == target ? standsOn(target)
-					: goalKey == delivery ? distance <= reach || canReachChest(goal) : distance <= reach;
+					: goalKey == delivery ? (distance <= reach || canReachChest(goal)) && seesChest(delivery) : distance <= reach;
 
 			if (arrived) {
 				if (recallPhase == RECALL_RETURNING) {
@@ -1338,16 +1338,34 @@ public class RobotEntity extends PathfinderMob {
 				return;
 			}
 
+			// a chest it cannot see from here (e.g. from below, through the slabs it stands on): aim for an open side of it
+			Vec3 approach = goal;
+
+			if (goalKey == delivery && !seesChest(delivery)) {
+				BlockPos side = openSide(delivery);
+				approach = side == null ? goal : Vec3.atBottomCenterOf(side);
+			}
+
 			// the path ends on the block next to the goal; walk the last bit straight
-			if (getNavigation().isDone() && position().distanceTo(goal) < reach + 2) {
-				getMoveControl().setWantedPosition(goal.x, goal.y, goal.z, 1.0);
+			if (getNavigation().isDone() && position().distanceTo(approach) < reach + 2) {
+				getMoveControl().setWantedPosition(approach.x, approach.y, approach.z, 1.0);
 				return;
 			}
 
 			// in water it swims straight to its goal once no walking path is left, up, down and across; standing at the
 			// edge of the water with the goal below it, it jumps in
 			if (plannedPath == null && getNavigation().isDone() && (isInWater() || goalInWaterBelow(goal))) {
-				getMoveControl().setWantedPosition(goal.x, goal.y, goal.z, 1.0);
+				if (approach != goal) {
+					// out of the water to the open side, where it can stand next to the chest
+					Path path = getNavigation().createPath(BlockPos.containing(approach), 0);
+
+					if (path != null && path.canReach()) {
+						getNavigation().moveTo(path, 1.0);
+						return;
+					}
+				}
+
+				getMoveControl().setWantedPosition(approach.x, approach.y, approach.z, 1.0);
 				return;
 			}
 
@@ -1376,6 +1394,11 @@ public class RobotEntity extends PathfinderMob {
 			} else if (getNavigation().isDone() && goalKey == delivery) {
 				// out of the water again (or its way ended a bit off): a new way right up to the chest, or as close as it goes
 				Path path = getNavigation().createPath(delivery, 1);
+				BlockPos side = openSide(delivery);
+
+				if ((path == null || !path.canReach()) && side != null) {
+					path = getNavigation().createPath(side, 0);
+				}
 
 				if (path == null || !path.canReach()) {
 					path = getNavigation().createPath(delivery, 3);
@@ -1548,6 +1571,63 @@ public class RobotEntity extends PathfinderMob {
 		double dy = chest.y - getY();
 		double reach = getNavigation().isDone() && getDeltaMovement().horizontalDistanceSqr() < 1.0E-3 ? 2.5 : 1.5;
 		return dx * dx + dz * dz <= reach * reach && dy > -2 && dy < 4.5;
+	}
+
+	/**
+	 * Nothing stands between it and the chest, like a player who has to see what they open: no wall, no slab, no
+	 * floor (e.g. when it swims below a chest standing on slabs over water).
+	 */
+	private boolean seesChest(BlockPos chest) {
+		BlockState state = level().getBlockState(chest);
+		BlockPos partner = state.getBlock() instanceof net.minecraft.world.level.block.ChestBlock
+				&& state.getValue(net.minecraft.world.level.block.ChestBlock.TYPE) != net.minecraft.world.level.block.state.properties.ChestType.SINGLE
+				? chest.relative(net.minecraft.world.level.block.ChestBlock.getConnectedDirection(state)) : chest;
+		Vec3 target = Vec3.atCenterOf(chest);
+
+		for (Vec3 from : new Vec3[] {getEyePosition(), position().add(0, getBbHeight() * 0.3, 0)}) {
+			if (clearTo(from, target, chest, partner)) {
+				return true;
+			}
+		}
+
+		// a chest higher up in a wall: it reaches straight up through free air, then across to the chest
+		Vec3 up = new Vec3(getX(), target.y, getZ());
+		return target.y > getEyeY() && clearTo(getEyePosition(), up, null, null) && clearTo(up, target, chest, partner);
+	}
+
+	/**
+	 * The free spot next to the chest (beside it, or one lower when the chest stands on something) closest to the
+	 * robot, from which nothing blocks the way to the chest.
+	 */
+	private BlockPos openSide(BlockPos chest) {
+		BlockPos best = null;
+
+		for (net.minecraft.core.Direction side : net.minecraft.core.Direction.Plane.HORIZONTAL) {
+			for (int dy = 0; dy >= -1; dy--) {
+				BlockPos spot = chest.relative(side).above(dy);
+
+				if (!level().getBlockState(spot).getCollisionShape(level(), spot).isEmpty()
+						|| !level().getBlockState(spot.above()).getCollisionShape(level(), spot.above()).isEmpty() && dy == 0) {
+					continue;
+				}
+
+				Vec3 eye = Vec3.atBottomCenterOf(spot).add(0, getEyeHeight(), 0);
+
+				if (clearTo(eye, Vec3.atCenterOf(chest), chest, chest) && (best == null || distanceToSqr(Vec3.atCenterOf(spot)) < distanceToSqr(Vec3.atCenterOf(best)))) {
+					best = spot;
+				}
+			}
+		}
+
+		return best;
+	}
+
+	/** The line from {@code from} to {@code to} runs through air until it meets the chest (or, without a chest, all the way). */
+	private boolean clearTo(Vec3 from, Vec3 to, BlockPos chest, BlockPos partner) {
+		var hit = level().clip(new net.minecraft.world.level.ClipContext(from, to, net.minecraft.world.level.ClipContext.Block.COLLIDER,
+				net.minecraft.world.level.ClipContext.Fluid.NONE, this));
+		return hit.getType() == net.minecraft.world.phys.HitResult.Type.MISS
+				|| chest != null && (hit.getBlockPos().equals(chest) || hit.getBlockPos().equals(partner));
 	}
 
 	@Override
