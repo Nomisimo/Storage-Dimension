@@ -26,6 +26,12 @@ jobs:
             git show "origin/builds:$f" > "out/$f"
           done
           ls -l out
+          # The builds branch must already hold the jars of this version (the build on main may still be running).
+          VERSION="${{ inputs.tag }}"; VERSION="${VERSION#v}"
+          if [ ! -f "out/storage-dimension-$VERSION.jar" ]; then
+            echo "::error::Auf dem builds-Branch liegt noch kein storage-dimension-$VERSION.jar. Erst den Build auf main abwarten, dann den Release neu starten."
+            exit 1
+          fi
       - name: create release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -34,6 +40,10 @@ jobs:
           TITLE="Storage Dimension $TAG (MC 26.1.2)"
           # Running it again for the same tag refreshes that release with the newest jars instead of failing.
           if gh release view "$TAG" > /dev/null 2>&1; then
+            # Drop jars of another version that an earlier run attached.
+            for old in $(gh release view "$TAG" --json assets --jq '.assets[].name'); do
+              [ -f "out/$old" ] || gh release delete-asset "$TAG" "$old" --yes
+            done
             gh release upload "$TAG" out/* --clobber
             gh release edit "$TAG" --title "$TITLE" --notes-file .github/release-notes.md
           else
