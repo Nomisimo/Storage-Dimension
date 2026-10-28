@@ -1,3 +1,5 @@
--p net.minecraft.world.entity.Display$ItemDisplay
--p net.minecraft.client.renderer.SkyRenderer
--public net.minecraft.world.level.block.ChestBlock
+-p net.minecraft.world.entity.Display
+-p net.minecraft.world.entity.Display$BillboardConstraints
+-public com.mojang.math.Transformation
+-p -c net.minecraft.client.renderer.SkyRenderer
+-p net.minecraft.client.renderer.LevelRenderer
