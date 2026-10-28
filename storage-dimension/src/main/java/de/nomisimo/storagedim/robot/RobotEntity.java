@@ -779,10 +779,14 @@ public class RobotEntity extends PathfinderMob {
 	}
 
 	/** For debugging and the client test: what the robot is doing right now. */
+	/** Where it last steered on the way to a chest it cannot see, for the test log. */
+	private String steerInfo = "";
+
 	public String describe() {
 		return String.format("speed=%.3f water=%s name=%s color=%06x error=%s range=%d filter=%s%s station=%s mood=%d noChest=%s full=%s ", getDeltaMovement().horizontalDistance(), isInWater(), getCustomName() == null ? "" : getCustomName().getString(), getColor(), hasError(), range, excludeFilter ? "except " : "", filter, station, getMood(), noChest, chestsFull) + String.format("pos=%.1f/%.1f/%.1f home=%s target=%s delivery=%s carried=%s action=%d sitting=%s pathDone=%s goals=%s",
 				getX(), getY(), getZ(), home, target == null ? null : target.position(), delivery, getCarried(), getAction(), isSitting(),
-				getNavigation().isDone(), goalSelector.getAvailableGoals().stream().filter(g -> g.isRunning()).map(g -> g.getGoal().getClass().getSimpleName()).toList());
+				getNavigation().isDone(), goalSelector.getAvailableGoals().stream().filter(g -> g.isRunning()).map(g -> g.getGoal().getClass().getSimpleName()).toList())
+				+ (steerInfo.isEmpty() ? "" : " steer=" + steerInfo);
 	}
 
 	// ---- behaviour ----
@@ -1352,6 +1356,8 @@ public class RobotEntity extends PathfinderMob {
 					}
 				}
 			}
+
+			steerInfo = goalKey == delivery && approach != goal ? String.format(java.util.Locale.ROOT, "%.1f/%.1f/%.1f", approach.x, approach.y, approach.z) : "";
 
 			// called back, it keeps trying (and teleports when stuck) instead of giving up; on the way to a chest, getting
 			// closer to the spot it aims for counts
