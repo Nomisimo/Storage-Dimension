@@ -605,8 +605,8 @@ public class ClientScreenshots implements FabricClientGameTest {
 	}
 
 	/**
-	 * A chest standing on slabs on a pool, like in Momo's test world: the robot fetches an egg from the bottom and
-	 * must climb onto the slabs to put it in, not hand it up through the slab from below.
+	 * A chest standing on slabs on a pool, like in Momo's test world: the robot starts below the slabs, fetches an egg
+	 * from the pool and must climb onto the slabs to put it in, not hand it up through the slab from below.
 	 */
 	private static void slabChestTest(ClientGameTestContext context, TestSingleplayerContext world) {
 		BlockPos pool = stationBase.offset(-60, 0, 0);
@@ -636,11 +636,12 @@ public class ClientScreenshots implements FabricClientGameTest {
 			String dim = Rooms.id(level);
 			StorageData.get().setStation(dim, station, StorageData.get().station(dim, station).withRange(16).withName("Platsch").withStationName("Steg"));
 			RobotEntity robot = Robots.ROBOT.create(level, EntitySpawnReason.SPAWN_ITEM_USE);
-			robot.snapTo(chest.getX() + 0.5, chest.getY(), chest.getZ() + 1.5, 0, 0);
+			// it starts swimming right below the chest, under the slabs
+			robot.snapTo(chest.getX() + 0.5, chest.getY() - 2.6, chest.getZ() + 0.5, 0, 0);
 			robot.setup(player.getUUID(), station);
 			robot.applyConfig(StorageData.get().station(dim, station));
 			level.addFreshEntity(robot);
-			ItemEntity egg = new ItemEntity(level, chest.getX() + 0.5, chest.getY() - 3.0, chest.getZ() + 0.5, new ItemStack(Items.EGG));
+			ItemEntity egg = new ItemEntity(level, pool.getX() + 0.5, pool.getY() - 1.5, pool.getZ() + 5.5, new ItemStack(Items.EGG));
 			egg.setDeltaMovement(Vec3.ZERO);
 			egg.setNoPickUpDelay();
 			level.addFreshEntity(egg);
