@@ -143,7 +143,7 @@ Die Roboter lagern nur in Speicher, der **direkt an der Station** steht, also an
 ### Wie die Roboter arbeiten
 
 - **Name:** Der Name über dem Kopf, in Jade und in der Stationsliste steht in der Farbe des Roboters (sehr dunkle Farben etwas aufgehellt, damit man sie lesen kann).
-- **Einlagern:** Zum Einlagern geht ein Roboter direkt an die Kiste. Der Deckel (bei Fässern die Klappe) geht kurz auf und wieder zu, standardmäßig ohne Geräusch (siehe `robotChestSound` unter [Einstellungen](#einstellungen)).
+- **Einlagern:** Zum Einlagern geht ein Roboter direkt an die Kiste. Der Deckel (bei Fässern die Klappe) geht kurz auf und wieder zu, standardmäßig ohne Geräusch (siehe `robotChestSound` unter [Einstellungen](#einstellungen)). Liegt ein Block auf der Kiste, bleibt der Deckel zu wie bei Spielern; eingelagert wird trotzdem.
 - **Schwarm:** Mehrere Roboter stimmen sich ab. Jeder holt ein anderes Item, es rennen nie alle zum selben.
 - **Wege:** Bevor ein Roboter losläuft, plant er den ganzen Weg. Gibt es keinen (eingemauert, hinter einer Roboter-Barriere, über Lava), lässt er das Item eine Minute in Ruhe und nimmt das nächste. Bleibt er unterwegs hängen, gibt er nach 5 Sekunden auf. Neu fallengelassene Items bemerkt er nach spätestens einer halben Sekunde.
 - **Klettern:** Er hüpft bis zu zwei Blöcke hoch, auch über Zäune und Mauern, und stellt sich zum Aufheben direkt auf das Item. Liegt ein Item in einer Zaunecke, wo er sich nicht draufstellen kann, greift er vom Zaun darüber oder vom Feld daneben zu. Kisten erreicht er bis etwa drei Blöcke über dem Boden. Aus Booten und Loren steigt er sofort wieder aus.
@@ -189,6 +189,10 @@ Das Add-on `storagedim-tb-0.6.0.jar` fügt ein echtes **ME-Upgrade** für den Up
 
 - **Rezept** (formlos): Leeres Upgrade (Traveler's Backpack), Enderauge, 2× Amethystscherbe, Redstoneblock. Mit dem Add-on ergibt auch das normale ME-Upgrade-Rezept (mit Papier) dieses Upgrade. Es passt in den Upgrade-Slot und macht mit einem Bündel auch einen ME-Rucksack.
 - **ME-Ansicht:** Upgrade in einen Upgrade-Slot legen. Linksklick auf das ME-Symbol zeigt den ME-Speicher direkt im Rucksack-Fenster an Stelle des Rucksack-Inhalts. Crafting und die anderen Upgrades bleiben daneben. Ein zweiter Linksklick zeigt wieder den Rucksack, Rechtsklick nimmt das Upgrade heraus.
+- Der Rucksack öffnet sich so, wie er zuletzt geschlossen wurde: in der ME-Ansicht oder als Rucksack. Auch die Sortierung der ME-Ansicht bleibt gespeichert, über Neustarts hinweg (Datei `storagedim-tb.json` im Weltordner).
+
+![Der Rucksack öffnet direkt wieder in der ME-Ansicht](docs/screenshots/rucksack-me-gemerkt.png)
+
 - Die ME-Ansicht ist aufgebaut wie der ME-Speicher: oben eine graue Leiste mit Suchfeld, **J**-Schalter und Sortierung, unten ◀ / ▶, **Einlagern** sowie Seite, Sorten und Gesamtmenge. Die Knöpfe des Rucksacks sind in der ME-Ansicht ausgeblendet. Klicks funktionieren wie im ME-Speicher.
 - Der Rucksack muss nicht in der Hand sein: auf dem Rücken tragen und mit der Rucksack-Taste (Standard **B**) öffnen reicht.
 - **Crafting aus dem ME-Speicher:** Hat der Rucksack zusätzlich das Crafting-Upgrade, holt der „+“-Knopf von JEI fehlende Zutaten auch aus dem ME-Speicher, genauso wie aus Inventar und Rucksack. „+“ ist nur grün, wenn alle Zutaten zusammen vorhanden sind, sonst markiert JEI die fehlenden rot. Shift + „+“ füllt das Raster für so viele Durchgänge wie möglich (bis zu einem Stapel). Was vorher im Raster lag, kommt zurück ins Inventar oder, wenn das voll ist, in den Speicher.
