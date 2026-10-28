@@ -443,7 +443,7 @@ public final class Islands {
 		AABB box = new AABB(centre.getX() - reach, centre.getY() - 4, centre.getZ() - reach, centre.getX() + reach + 1, centre.getY() + 4,
 				centre.getZ() + reach + 1);
 
-		for (Entity entity : level.getEntities((Entity) null, box, e -> e.getTags().contains(TAG))) {
+		for (Entity entity : level.getEntities((Entity) null, box, e -> e instanceof Display.ItemDisplay)) {
 			if (!keep.contains(entity.getUUID())) {
 				entity.discard();
 			}

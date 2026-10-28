@@ -56,7 +56,7 @@ public final class StorageData {
 	public final Map<String, Map<Long, RobotConfig>> stations = new HashMap<>();
 	/** Robots placed for each station per dimension: robot id to its name, in the order they were placed. */
 	public final Map<String, Map<Long, Map<UUID, String>>> stationRobots = new HashMap<>();
-	/** Where to send a player back to when they leave the storage room. */
+	/** Where to send a player back to when they leave the chest island. */
 	public final Map<UUID, SavedPos> returns = new HashMap<>();
 	/**
 	 * Players who were watching through a chest in an older version; they get their position and

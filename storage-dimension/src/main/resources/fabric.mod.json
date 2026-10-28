@@ -3,7 +3,7 @@
 	"id": "storagedim",
 	"version": "${version}",
 	"name": "Storage Dimension",
-	"description": "Dimensionskisten, die in einen eigenen Lagerraum ziehen, mit ME-artigem Speicher, Filterkisten, Sammelroboter und Hopper-Eingang.",
+	"description": "Dimensionskisten, die auf eine wachsende Insel aus Kisten führen, mit ME-artigem Speicher, Filterkisten, Sammelroboter und Hopper-Eingang.",
 	"authors": [
 		"Nomisimo"
 	],
