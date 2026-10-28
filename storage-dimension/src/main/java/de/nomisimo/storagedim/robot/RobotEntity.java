@@ -1125,6 +1125,8 @@ public class RobotEntity extends PathfinderMob {
 	private class WorkGoal extends Goal {
 		private int cooldown;
 		private Object lastGoal;
+		/** The spot it last aimed for on the way to a chest (an open side of it, or open water to come up). */
+		private Vec3 lastSteer;
 		private double bestDistance;
 		private Path lastPath;
 		private int lastNode;
@@ -1333,17 +1335,33 @@ public class RobotEntity extends PathfinderMob {
 				return;
 			}
 
-			// called back, it keeps trying (and teleports when stuck) instead of giving up
-			if (recallPhase != RECALL_RETURNING && gaveUp(goalKey, distance)) {
-				return;
-			}
-
-			// a chest it cannot see from here (e.g. from below, through the slabs it stands on): aim for an open side of it
+			// a chest it cannot see from here (e.g. from below, through the slabs it stands on): aim for an open side of it,
+			// and when it swims below a ceiling, first for open water where it can come up
 			Vec3 approach = goal;
 
 			if (goalKey == delivery && !seesChest(delivery)) {
 				BlockPos side = openSide(delivery);
 				approach = side == null ? goal : Vec3.atBottomCenterOf(side);
+
+				if (side != null && isInWater() && !clearTo(getEyePosition(), new Vec3(getX(), approach.y + 0.5, getZ()), null, null)) {
+					Vec3 exit = waterExit(approach);
+
+					if (exit != null) {
+						approach = exit;
+					}
+				}
+			}
+
+			// called back, it keeps trying (and teleports when stuck) instead of giving up; on the way to a chest, getting
+			// closer to the spot it aims for counts
+			if (goalKey == delivery && (lastSteer == null || lastSteer.distanceToSqr(approach) > 1)) {
+				// a new spot to aim for: the progress so far is measured afresh
+				lastSteer = approach;
+				lastGoal = null;
+			}
+
+			if (recallPhase != RECALL_RETURNING && gaveUp(goalKey, goalKey == delivery ? position().distanceTo(approach) : distance)) {
+				return;
 			}
 
 			// the path ends on the block next to the goal; walk the last bit straight
@@ -1615,6 +1633,34 @@ public class RobotEntity extends PathfinderMob {
 
 				if (clearTo(eye, Vec3.atCenterOf(chest), chest, chest) && (best == null || distanceToSqr(Vec3.atCenterOf(spot)) < distanceToSqr(Vec3.atCenterOf(best)))) {
 					best = spot;
+				}
+			}
+		}
+
+		return best;
+	}
+
+	/**
+	 * Swimming below a ceiling (slabs, a floor over the water): the nearest spot at its depth with open water up to the
+	 * height of {@code above}, closest to it, where it can come up.
+	 */
+	private Vec3 waterExit(Vec3 above) {
+		Vec3 best = null;
+		BlockPos here = blockPosition();
+
+		for (int dx = -6; dx <= 6; dx++) {
+			for (int dz = -6; dz <= 6; dz++) {
+				BlockPos column = here.offset(dx, 0, dz);
+				Vec3 bottom = new Vec3(column.getX() + 0.5, getY() + getBbHeight() * 0.5, column.getZ() + 0.5);
+
+				if (!level().getFluidState(column).is(net.minecraft.tags.FluidTags.WATER)
+						|| !clearTo(bottom, new Vec3(bottom.x, above.y + 0.5, bottom.z), null, null)
+						|| !clearTo(getEyePosition(), bottom, null, null)) {
+					continue;
+				}
+
+				if (best == null || bottom.distanceToSqr(above) < best.distanceToSqr(above)) {
+					best = bottom;
 				}
 			}
 		}
