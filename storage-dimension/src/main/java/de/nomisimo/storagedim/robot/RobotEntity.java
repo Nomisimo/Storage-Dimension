@@ -1617,7 +1617,8 @@ public class RobotEntity extends PathfinderMob {
 
 		// a chest higher up in a wall: it reaches straight up through free air, then across to the chest
 		Vec3 up = new Vec3(getX(), target.y, getZ());
-		return target.y > getEyeY() && clearTo(getEyePosition(), up, null, null) && clearTo(up, target, chest, partner);
+		return target.y > getEyeY() && level().noCollision(this, getBoundingBox().expandTowards(0, target.y - getY(), 0))
+				&& clearTo(up, target, chest, partner);
 	}
 
 	/**
