@@ -256,6 +256,17 @@ public class BackpackJeiTest implements FabricClientGameTest {
 		context.runOnClient(client -> client.player.closeContainer());
 		context.waitTicks(5);
 
+		// the backpack opens the way it was left: first as backpack, after switching to ME again in the ME view
+		reopenBackpack(context, world, "left as backpack");
+		context.runOnClient(client -> toggleView());
+		context.waitTicks(10);
+		context.runOnClient(client -> client.player.closeContainer());
+		context.waitTicks(5);
+		reopenBackpack(context, world, "left as ME");
+		context.takeScreenshot("backpack-reopen-me");
+		context.runOnClient(client -> client.player.closeContainer());
+		context.waitTicks(5);
+
 		// search sync: text in JEI's search bar also searches the ME terminal
 		context.runOnClient(client -> StorageConfig.get().jeiSearchSync = true);
 		world.getServer().runOnServer(server -> {
@@ -273,6 +284,16 @@ public class BackpackJeiTest implements FabricClientGameTest {
 			client.player.closeContainer();
 		});
 		context.waitTicks(5);
+	}
+
+	private static void reopenBackpack(ClientGameTestContext context, TestSingleplayerContext world, String label) {
+		world.getServer().runOnServer(server -> {
+			ServerPlayer player = server.getPlayerList().getPlayers().get(0);
+			BackpackContainer.openBackpack(player, player.getInventory().getItem(0), Reference.ITEM_SCREEN_ID, 0);
+		});
+		context.waitFor(client -> client.screen instanceof BackpackScreen, 200);
+		context.waitTicks(25);
+		context.runOnClient(client -> log("reopen " + label + ": title=" + client.screen.getTitle().getString()));
 	}
 
 	/** Opens or closes the crafting upgrade's tab, as clicking its icon does. */

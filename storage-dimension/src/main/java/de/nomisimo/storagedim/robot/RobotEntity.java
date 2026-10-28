@@ -826,6 +826,16 @@ public class RobotEntity extends PathfinderMob {
 	 * Opens or closes the lid of the chest, barrel, shulker or ender chest it hands in to, with the sound a player
 	 * makes. Blocks of other mods without a lid stay as they are.
 	 */
+	/** A chest with a solid block (or a cat) on top cannot open, nor can a shulker box with something in front of its lid. */
+	private boolean lidBlocked(BlockPos pos, BlockState state, boolean shulker) {
+		if (shulker) {
+			BlockPos front = pos.relative(state.getValue(net.minecraft.world.level.block.ShulkerBoxBlock.FACING));
+			return !level().getBlockState(front).getCollisionShape(level(), front).isEmpty();
+		}
+
+		return net.minecraft.world.level.block.ChestBlock.isChestBlockedAt(level(), pos);
+	}
+
 	private void setLid(BlockPos pos, boolean open) {
 		if (open && openLid != null) {
 			setLid(openLid, false);
@@ -853,6 +863,12 @@ public class RobotEntity extends PathfinderMob {
 		boolean shulker = entity instanceof net.minecraft.world.level.block.entity.ShulkerBoxBlockEntity;
 
 		if (!(entity instanceof net.minecraft.world.level.block.entity.LidBlockEntity) && !shulker) {
+			return;
+		}
+
+		// like for players, a lid with a block on it stays shut; the robot still puts its items in
+		if (open && lidBlocked(pos, state, shulker)) {
+			openLid = null;
 			return;
 		}
 

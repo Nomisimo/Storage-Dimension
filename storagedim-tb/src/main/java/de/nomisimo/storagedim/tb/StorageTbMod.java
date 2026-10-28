@@ -28,6 +28,7 @@ public class StorageTbMod implements ModInitializer {
 				new MeUpgradeItem(new Item.Properties().stacksTo(1).setId(ResourceKey.create(Registries.ITEM, id))));
 
 		MeNetworking.register();
+		TbSettings.register();
 		PayloadTypeRegistry.serverboundPlay().register(FillGridPayload.TYPE, FillGridPayload.CODEC);
 		ServerPlayNetworking.registerGlobalReceiver(FillGridPayload.TYPE, (payload, context) -> GridFiller.fill(context.player(), payload));
 	}

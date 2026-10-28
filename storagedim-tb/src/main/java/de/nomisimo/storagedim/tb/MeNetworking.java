@@ -27,6 +27,8 @@ final class MeNetworking {
 	private static final int SYNC_TICKS = 10;
 	/** Per player: container id and hash of the stock list last sent, to send only changes. */
 	private static final Map<UUID, long[]> SENT = new HashMap<>();
+	/** Per player: the backpack window that was already switched to the view they left it in last time. */
+	private static final Map<UUID, Integer> OPENED = new HashMap<>();
 
 	private MeNetworking() {
 	}
@@ -151,7 +153,10 @@ final class MeNetworking {
 
 	private static void toggle(ServerPlayer player) {
 		if (player.containerMenu instanceof BackpackBaseMenu menu && hasMe(menu)) {
-			setView(player, menu, !MeView.isOpen(menu));
+			boolean on = !MeView.isOpen(menu);
+			setView(player, menu, on);
+			// the next backpack window opens the same way
+			TbSettings.set(TbSettings.ME_VIEW, player.getUUID(), on && MeView.isOpen(menu));
 		}
 	}
 
@@ -184,7 +189,15 @@ final class MeNetworking {
 				}
 
 				SENT.remove(player.getUUID());
+				OPENED.remove(player.getUUID());
 				continue;
+			}
+
+			// a newly opened backpack window starts in the ME view if the player left it there last time
+			Integer opened = OPENED.put(player.getUUID(), menu.containerId);
+
+			if ((opened == null || opened != menu.containerId) && TbSettings.ME_VIEW.contains(player.getUUID()) && !MeView.isOpen(menu)) {
+				setView(player, menu, true);
 			}
 
 			MeView view = MeView.of(menu);
@@ -197,6 +210,7 @@ final class MeNetworking {
 		}
 
 		SENT.keySet().removeIf(id -> server.getPlayerList().getPlayer(id) == null);
+		OPENED.keySet().removeIf(id -> server.getPlayerList().getPlayer(id) == null);
 	}
 
 	private static void sendStock(ServerPlayer player, BackpackBaseMenu menu) {

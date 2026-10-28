@@ -7,10 +7,8 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
-import java.util.Set;
 import java.util.UUID;
 import java.util.WeakHashMap;
-import java.util.concurrent.ConcurrentHashMap;
 
 import com.tiviacz.travelersbackpack.inventory.menu.BackpackBaseMenu;
 
@@ -35,8 +33,6 @@ import net.minecraft.world.item.ItemStack;
 final class MeView {
 	static final int MAX_SEARCH = 50;
 	private static final Map<AbstractContainerMenu, MeView> VIEWS = Collections.synchronizedMap(new WeakHashMap<>());
-	/** Players who sort the ME view by name instead of amount, until the server restarts. */
-	private static final Set<UUID> BY_NAME = ConcurrentHashMap.newKeySet();
 
 	private final BackpackBaseMenu menu;
 	private final boolean client;
@@ -188,7 +184,7 @@ final class MeView {
 			}
 		}
 
-		if (BY_NAME.contains(player.getUUID())) {
+		if (TbSettings.BY_NAME.contains(player.getUUID())) {
 			List<Integer> order = new ArrayList<>();
 
 			for (int i = 0; i < prototypes.size(); i++) {
@@ -234,7 +230,7 @@ final class MeView {
 
 		if (ServerPlayNetworking.canSend(player, MeNetworking.PagePayload.TYPE)) {
 			ServerPlayNetworking.send(player, new MeNetworking.PagePayload(menu.containerId, page, pages, prototypes.size(), total,
-					BY_NAME.contains(player.getUUID())));
+					TbSettings.BY_NAME.contains(player.getUUID())));
 		}
 	}
 
@@ -261,9 +257,8 @@ final class MeView {
 				}
 			}
 			case MeNetworking.BUTTON_SORT -> {
-				if (!BY_NAME.remove(player.getUUID())) {
-					BY_NAME.add(player.getUUID());
-				}
+				UUID id = player.getUUID();
+				TbSettings.set(TbSettings.BY_NAME, id, !TbSettings.BY_NAME.contains(id));
 			}
 			default -> {
 				return;
