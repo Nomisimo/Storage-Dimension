@@ -1343,7 +1343,8 @@ public class RobotEntity extends PathfinderMob {
 				BlockPos side = openSide(delivery);
 				approach = side == null ? goal : Vec3.atBottomCenterOf(side);
 
-				if (side != null && isInWater() && !clearTo(getEyePosition(), new Vec3(getX(), approach.y + 0.5, getZ()), null, null)) {
+				// its whole body has to fit up through the gap, or it bobs at the edge of the ceiling
+				if (side != null && isInWater() && !level().noCollision(this, getBoundingBox().expandTowards(0, Math.max(0, approach.y + 0.5 - getY()), 0))) {
 					Vec3 exit = waterExit(approach);
 
 					if (exit != null) {
