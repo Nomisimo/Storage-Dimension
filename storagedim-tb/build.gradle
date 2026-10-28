@@ -3,7 +3,7 @@ plugins {
 	id 'maven-publish'
 }
 
-// The add-on always carries the version of Storage Dimension itself, so both jars match (e.g. 0.5.1).
+// The add-on always carries the version of Storage Dimension itself, so both jars match (e.g. 0.6.0).
 def mainProperties = new Properties()
 file('../storage-dimension/gradle.properties').withInputStream { mainProperties.load(it) }
 version = mainProperties.getProperty('version')

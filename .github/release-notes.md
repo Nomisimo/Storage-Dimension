@@ -1,5 +1,7 @@
 Storage Dimension für **Minecraft 26.1.2** (Fabric).
 
+**Neu in 0.6.0:** Die Storage Dimension ist jetzt eine Kisten-Insel in der Form der End-Insel statt eines Lagerraums. Der Boden ist aus Fässern, darauf steht für jede gespeicherte Item-Sorte eine eigene Kiste, sortiert nach Mod und Name, mit dem Item schwebend darüber. Jede Kiste hält beliebig viele Items ihrer Sorte und nimmt nichts anderes an; was man herausnimmt, ist auch aus dem ME-Speicher weg. Werkzeuge teilen sich eine Kiste pro Item, verzauberte Bücher und Tränke bekommen je Variante eine eigene. Neue Sorten bekommen sofort eine Kiste am Rand, leere Kisten verschwinden, sobald niemand auf der Insel ist. Darüber liegt der End-Himmel mit kleinen weißen und grauen Kisten als Sternen und einer großen Kiste als Mond. Auf der Insel lässt sich nichts abbauen oder hinstellen, wer herunterfällt, landet wieder in der Mitte; raus geht es über den Leuchtstein oder `/storage raus`. Mit `sharedStorage = false` hat jeder Speicher seine eigene Insel. Der alte Raum wird beim ersten Betreten abgebaut, was noch in Ofen oder Kisten lag, landet im Speicher.
+
 **Neu in 0.5.1:** Roboter lagern nur noch in Speicher direkt an ihrer Station (Kisten, Fässer, Shulker- und Enderkisten, Dimensions-, Filter- und ME-Blöcke, Speicher anderer Mods; nie in Trichter oder Maschinen). Sind alle voll, warten sie traurig („Kisten voll“) und räumen weiter ein, sobald wieder Platz ist. Zum Einlagern gehen sie direkt an die Kiste und öffnen kurz den Deckel (Geräusch per `robotChestSound` zuschaltbar). Jeder Roboter behält seine eigenen Einstellungen (Name, Farbe, Filter, Reichweite), sodass an einer Station Roboter mit verschiedenen Aufgaben arbeiten können; der Fehler-Tag erscheint nur noch, wenn ein Roboter wirklich nichts tut. Namen stehen in der Farbe des Roboters (Namensschild, Jade, Stationsliste). Beim Rückruf und Teleport landet jeder auf einem eigenen freien Platz. Im Wasser schwimmen sie so schnell wie an Land, mit mehr Blasen, Spritzern und Bugwelle, tauchen bis zum Grund tiefer Becken und holen treibende Items wie Seetang; gewartet wird nur auf trockenem Boden. Sie stehen richtig auf Zäunen und Mauern und holen auch Items aus Zaunecken. Kleineres Minimap-Icon mit größeren Augen. Traveler's-Backpack-Add-on 0.5.1: Suche und Sortierung immer in der Titelzeile; Suchfeld lässt sich leeren, Tooltips liegen nicht mehr hinter den Leisten, B beim Tippen schließt den Rucksack nicht mehr, die Rucksack-Knöpfe sind in der ME-Ansicht nicht mehr klickbar.
 
 **Neu in 0.5.0:** Roboter-Station mit eigenem Fenster (echte Knöpfe und Textfelder): Stationsname, Filter (nur diese / alles außer diesen), Reichweite, Farbe und Robotername (doppelte Namen werden durchnummeriert, kostet keine Level), dazu eine Liste aller Roboter der Station (bis 32) mit Zustand und Entfernung. Roboter lassen sich nur noch an einer Station eingestellt hinstellen und folgen deren Einstellungen sofort. Zurückrufen-Knopf: Alle laufen sofort los („auf dem Weg“), sammeln sich im 3×3-Feld um die Station (ab 21 Robotern 5×5) und warten eine Minute; dabei schauen sie den Spieler an, der gerufen hat. Teleportiert wird nur, wer keinen Weg findet; wer 3 Minuten nicht zur Station durchkommt, teleportiert sich ebenfalls hin. Kann ein Roboter nicht arbeiten, stehen rote 🚫 links und rechts von seinem Namen, der Grund steht als „Fehler: …“ in Jade und in der Stationsliste. Roboter hüpfen bis zu zwei Blöcke hoch, auch über Zäune und Mauern, steigen aus Booten aus, tauchen mit Glashelm, schwimmen schnell mit Spritzspur, spannen bei Regen einen Schirm in ihrer Farbe auf und wackeln beim Warten jeder im eigenen Takt. Mit Jade zeigt der Blick auf Roboter und Station Einstellungen und Zustand, mit Xaero's Minimap erscheinen die Roboter mit Gesicht auf der Karte. Filterkisten mit verzauberten Items als Filter nehmen nur Items mit genau diesen Verzauberungen. ME-Terminal: echte Knöpfe zum Blättern und Einlagern. Traveler's-Backpack-Add-on 0.5.0: Die ME-Ansicht im Rucksack ist aufgebaut wie die ME-Kiste (Suchleiste mit J-Schalter und Sortierung oben, Blättern, Einlagern und Mengenanzeige unten), die Rucksack-Knöpfe sind dort ausgeblendet. Getestet mit JEI 29.47.0.111, Jade 26.1.11 und Xaero's Minimap 26.6.2.
@@ -12,18 +14,18 @@ Storage Dimension für **Minecraft 26.1.2** (Fabric).
 
 **Neu in 0.4.1:** Im ME-Speicher (auch über das Rucksack-Upgrade) und im Filter-Fenster lassen sich Items im eigenen Inventar wieder ziehen und verteilen sowie per Doppelklick sammeln; vorher sprangen sie zurück in die Hand.
 
-**Neu in 0.4.0:** Sammelroboter, eigene Texturen für Dimensionskiste, Filterkiste, ME-Terminal und die ME-Items, Rezepte in JEI, Anbindung an Maschinen (z. B. Tech Reborn), doppelte Filterkisten mit 14 Filtern. Ab dieser Version brauchen **alle Spieler** `storage-dimension-0.5.1.jar`.
+**Neu in 0.4.0:** Sammelroboter, eigene Texturen für Dimensionskiste, Filterkiste, ME-Terminal und die ME-Items, Rezepte in JEI, Anbindung an Maschinen (z. B. Tech Reborn), doppelte Filterkisten mit 14 Filtern. Ab dieser Version brauchen **alle Spieler** `storage-dimension-0.6.0.jar`.
 
 ## Server, in den Ordner `mods`
 
-- `storage-dimension-0.5.1.jar`
-- `storagedim-tb-0.5.1.jar`
+- `storage-dimension-0.6.0.jar`
+- `storagedim-tb-0.6.0.jar`
 - dazu [Fabric API](https://modrinth.com/mod/fabric-api), [Traveler's Backpack](https://modrinth.com/mod/travelersbackpack) und [Forge Config API Port](https://modrinth.com/mod/forge-config-api-port), alle für 26.1.2
 
 ## Jeder Spieler, in den Ordner `mods`
 
-- `storage-dimension-0.5.1.jar`
-- `storagedim-tb-0.5.1.jar`
+- `storage-dimension-0.6.0.jar`
+- `storagedim-tb-0.6.0.jar`
 - dazu [Fabric API](https://modrinth.com/mod/fabric-api), [Traveler's Backpack](https://modrinth.com/mod/travelersbackpack), [Forge Config API Port](https://modrinth.com/mod/forge-config-api-port) und [JEI](https://modrinth.com/mod/jei), alle für 26.1.2
 
 ## Nur Storage Dimension, ohne Traveler's Backpack
