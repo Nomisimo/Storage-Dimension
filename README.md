@@ -53,6 +53,10 @@ Ein Fabric-Mod für **Minecraft 26.1.2**: eine Insel aus Kisten in einer eigenen
 - Raus geht es per Rechtsklick auf den Leuchtstein in der Mitte oder mit `/storage raus`.
 - Standardmäßig teilen sich alle Spieler einen Speicher und eine Insel. Mit `sharedStorage = false` bekommt jeder Speicher seine eigene Insel (siehe [Einstellungen](#einstellungen)).
 
+| Ankunft in der Mitte | Von der Seite | Himmel |
+|---|---|---|
+| ![Ankunft auf der Insel](docs/screenshots/kisten-insel-ankunft.png) | ![Die Insel von der Seite](docs/screenshots/kisten-insel-seite.png) | ![Kisten-Sterne und Kisten-Mond](docs/screenshots/kisten-insel-himmel.png) |
+
 ![Die Bruchstein-Kiste auf der Insel](docs/screenshots/kisten-insel-kiste.png)
 
 ### ME-Speicher
