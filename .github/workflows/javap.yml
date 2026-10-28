@@ -30,10 +30,13 @@ jobs:
             echo "=================== $cls"
             javap $flags -cp "$CP" "$cls" 2>&1 | head -4000
           done < ../jp/tools/javap-classes.txt
-      - name: Xaero config keys
+      - name: Data files
         run: |
-          JAR=$(find ~/.gradle -path "*xaeros-minimap*" -name "*.jar" | grep -v sources | head -1)
-          echo "jar=$JAR"
-          mkdir -p /tmp/xa && cd /tmp/xa && unzip -q -o "$JAR"
-          find . -name "*.cfg" -o -name "*.txt" -o -name "*.json" | grep -iv lang | head -40
-          for f in $(grep -rl -a -i "radar" --include=*.class . | head -60); do strings -n 6 "$f" | grep -i -E "icon|radar|dot|display" | sed "s|^|$f: |" | head -15; done | grep -i -E "icon|dot" | sort -u | head -150
+          MC=$(find ~/.gradle -name "minecraft-*merged*.jar" -o -name "minecraft-common*.jar" -o -name "minecraft-client*.jar" | grep -v sources | head -5)
+          echo "$MC"
+          for j in $MC; do unzip -l "$j" | grep -E "dimension_type/|data/minecraft/dimension/" | head; done
+          J=$(for j in $MC; do unzip -l "$j" | grep -q "dimension_type/the_end.json" && echo $j; done | head -1)
+          echo "== jar $J"
+          unzip -p "$J" data/minecraft/dimension_type/the_end.json; echo; unzip -p "$J" data/minecraft/dimension_type/overworld.json; echo
+          find ~/.gradle -name "fabric-rendering-v1*.jar" | head -2
+          FR=$(find ~/.gradle -name "fabric-rendering-v1*.jar" | grep -v sources | head -1); unzip -l "$FR" | grep -i -E "sky|dimension" | head -20

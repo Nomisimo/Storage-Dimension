@@ -1,0 +1,3 @@
+-p net.minecraft.world.entity.Display$ItemDisplay
+-p net.minecraft.client.renderer.SkyRenderer
+-public net.minecraft.world.level.block.ChestBlock
