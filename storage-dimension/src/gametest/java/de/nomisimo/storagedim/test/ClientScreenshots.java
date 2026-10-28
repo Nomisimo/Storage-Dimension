@@ -654,7 +654,9 @@ public class ClientScreenshots implements FabricClientGameTest {
 				var box = (net.minecraft.world.level.block.entity.ChestBlockEntity) level.getBlockEntity(chest);
 				RobotEntity platsch = level.getEntities(Robots.ROBOT, r -> r.getCustomName() != null && "Platsch".equals(r.getCustomName().getString()))
 						.stream().findFirst().orElse(null);
-				System.out.println("STORAGEDIM SLAB t=" + tick + " chest=" + box.getItem(0) + " robotDy=" + (platsch == null ? "-" : String.format(java.util.Locale.ROOT, "%.2f", platsch.getY() - chest.getY())));
+				System.out.println("STORAGEDIM SLAB t=" + tick + " chest=" + box.getItem(0) + " eggs=" + level.getEntitiesOfClass(ItemEntity.class,
+						new net.minecraft.world.phys.AABB(chest).inflate(4, 5, 4)).stream().map(e -> e.position().subtract(Vec3.atLowerCornerOf(chest)).toString()).toList()
+						+ " robot=" + (platsch == null ? "-" : platsch.describe()));
 			});
 
 			if (t == 6) {
