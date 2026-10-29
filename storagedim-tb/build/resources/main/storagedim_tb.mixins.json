@@ -1,0 +1,17 @@
+{
+	"required": false,
+	"minVersion": "0.8",
+	"package": "de.nomisimo.storagedim.tb.mixin",
+	"compatibilityLevel": "JAVA_25",
+	"injectors": {
+		"defaultRequire": 0
+	},
+	"mixins": [
+		"BackpackMenuMixin"
+	],
+	"client": [
+		"BackpackScreenMixin",
+		"JeiTransferMixin",
+		"ScreenTitleAccessor"
+	]
+}

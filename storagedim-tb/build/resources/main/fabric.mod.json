@@ -1,0 +1,37 @@
+{
+	"schemaVersion": 1,
+	"id": "storagedim_tb",
+	"version": "0.6.0",
+	"name": "Storage Dimension: Traveler's Backpack",
+	"description": "ME-Upgrade für Traveler's Backpack: zeigt den Speicher der Storage Dimension im Rucksack-Fenster und liefert Zutaten für JEI-„+“ im Rucksack-Crafting.",
+	"authors": [
+		"Nomisimo"
+	],
+	"license": "CC0-1.0",
+	"environment": "*",
+	"entrypoints": {
+		"main": [
+			"de.nomisimo.storagedim.tb.StorageTbMod"
+		],
+		"client": [
+			"de.nomisimo.storagedim.tb.StorageTbClient"
+		],
+		"jei_mod_plugin": [
+			"de.nomisimo.storagedim.tb.TbJeiPlugin"
+		]
+	},
+	"depends": {
+		"fabricloader": ">=0.19.5",
+		"minecraft": "~26.1.2",
+		"java": ">=25",
+		"fabric-api": "*",
+		"storagedim": "*",
+		"travelersbackpack": ">=11.2.10"
+	},
+	"mixins": [
+		"storagedim_tb.mixins.json"
+	],
+	"suggests": {
+		"jei": "*"
+	}
+}

@@ -1,0 +1,31 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "category": "misc",
+  "ingredients": [
+    "travelersbackpack:blank_upgrade",
+    "minecraft:ender_eye",
+    "minecraft:amethyst_shard",
+    "minecraft:amethyst_shard",
+    "minecraft:redstone_block"
+  ],
+  "result": {
+    "id": "storagedim_tb:me_upgrade",
+    "components": {
+      "minecraft:custom_data": {
+        "storagedim_upgrade": true
+      },
+      "minecraft:lore": [
+        {
+          "text": "In einen Upgrade-Slot vom Traveler's Backpack legen",
+          "color": "gray",
+          "italic": false
+        },
+        {
+          "text": "oder mit einem Bündel kombinieren: ME-Rucksack",
+          "color": "gray",
+          "italic": false
+        }
+      ]
+    }
+  }
+}

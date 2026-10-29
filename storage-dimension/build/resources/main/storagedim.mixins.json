@@ -1,0 +1,17 @@
+{
+	"required": true,
+	"package": "de.nomisimo.storagedim.mixin",
+	"compatibilityLevel": "JAVA_25",
+	"mixins": [
+		"BlockItemMixin",
+		"DisplayAccessor",
+		"ItemDisplayAccessor"
+	],
+	"client": [
+		"ChestRendererMixin",
+		"ContainerScreenMixin"
+	],
+	"injectors": {
+		"defaultRequire": 1
+	}
+}

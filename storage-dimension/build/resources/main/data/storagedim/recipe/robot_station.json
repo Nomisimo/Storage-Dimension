@@ -1,0 +1,19 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "pattern": [
+    " L ",
+    "IRI",
+    "ICI"
+  ],
+  "key": {
+    "L": "minecraft:lightning_rod",
+    "I": "minecraft:iron_ingot",
+    "R": "minecraft:redstone_block",
+    "C": "minecraft:chest"
+  },
+  "result": {
+    "id": "storagedim:robot_station",
+    "count": 1
+  }
+}
