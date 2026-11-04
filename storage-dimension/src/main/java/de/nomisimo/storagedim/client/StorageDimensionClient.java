@@ -134,15 +134,18 @@ public class StorageDimensionClient implements ClientModInitializer {
 		Screens.getWidgets(screen).add(nextButton);
 		Screens.getWidgets(screen).add(depositButton);
 
+		// a project chest has a settings button right after the search field, which gets shorter for it
+		int searchWidth = (JEI ? 94 : 108) - (project ? 14 : 0);
+
 		if (project) {
 			settingsButton = Button.builder(Component.literal("✎"), button -> ClientPlayNetworking.send(new TerminalNetworking.ButtonPayload(TerminalNetworking.BUTTON_SETTINGS)))
-					.bounds(left + 135, top + 108, 16, 16).tooltip(Tooltip.create(Component.literal("Projekt einstellen"))).build();
+					.bounds(left + 7 + searchWidth + 2, top + 4, 12, 12).tooltip(Tooltip.create(Component.literal("Projekt einstellen"))).build();
 			Screens.getWidgets(screen).add(settingsButton);
 		}
 		updatePageButtons();
 
 		// with JEI there is a small switch between search field and sort button
-		SearchBox search = new SearchBox(Minecraft.getInstance(), left + 7, top + 4, JEI ? 94 : 108, 12);
+		SearchBox search = new SearchBox(Minecraft.getInstance(), left + 7, top + 4, searchWidth, 12);
 		search.setMaxLength(50);
 		search.setHint(Component.literal("Suchen …"));
 		search.setResponder(text -> {

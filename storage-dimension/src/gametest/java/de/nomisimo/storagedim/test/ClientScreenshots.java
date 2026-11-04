@@ -816,6 +816,7 @@ public class ClientScreenshots implements FabricClientGameTest {
 	 */
 	private static void projectTest(ClientGameTestContext context, TestSingleplayerContext world) {
 		BlockPos[] chestPos = new BlockPos[1];
+		context.getInput().setCursorPos(0, 0);
 		world.getServer().runOnServer(server -> {
 			ServerPlayer player = server.getPlayerList().getPlayers().get(0);
 			ServerLevel level = player.level();

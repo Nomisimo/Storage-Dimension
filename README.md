@@ -95,7 +95,7 @@ Eine Kiste für ein Bauprojekt: Du legst fest, welche Items in welcher Menge geb
   - **Item suchen** durchsucht alle Items des Spiels. Klick nimmt 1 ins Projekt, Shift-Klick 64.
   - Klick auf ein Item wählt es aus. Die Menge ändern **− 64**, **− 1**, **+ 1** und **+ 64**, oder die Zahl direkt eingeben.
   - **Name** vergeben und der Haken **Im ME blocken**.
-- **Benutzen:** Normaler Rechtsklick zeigt die Projekt-Items, die im ME-Speicher sind, mit der benötigten und der fehlenden Menge. Baumaterial kann direkt in die Kiste gelegt werden. Der Knopf ✎ unten (ohne Client-Mod das Buch) wechselt zu den Einstellungen.
+- **Benutzen:** Normaler Rechtsklick zeigt die Projekt-Items, die im ME-Speicher sind, mit der benötigten und der fehlenden Menge. Baumaterial kann direkt in die Kiste gelegt werden. Der Knopf ✎ neben dem Suchfeld (ohne Client-Mod das Buch unten) wechselt zu den Einstellungen.
 - **Im ME blocken:** Die Mengen des Projekts bleiben für das Projekt im Speicher. Im ME-Terminal, im Rucksack, für Trichter und JEI lässt sich nur herausnehmen, was über das Projekt hinausgeht. Der Tooltip sagt, für welche Projekte wie viel geblockt ist.
 - **Auf der Kisten-Insel** stehen die Projektkisten an einem eigenen Platz: als Fallenkisten mit dem Projektnamen im Ring direkt um den Ankunftsplatz. Geblockte Items liegen dort nur in der Projektkiste, nicht in den normalen Item-Kisten.
 - **Abbauen:** Die Kiste behält ihr Projekt und lässt sich woanders wieder hinstellen.
