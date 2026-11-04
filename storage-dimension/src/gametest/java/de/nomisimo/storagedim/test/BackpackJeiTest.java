@@ -214,6 +214,45 @@ public class BackpackJeiTest implements FabricClientGameTest {
 		});
 		context.waitTicks(5);
 
+		// Momo: search, take an item out with the mouse, click back into the field: typing must work again
+		context.getInput().typeChars("redst");
+		context.waitTicks(10);
+		double[] slotAt = context.computeOnClient(client -> screenPos(client, ((BackpackBaseMenu) client.player.containerMenu).BACKPACK_INV_START));
+		context.getInput().setCursorPos(slotAt[0], slotAt[1]);
+		context.getInput().pressMouse(GLFW.GLFW_MOUSE_BUTTON_LEFT);
+		context.waitTicks(5);
+		double[] invAt = context.computeOnClient(client -> screenPos(client, client.player.containerMenu.slots.size() - 20));
+		context.getInput().setCursorPos(invAt[0], invAt[1]);
+		context.getInput().pressMouse(GLFW.GLFW_MOUSE_BUTTON_LEFT);
+		context.waitTicks(10);
+		context.runOnClient(client -> log("after taking an item: focused=" + client.screen.getFocused() + " carried=" + client.player.containerMenu.getCarried()));
+		double[] boxAt = context.computeOnClient(client -> {
+			net.minecraft.client.gui.components.EditBox box = client.screen.children().stream()
+					.filter(child -> child instanceof net.minecraft.client.gui.components.EditBox)
+					.map(child -> (net.minecraft.client.gui.components.EditBox) child).findFirst().orElseThrow();
+			double scale = client.getWindow().getGuiScale();
+			return new double[] {(box.getX() + box.getWidth() - 4) * scale, (box.getY() + box.getHeight() / 2.0) * scale};
+		});
+		context.getInput().setCursorPos(boxAt[0], boxAt[1]);
+		context.getInput().pressMouse(GLFW.GLFW_MOUSE_BUTTON_LEFT);
+		context.waitTicks(3);
+		context.getInput().typeChars("one");
+		context.waitTicks(10);
+		context.runOnClient(client -> {
+			net.minecraft.client.gui.components.EditBox box = client.screen.children().stream()
+					.filter(child -> child instanceof net.minecraft.client.gui.components.EditBox)
+					.map(child -> (net.minecraft.client.gui.components.EditBox) child).findFirst().orElse(null);
+			log("typing after taking an item: '" + (box == null ? "no field" : box.getValue()) + "' focused=" + (box != null && box.isFocused())
+					+ " screenFocus=" + client.screen.getFocused());
+		});
+		context.takeScreenshot("backpack-search-after-take");
+
+		for (int i = 0; i < 12; i++) {
+			context.getInput().pressKey(GLFW.GLFW_KEY_BACKSPACE);
+		}
+
+		context.waitTicks(5);
+
 		// a tooltip over the bottom row is drawn above the bar below it
 		context.runOnClient(client -> {
 			BackpackBaseMenu menu = (BackpackBaseMenu) client.player.containerMenu;
@@ -294,6 +333,21 @@ public class BackpackJeiTest implements FabricClientGameTest {
 		context.waitFor(client -> client.screen instanceof BackpackScreen, 200);
 		context.waitTicks(25);
 		context.runOnClient(client -> log("reopen " + label + ": title=" + client.screen.getTitle().getString()));
+	}
+
+	/** Where a slot of the open screen is, in window pixels for the test input. Client thread only. */
+	private static double[] screenPos(net.minecraft.client.Minecraft client, int slot) {
+		try {
+			Field left = net.minecraft.client.gui.screens.inventory.AbstractContainerScreen.class.getDeclaredField("leftPos");
+			Field top = net.minecraft.client.gui.screens.inventory.AbstractContainerScreen.class.getDeclaredField("topPos");
+			left.setAccessible(true);
+			top.setAccessible(true);
+			var s = client.player.containerMenu.getSlot(slot);
+			double scale = client.getWindow().getGuiScale();
+			return new double[] {(left.getInt(client.screen) + s.x + 8) * scale, (top.getInt(client.screen) + s.y + 8) * scale};
+		} catch (ReflectiveOperationException e) {
+			throw new RuntimeException(e);
+		}
 	}
 
 	/** Opens or closes the crafting upgrade's tab, as clicking its icon does. */
