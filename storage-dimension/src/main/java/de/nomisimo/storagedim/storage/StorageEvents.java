@@ -410,7 +410,7 @@ public final class StorageEvents {
 						Component.literal("Noch keine Items im Projekt: Item auf einen Platz legen oder suchen").withStyle(ChatFormatting.YELLOW)));
 			}
 
-			ProjectMenu.open(player, project);
+			Projects.openSettings(player, project);
 			return InteractionResult.SUCCESS;
 		}
 

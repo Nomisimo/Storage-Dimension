@@ -63,6 +63,9 @@ public class StorageDimensionClient implements ClientModInitializer {
 		EntityRendererRegistry.register(Robots.ROBOT, RobotRenderer::new);
 		ClientChestMarks.register();
 		MenuScreens.register(StationMenu.TYPE, StationScreen::new);
+		MenuScreens.register(de.nomisimo.storagedim.storage.ProjectSettingsMenu.TYPE, ProjectScreen::new);
+		ClientPlayNetworking.registerGlobalReceiver(de.nomisimo.storagedim.storage.ProjectNetworking.SyncPayload.TYPE,
+				(payload, context) -> ProjectScreen.receive(payload));
 		ClientPlayNetworking.registerGlobalReceiver(StationNetworking.SyncPayload.TYPE, (payload, context) -> StationScreen.receive(payload));
 		ClientPlayNetworking.registerGlobalReceiver(TerminalNetworking.OpenedPayload.TYPE, (payload, context) -> {
 			terminalId = payload.containerId();
@@ -138,7 +141,7 @@ public class StorageDimensionClient implements ClientModInitializer {
 		int searchWidth = (JEI ? 94 : 108) - (project ? 14 : 0);
 
 		if (project) {
-			settingsButton = Button.builder(Component.literal("✎"), button -> ClientPlayNetworking.send(new TerminalNetworking.ButtonPayload(TerminalNetworking.BUTTON_SETTINGS)))
+			settingsButton = Button.builder(Component.literal("⚙"), button -> ClientPlayNetworking.send(new TerminalNetworking.ButtonPayload(TerminalNetworking.BUTTON_SETTINGS)))
 					.bounds(left + 7 + searchWidth + 2, top + 4, 12, 12).tooltip(Tooltip.create(Component.literal("Projekt einstellen"))).build();
 			Screens.getWidgets(screen).add(settingsButton);
 		}

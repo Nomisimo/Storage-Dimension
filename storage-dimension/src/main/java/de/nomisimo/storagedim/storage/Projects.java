@@ -140,6 +140,15 @@ public final class Projects {
 		return project;
 	}
 
+	/** The settings: the project screen with the client mod, otherwise the chest-style settings. */
+	public static void openSettings(net.minecraft.server.level.ServerPlayer player, Project project) {
+		if (TerminalNetworking.hasClientUi(player)) {
+			ProjectSettingsMenu.open(player, project);
+		} else {
+			ProjectMenu.open(player, project);
+		}
+	}
+
 	// ---- blocking ----
 
 	/** How many of this item the blocking projects of the network keep, without {@code except}. */

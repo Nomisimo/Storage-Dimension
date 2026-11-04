@@ -92,18 +92,20 @@ Eine Kiste für ein Bauprojekt: Du legst fest, welche Items in welcher Menge geb
 ![Projektkiste](docs/screenshots/projekt-kiste.png)
 
 - **Rezept:** Filterkiste + Buch (formlos).
-- **Einstellen:** Schleichen + Rechtsklick mit leerer Hand. Die Liste hat beliebig viele Plätze, auf mehreren Seiten.
-  - Ein Item auf einen Platz legen oder im eigenen Inventar Shift-klicken fügt es hinzu.
-  - **Item suchen** durchsucht alle Items des Spiels. Klick nimmt 1 ins Projekt, Shift-Klick 64.
-  - Klick auf ein Item wählt es aus. Die Menge ändern **− 64**, **− 1**, **+ 1** und **+ 64**, oder die Zahl direkt eingeben.
-  - **Name** vergeben und der Haken **Im ME blocken**.
+- **Einstellen:** Schleichen + Rechtsklick mit leerer Hand, oder das Zahnrad ⚙ in der Item-Ansicht.
+  - Oben: **Name** und der Knopf **Blocken** (Im ME blocken).
+  - Die Liste hat eine Zeile pro Item: links das Item, daneben das Mengenfeld mit **-64** und **-1** links und **+1** und **+64** rechts, ganz rechts **✕** zum Entfernen. Die Liste scrollt, unten ist immer eine leere Zeile.
+  - Neue Items: in die leere Zeile legen, im eigenen Inventar Shift-klicken oder oben im Feld **Item suchen** über alle Items des Spiels suchen und anklicken. Ein Item mit einem anderen auf dem Cursor anklicken tauscht es aus.
+  - Hover über ein Item zeigt, wie viele davon da sind und wie viele fehlen. Ist alles da, wird die Zeile grün.
+  - **Rezeptbuch:** Ein Buch mit Feder in den linken Platz legen, rechts kommt es mit dem Projekt beschrieben heraus (Name und eine Zeile pro Item mit Menge).
 
-![Einstellungen der Projektkiste: oben die Liste, darunter Auswahl, − / +, Menge, Name, Blocken, Suche und der Weg zu den Items](docs/screenshots/projekt-einstellungen.png)
+![Einstellungen der Projektkiste](docs/screenshots/projekt-einstellungen.png)
 ![Item-Suche über alle Items](docs/screenshots/projekt-suche.png)
 
-- **Benutzen:** Normaler Rechtsklick zeigt die Projekt-Items, die im ME-Speicher sind, mit der benötigten und der fehlenden Menge. Baumaterial kann direkt in die Kiste gelegt werden. Der Knopf ✎ neben dem Suchfeld (ohne Client-Mod das Buch unten) wechselt zu den Einstellungen.
+- **Benutzen:** Normaler Rechtsklick zeigt die Projekt-Items, die im ME-Speicher sind. Die Zahlen sind grün, sobald die benötigte Menge da ist, und der Tooltip sagt, wie viele von wie vielen da sind und wie viele fehlen. Baumaterial kann direkt in die Kiste gelegt werden. Das Zahnrad ⚙ neben dem Suchfeld wechselt zu den Einstellungen.
 
 ![Item-Ansicht der Projektkiste](docs/screenshots/projekt-items.png)
+![Tooltip: 40 von 64 da, 24 fehlen](docs/screenshots/projekt-items-tooltip.png)
 
 - **Im ME blocken:** Die Mengen des Projekts bleiben für das Projekt im Speicher. Im ME-Terminal, im Rucksack, für Trichter und JEI lässt sich nur herausnehmen, was über das Projekt hinausgeht. Der Tooltip sagt, für welche Projekte wie viel geblockt ist.
 

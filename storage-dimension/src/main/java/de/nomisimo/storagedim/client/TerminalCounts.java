@@ -45,7 +45,17 @@ public final class TerminalCounts {
 		return (number.endsWith(".0") ? number.substring(0, number.length() - 2) : number) + UNITS[unit];
 	}
 
+	/** The colour the server asked for the amount (green when a project has enough), white otherwise. */
+	public static int color(ItemStack stack) {
+		CustomData data = stack.get(DataComponents.CUSTOM_DATA);
+		return data == null ? 0xFFFFFFFF : data.copyTag().getIntOr(StorageMenu.COLOR_KEY, 0xFFFFFFFF);
+	}
+
 	public static void draw(GuiGraphicsExtractor graphics, Font font, long count, int x, int y) {
+		draw(graphics, font, count, x, y, 0xFFFFFFFF);
+	}
+
+	public static void draw(GuiGraphicsExtractor graphics, Font font, long count, int x, int y, int color) {
 		if (count <= 1) {
 			return;
 		}
@@ -56,7 +66,7 @@ public final class TerminalCounts {
 		// bottom right corner of the slot, like the normal count
 		pose.translate(x + 16, y + 12);
 		pose.scale(0.5F, 0.5F);
-		graphics.text(font, text, -font.width(text), 0, 0xFFFFFFFF, true);
+		graphics.text(font, text, -font.width(text), 0, color, true);
 		pose.popMatrix();
 	}
 }

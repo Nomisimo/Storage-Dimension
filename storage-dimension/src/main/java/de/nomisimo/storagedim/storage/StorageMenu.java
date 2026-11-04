@@ -48,6 +48,8 @@ public class StorageMenu extends ChestMenu {
 	private static final int ICON_MAX = 99;
 	/** Custom data key on a terminal icon with the exact stored amount. */
 	public static final String COUNT_KEY = "storagedim_count";
+	/** Custom data key with the colour the client draws the amount in, e.g. green when a project has enough. */
+	public static final String COLOR_KEY = "storagedim_count_color";
 	private static final Set<StorageMenu> OPEN = java.util.Collections.newSetFromMap(new WeakHashMap<>());
 	/** Sort order per player, kept until the server restarts. The search starts empty every time. */
 	private static final Map<UUID, Sort> SORTS = new HashMap<>();
@@ -195,10 +197,15 @@ public class StorageMenu extends ChestMenu {
 			Projects.Entry wanted = project.entryFor(entry.prototype);
 
 			if (wanted != null) {
-				extra.add(Component.literal("Projekt braucht: " + format(wanted.target)).withStyle(ChatFormatting.AQUA));
-
-				if (count < wanted.target) {
-					extra.add(Component.literal("Fehlt: " + format(wanted.target - count)).withStyle(ChatFormatting.RED));
+				if (count >= wanted.target) {
+					extra.add(Component.literal("✔ " + format(wanted.target) + " von " + format(wanted.target) + " da").withStyle(ChatFormatting.GREEN));
+					// the client draws the amount green
+					CompoundTag tag = icon.getOrDefault(DataComponents.CUSTOM_DATA, CustomData.EMPTY).copyTag();
+					tag.putInt(COLOR_KEY, 0xFF55FF55);
+					icon.set(DataComponents.CUSTOM_DATA, CustomData.of(tag));
+				} else {
+					extra.add(Component.literal(format(count) + " von " + format(wanted.target) + " da").withStyle(ChatFormatting.AQUA));
+					extra.add(Component.literal("Fehlen: " + format(wanted.target - count)).withStyle(ChatFormatting.RED));
 				}
 			}
 		} else if (!freeOnly) {
@@ -309,7 +316,7 @@ public class StorageMenu extends ChestMenu {
 				+ all.size() + " Sorten · " + format(total) + " Items"));
 
 		if (project != null) {
-			ItemStack settings = button(Items.WRITABLE_BOOK, "Projekt einstellen");
+			ItemStack settings = button(Items.COMPARATOR, "⚙ Projekt einstellen");
 			settings.set(DataComponents.LORE, new ItemLore(List.of(
 					Component.literal("Items, Mengen, Name und Blocken").withStyle(ChatFormatting.GRAY))));
 			display.setItem(SLOT_SETTINGS, settings);
@@ -407,7 +414,7 @@ public class StorageMenu extends ChestMenu {
 		}
 
 		if (slot == SLOT_SETTINGS && project != null && player instanceof ServerPlayer serverPlayer) {
-			ProjectMenu.open(serverPlayer, project);
+			Projects.openSettings(serverPlayer, project);
 			return;
 		}
 

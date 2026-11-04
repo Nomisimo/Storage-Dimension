@@ -26,6 +26,6 @@ public class ContainerScreenMixin {
 		}
 
 		original.call(graphics, font, stack, x, y, "");
-		TerminalCounts.draw(graphics, font, count, x, y);
+		TerminalCounts.draw(graphics, font, count, x, y, TerminalCounts.color(stack));
 	}
 }
