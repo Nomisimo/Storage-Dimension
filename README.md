@@ -9,7 +9,7 @@ Ein Fabric-Mod für **Minecraft 26.1.2**: eine Insel aus Kisten in einer eigenen
 ## Inhalt
 
 - [Installation](#installation)
-- [Speicher](#speicher): Dimensionskiste, ME-Speicher, ME-Terminal, Filterkiste, Trichter und Maschinen
+- [Speicher](#speicher): Dimensionskiste, ME-Speicher, ME-Terminal, Filterkiste, Projektkiste, Trichter und Maschinen
 - [Sammelroboter](#sammelroboter): Roboter, Roboter-Station, Rückruf, Roboter-Barriere
 - [ME-Rucksack und Traveler's Backpack](#me-rucksack-und-travelers-backpack)
 - [Rezepte](#rezepte)
@@ -84,6 +84,21 @@ Eine Kiste, die nur ausgewählte Items aus dem ME-Speicher zeigt.
 - **Benutzen:** Normaler Rechtsklick öffnet die Kiste. Dort lassen sich die gefilterten Items herausnehmen und passende einlagern.
 - **Doppelkiste:** Zwei Filterkisten nebeneinander werden eine Doppelkiste mit 14 Filter-Plätzen. Eine normale Kiste verbindet sich nie mit einer Filterkiste. Wird eine Hälfte abgebaut, behält die andere die ersten 7 Filter.
 - **Trichter darunter** ziehen die Filter-Items aus dem ME-Speicher heraus. Bis zu ein Stapel pro Filter liegt dafür bereit und geht zurück in den Speicher, wenn ihn keiner abholt.
+
+### Projektkiste
+
+Eine Kiste für ein Bauprojekt: Du legst fest, welche Items in welcher Menge gebraucht werden, und die Kiste zeigt sie aus dem ME-Speicher.
+
+- **Rezept:** Filterkiste + Buch (formlos).
+- **Einstellen:** Schleichen + Rechtsklick mit leerer Hand. Die Liste hat beliebig viele Plätze, auf mehreren Seiten.
+  - Ein Item auf einen Platz legen oder im eigenen Inventar Shift-klicken fügt es hinzu.
+  - **Item suchen** durchsucht alle Items des Spiels. Klick nimmt 1 ins Projekt, Shift-Klick 64.
+  - Klick auf ein Item wählt es aus. Die Menge ändern **− 64**, **− 1**, **+ 1** und **+ 64**, oder die Zahl direkt eingeben.
+  - **Name** vergeben und der Haken **Im ME blocken**.
+- **Benutzen:** Normaler Rechtsklick zeigt die Projekt-Items, die im ME-Speicher sind, mit der benötigten und der fehlenden Menge. Baumaterial kann direkt in die Kiste gelegt werden. Der Knopf ✎ unten (ohne Client-Mod das Buch) wechselt zu den Einstellungen.
+- **Im ME blocken:** Die Mengen des Projekts bleiben für das Projekt im Speicher. Im ME-Terminal, im Rucksack, für Trichter und JEI lässt sich nur herausnehmen, was über das Projekt hinausgeht. Der Tooltip sagt, für welche Projekte wie viel geblockt ist.
+- **Auf der Kisten-Insel** stehen die Projektkisten an einem eigenen Platz: als Fallenkisten mit dem Projektnamen im Ring direkt um den Ankunftsplatz. Geblockte Items liegen dort nur in der Projektkiste, nicht in den normalen Item-Kisten.
+- **Abbauen:** Die Kiste behält ihr Projekt und lässt sich woanders wieder hinstellen.
 
 ### Trichter und Maschinen
 
@@ -220,6 +235,7 @@ Alle Rezepte stehen auch in [JEI](https://modrinth.com/mod/jei).
 | Dimensionskiste | Amethystscherben, Enderperlen, Kiste | ![Rezept Dimensionskiste](docs/screenshots/rezept-storage-chest.png) |
 | ME-Terminal | Redstone, Amethystscherben, Enderkiste | ![Rezept ME-Terminal](docs/screenshots/rezept-me-terminal.png) |
 | Filterkiste | 8 Rahmen um eine Kiste, unten mittig ein Enderauge | ![Rezept Filterkiste](docs/screenshots/rezept-filter-chest.png) |
+| Projektkiste | formlos: Filterkiste + Buch | ![Rezept Projektkiste](docs/screenshots/rezept-project-chest.png) |
 | Sammelroboter | Eisenbarren, Kürbis, Redstone, Trichter, Eisennuggets | ![Rezept Sammelroboter](docs/screenshots/rezept-robot.png) |
 | Roboter-Station | Blitzableiter, Eisenbarren, Redstoneblock, Kiste | ![Rezept Roboter-Station](docs/screenshots/rezept-robot-station.png) |
 | Roboter-Barriere (8 Stück) | 8 Glas um eine Amethystscherbe | ![Rezept Roboter-Barriere](docs/screenshots/rezept-robot-barrier.png) |
@@ -242,6 +258,7 @@ Alle Rezepte stehen auch in [JEI](https://modrinth.com/mod/jei).
 | `/storage give [spieler]` | (OP) Gibt eine Dimensionskiste |
 | `/storage give terminal` | (OP) Gibt ein ME-Terminal |
 | `/storage give filter` | (OP) Gibt eine Filterkiste |
+| `/storage give projekt` | (OP) Gibt eine Projektkiste |
 | `/storage give robot` | (OP) Gibt einen Sammelroboter |
 | `/storage give station` | (OP) Gibt eine Roboter-Station |
 | `/storage give barrier` | (OP) Gibt 16 Roboter-Barrieren |

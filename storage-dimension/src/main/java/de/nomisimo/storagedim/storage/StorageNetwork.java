@@ -59,15 +59,28 @@ public class StorageNetwork {
 		StorageData.markDirty();
 	}
 
-	/** Removes up to {@code amount} items matching the prototype and returns them as a stack. */
+	/**
+	 * Removes up to {@code amount} items matching the prototype and returns them as a stack. What blocking projects
+	 * keep stays in, see {@link Projects}.
+	 */
 	public ItemStack extract(ItemStack prototype, int amount) {
+		return extract(prototype, amount, null);
+	}
+
+	/** Like {@link #extract(ItemStack, int)}, for a project chest: the project's own blocked items may go too. */
+	public ItemStack extract(ItemStack prototype, int amount, Projects.Project project) {
 		StoredItem entry = find(prototype);
 
 		if (entry == null || amount <= 0) {
 			return ItemStack.EMPTY;
 		}
 
-		int taken = (int) Math.min(amount, entry.count);
+		int taken = (int) Math.min(amount, Projects.available(this, entry, project));
+
+		if (taken <= 0) {
+			return ItemStack.EMPTY;
+		}
+
 		entry.count -= taken;
 
 		if (entry.count <= 0) {
@@ -98,6 +111,12 @@ public class StorageNetwork {
 	/** Read-only view of the entries in storage order. */
 	public List<StoredItem> entries() {
 		return java.util.Collections.unmodifiableList(items);
+	}
+
+	/** How many of this item can be taken out, after what blocking projects keep. */
+	public long available(ItemStack prototype) {
+		StoredItem entry = find(prototype);
+		return entry == null ? 0 : Projects.available(this, entry, null);
 	}
 
 	public long totalCount() {

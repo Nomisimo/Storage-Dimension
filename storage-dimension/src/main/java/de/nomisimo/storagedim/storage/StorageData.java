@@ -50,6 +50,10 @@ public final class StorageData {
 	public final Map<String, Map<Long, UUID>> chests = new HashMap<>();
 	/** Dimension id to (packed block pos to filter chest). */
 	public final Map<String, Map<Long, FilterChests.FilterChest>> filterChests = new HashMap<>();
+	/** Every project by id, see {@link Projects}. */
+	public final Map<UUID, Projects.Project> projects = new LinkedHashMap<>();
+	/** Dimension id to (packed block pos to the project of the placed project chest). */
+	public final Map<String, Map<Long, UUID>> projectChests = new HashMap<>();
 	/** Dimension id to packed positions of placed ME terminals. */
 	public final Map<String, Set<Long>> terminals = new HashMap<>();
 	/** Settings of each robot station per dimension, applied to robots configured there. */
@@ -208,6 +212,28 @@ public final class StorageData {
 		}
 	}
 
+	// ---- project chests ----
+
+	public Projects.Project projectChest(String dimension, BlockPos pos) {
+		Map<Long, UUID> map = projectChests.get(dimension);
+		return map == null ? null : projects.get(map.get(pos.asLong()));
+	}
+
+	public void setProjectChest(String dimension, BlockPos pos, Projects.Project project) {
+		projectChests.computeIfAbsent(dimension, d -> new HashMap<>()).put(pos.asLong(), project.id);
+		ChestMarks.changed(dimension);
+		markDirty();
+	}
+
+	public void removeProjectChest(String dimension, BlockPos pos) {
+		Map<Long, UUID> map = projectChests.get(dimension);
+
+		if (map != null && map.remove(pos.asLong()) != null) {
+			ChestMarks.changed(dimension);
+			markDirty();
+		}
+	}
+
 	// ---- terminals ----
 
 	/** The settings of the station at {@code pos}, with defaults for a new one. */
@@ -333,6 +359,37 @@ public final class StorageData {
 		});
 		root.add("filterChests", filterObj);
 
+		JsonArray projectArr = new JsonArray();
+		projects.values().forEach(project -> {
+			JsonObject p = new JsonObject();
+			p.addProperty("id", project.id.toString());
+			p.addProperty("owner", project.owner.toString());
+			p.addProperty("name", project.name);
+			p.addProperty("block", project.block);
+			JsonArray entries = new JsonArray();
+
+			for (Projects.Entry entry : project.entries) {
+				ItemStack.CODEC.encodeStart(ops, entry.item).result().ifPresent(json -> {
+					JsonObject e = new JsonObject();
+					e.add("stack", json);
+					e.addProperty("target", entry.target);
+					entries.add(e);
+				});
+			}
+
+			p.add("entries", entries);
+			projectArr.add(p);
+		});
+		root.add("projects", projectArr);
+
+		JsonObject projectChestObj = new JsonObject();
+		projectChests.forEach((dim, map) -> {
+			JsonObject d = new JsonObject();
+			map.forEach((pos, id) -> d.addProperty(Long.toString(pos), id.toString()));
+			projectChestObj.add(dim, d);
+		});
+		root.add("projectChests", projectChestObj);
+
 		JsonObject terminalObj = new JsonObject();
 		terminals.forEach((dim, set) -> {
 			JsonArray arr = new JsonArray();
@@ -457,6 +514,32 @@ public final class StorageData {
 					map.put(Long.parseLong(e.getKey()), chest);
 				});
 				filterChests.put(dim.getKey(), map);
+			});
+		}
+
+		if (root.has("projects")) {
+			for (JsonElement el : root.getAsJsonArray("projects")) {
+				JsonObject p = el.getAsJsonObject();
+				Projects.Project project = new Projects.Project(UUID.fromString(p.get("id").getAsString()), UUID.fromString(p.get("owner").getAsString()),
+						p.get("name").getAsString(), p.get("block").getAsBoolean());
+
+				for (JsonElement e : p.getAsJsonArray("entries")) {
+					JsonObject entry = e.getAsJsonObject();
+					long target = entry.get("target").getAsLong();
+					ItemStack.CODEC.parse(ops, entry.get("stack")).resultOrPartial(StorageDimensionMod.LOGGER::warn)
+							.ifPresent(stack -> project.entries.add(new Projects.Entry(stack.copyWithCount(1), target)));
+				}
+
+				projects.put(project.id, project);
+			}
+		}
+
+		if (root.has("projectChests")) {
+			root.getAsJsonObject("projectChests").entrySet().forEach(dim -> {
+				Map<Long, UUID> map = new HashMap<>();
+				dim.getValue().getAsJsonObject().entrySet().forEach(e ->
+						map.put(Long.parseLong(e.getKey()), UUID.fromString(e.getValue().getAsString())));
+				projectChests.put(dim.getKey(), map);
 			});
 		}
 

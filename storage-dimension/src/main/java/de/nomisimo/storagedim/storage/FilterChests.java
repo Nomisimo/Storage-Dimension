@@ -76,6 +76,11 @@ public final class FilterChests {
 		return false;
 	}
 
+	/** The item to remember for matching: a damaged tool counts as the plain tool, so every one of its kind matches. */
+	public static ItemStack matchKey(ItemStack stack) {
+		return stack.isDamageableItem() ? new ItemStack(stack.getItem()) : stack.copyWithCount(1);
+	}
+
 	private static boolean sameEnchantments(ItemStack filter, ItemStack stack, DataComponentType<ItemEnchantments> type) {
 		ItemEnchantments wanted = filter.getOrDefault(type, ItemEnchantments.EMPTY);
 		return wanted.isEmpty() || wanted.equals(stack.getOrDefault(type, ItemEnchantments.EMPTY));

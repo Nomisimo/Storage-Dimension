@@ -64,11 +64,10 @@ public final class StorageApi {
 		return StorageMenu.icon(prototype, count);
 	}
 
-	/** How many items exactly like the prototype (item + components) are stored. */
+	/** How many items exactly like the prototype (item + components) can be taken out: stored minus what blocking projects keep. */
 	public static long count(ServerPlayer player, ItemStack prototype) {
 		StorageNetwork network = network(player);
-		StorageNetwork.StoredItem entry = network == null ? null : network.find(prototype);
-		return entry == null ? 0 : entry.count;
+		return network == null ? 0 : network.available(prototype);
 	}
 
 	/** Takes up to {@code amount} items exactly like the prototype out of storage. */

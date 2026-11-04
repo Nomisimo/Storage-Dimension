@@ -99,7 +99,8 @@ public final class Islands {
 		List<ItemStack> kinds = new ArrayList<>();
 
 		for (StorageNetwork.StoredItem entry : network.entries()) {
-			if (entry.count <= 0) {
+			// what projects block lies in their chests
+			if (entry.count <= 0 || Projects.available(network, entry, null) <= 0) {
 				continue;
 			}
 
@@ -114,6 +115,18 @@ public final class Islands {
 
 		kinds.sort(ORDER);
 		return kinds;
+	}
+
+	/** The chests the island needs: the projects first, then every kind of item. */
+	static List<ItemStack> wanted(StorageNetwork network) {
+		List<ItemStack> list = new ArrayList<>();
+		Projects.of(network).forEach(project -> list.add(Projects.islandKey(project)));
+		list.addAll(kinds(network));
+		return list;
+	}
+
+	public static boolean isProject(ItemStack key) {
+		return key.is(Items.WRITABLE_BOOK) && Projects.idOf(key) != null;
 	}
 
 	// ---- layout ----
@@ -156,7 +169,10 @@ public final class Islands {
 		return list;
 	}
 
-	/** Lays out all kinds anew in the smallest round island that fits them. */
+	/**
+	 * Lays out all chests anew in the smallest round island that fits them. The project chests get their own place,
+	 * the spots closest to where players arrive; the items follow in rows.
+	 */
 	private static void layout(StorageNetwork network, List<ItemStack> kinds) {
 		int r = SPAWN + 1;
 		List<int[]> spots = spots(r);
@@ -166,9 +182,19 @@ public final class Islands {
 		}
 
 		network.island.clear();
+		List<int[]> free = new ArrayList<>(spots);
+		List<int[]> close = new ArrayList<>(spots);
+		close.sort(Comparator.comparingInt((int[] spot) -> spot[0] * spot[0] + spot[1] * spot[1]));
+		int i = 0;
 
-		for (int i = 0; i < kinds.size(); i++) {
-			network.island.add(new IslandChest(spots.get(i)[0], spots.get(i)[1], kinds.get(i)));
+		for (; i < kinds.size() && isProject(kinds.get(i)); i++) {
+			int[] spot = close.get(i);
+			free.remove(spot);
+			network.island.add(new IslandChest(spot[0], spot[1], kinds.get(i)));
+		}
+
+		for (int j = 0; i < kinds.size(); i++, j++) {
+			network.island.add(new IslandChest(free.get(j)[0], free.get(j)[1], kinds.get(i)));
 		}
 	}
 
@@ -260,7 +286,7 @@ public final class Islands {
 	 */
 	public static void prepare(ServerLevel level, StorageNetwork network) {
 		clearOldRooms(level);
-		List<ItemStack> kinds = kinds(network);
+		List<ItemStack> kinds = wanted(network);
 
 		if (isBuilt(level, network) && sameLayout(network, kinds)) {
 			return;
@@ -277,7 +303,7 @@ public final class Islands {
 	public static void grow(ServerLevel level, StorageNetwork network) {
 		List<ItemStack> missing = new ArrayList<>();
 
-		for (ItemStack kind : kinds(network)) {
+		for (ItemStack kind : wanted(network)) {
 			if (network.island.stream().noneMatch(c -> ItemStack.isSameItemSameComponents(c.key(), kind))) {
 				missing.add(kind);
 			}
@@ -331,14 +357,21 @@ public final class Islands {
 
 		for (IslandChest chest : network.island) {
 			BlockPos pos = centre.offset(chest.dx(), 1, chest.dz());
-			BlockState state = Blocks.CHEST.defaultBlockState().setValue(ChestBlock.FACING, facing(chest.dz()));
+			boolean project = isProject(chest.key());
+			// project chests are trapped chests, to tell them apart
+			Block block = project ? Blocks.TRAPPED_CHEST : Blocks.CHEST;
+			BlockState state = block.defaultBlockState().setValue(ChestBlock.FACING, facing(chest.dz()));
 
-			if (!level.getBlockState(pos).is(Blocks.CHEST)) {
+			if (!level.getBlockState(pos).is(block)) {
 				level.setBlock(pos, state, Block.UPDATE_CLIENTS);
 			}
 
 			spawnDisplay(level, labelId(network, chest), chest.key(), pos.getX() + 0.5, pos.getY() + 1.2, pos.getZ() + 0.5, 0.4f,
 					Display.BillboardConstraints.VERTICAL, false);
+
+			if (project) {
+				nameLabel(level, network, chest);
+			}
 		}
 
 		level.setBlock(centre.offset(EXIT_DX, 1, EXIT_DZ), Blocks.LODESTONE.defaultBlockState(), Block.UPDATE_CLIENTS);
@@ -394,6 +427,23 @@ public final class Islands {
 		level.addFreshEntity(display);
 	}
 
+	/** The book over a project chest shows the project's name. */
+	private static void nameLabel(ServerLevel level, StorageNetwork network, IslandChest chest) {
+		Projects.Project project = Projects.get(Projects.idOf(chest.key()));
+		Entity label = level.getEntity(labelId(network, chest));
+
+		if (project == null || label == null) {
+			return;
+		}
+
+		String name = "Projekt: " + project.name;
+
+		if (label.getCustomName() == null || !label.getCustomName().getString().equals(name)) {
+			label.setCustomName(net.minecraft.network.chat.Component.literal(name).withStyle(net.minecraft.ChatFormatting.AQUA));
+			label.setCustomNameVisible(true);
+		}
+	}
+
 	private static UUID labelId(StorageNetwork network, IslandChest chest) {
 		return id("label:" + network.room + ":" + network.islandBuild + ":" + chest.dx() + ":" + chest.dz());
 	}
@@ -422,7 +472,7 @@ public final class Islands {
 					BlockPos pos = centre.offset(dx, y, dz);
 					BlockState state = level.getBlockState(pos);
 
-					if (state.is(Blocks.BARREL) || state.is(Blocks.CHEST) || state.is(Blocks.LODESTONE)) {
+					if (state.is(Blocks.BARREL) || state.is(Blocks.CHEST) || state.is(Blocks.TRAPPED_CHEST) || state.is(Blocks.LODESTONE)) {
 						level.setBlock(pos, Blocks.AIR.defaultBlockState(), Block.UPDATE_CLIENTS);
 					}
 				}
@@ -456,6 +506,7 @@ public final class Islands {
 		Set<UUID> keep = new HashSet<>();
 		network.island.forEach(chest -> keep.add(labelId(network, chest)));
 		removeStale(level, network, keep);
+		network.island.stream().filter(chest -> isProject(chest.key())).forEach(chest -> nameLabel(level, network, chest));
 	}
 
 	// ---- players ----
@@ -504,13 +555,20 @@ public final class Islands {
 
 		IslandChest chest = network == null ? null : chestAt(network, pos);
 
-		if (chest == null || !network.canAccess(player.getUUID()) || !level.getBlockState(pos).is(Blocks.CHEST)) {
+		if (chest == null || !network.canAccess(player.getUUID())
+				|| !level.getBlockState(pos).is(Blocks.CHEST) && !level.getBlockState(pos).is(Blocks.TRAPPED_CHEST)) {
 			return InteractionResult.FAIL;
 		}
 
-		setLid(level, pos, true);
 		ItemStack key = chest.key();
-		StorageMenu.open(player, network, stack -> inGroup(key, stack), key.getHoverName().getString(), () -> setLid(level, pos, false));
+
+		if (isProject(key)) {
+			Projects.Project project = Projects.get(Projects.idOf(key));
+			return project == null ? InteractionResult.FAIL : StorageEvents.useProject(player, project);
+		}
+
+		setLid(level, pos, true);
+		StorageMenu.openIsland(player, network, stack -> inGroup(key, stack), key.getHoverName().getString(), () -> setLid(level, pos, false));
 		return InteractionResult.SUCCESS;
 	}
 
@@ -529,7 +587,7 @@ public final class Islands {
 			return;
 		}
 
-		level.blockEvent(pos, Blocks.CHEST, 1, now);
+		level.blockEvent(pos, level.getBlockState(pos).getBlock(), 1, now);
 		level.playSound(null, pos, open ? SoundEvents.CHEST_OPEN : SoundEvents.CHEST_CLOSE, SoundSource.BLOCKS, 0.5f,
 				level.getRandom().nextFloat() * 0.1f + 0.9f);
 	}

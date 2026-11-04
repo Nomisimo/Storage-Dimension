@@ -50,6 +50,9 @@ public class StorageDimensionClient implements ClientModInitializer {
 	private static Button prevButton;
 	private static Button nextButton;
 	private static Button depositButton;
+	private static Button settingsButton;
+	/** The open terminal is a project chest, which gets a settings button. */
+	private static boolean project;
 	private static BottomRow bottomRow;
 	private static TerminalNetworking.PagePayload pageInfo;
 	private static final boolean JEI = FabricLoader.getInstance().isModLoaded("jei");
@@ -64,6 +67,7 @@ public class StorageDimensionClient implements ClientModInitializer {
 		ClientPlayNetworking.registerGlobalReceiver(TerminalNetworking.OpenedPayload.TYPE, (payload, context) -> {
 			terminalId = payload.containerId();
 			sort = parse(payload.sort());
+			project = payload.project();
 			Screen screen = context.client().screen;
 
 			// the screen usually opened just before this packet arrived
@@ -115,7 +119,7 @@ public class StorageDimensionClient implements ClientModInitializer {
 
 		// re-initialising (e.g. after resizing) must not add a second set
 		Screens.getWidgets(screen).removeIf(widget -> widget instanceof SearchBox || widget == sortButton || widget == syncButton
-				|| widget instanceof BottomRow || widget == prevButton || widget == nextButton || widget == depositButton);
+				|| widget instanceof BottomRow || widget == prevButton || widget == nextButton || widget == depositButton || widget == settingsButton);
 
 		// bottom row: real buttons for the pages and for depositing, with the page and stock info in between
 		bottomRow = new BottomRow(left + 7, top + 107, 162, 18);
@@ -129,6 +133,12 @@ public class StorageDimensionClient implements ClientModInitializer {
 		Screens.getWidgets(screen).add(prevButton);
 		Screens.getWidgets(screen).add(nextButton);
 		Screens.getWidgets(screen).add(depositButton);
+
+		if (project) {
+			settingsButton = Button.builder(Component.literal("✎"), button -> ClientPlayNetworking.send(new TerminalNetworking.ButtonPayload(TerminalNetworking.BUTTON_SETTINGS)))
+					.bounds(left + 135, top + 108, 16, 16).tooltip(Tooltip.create(Component.literal("Projekt einstellen"))).build();
+			Screens.getWidgets(screen).add(settingsButton);
+		}
 		updatePageButtons();
 
 		// with JEI there is a small switch between search field and sort button

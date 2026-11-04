@@ -30,7 +30,7 @@ public final class ChestMarks {
 	private ChestMarks() {
 	}
 
-	public record MarksPayload(String dimension, List<Long> storage, List<Long> filter, List<Long> terminal) implements CustomPacketPayload {
+	public record MarksPayload(String dimension, List<Long> storage, List<Long> filter, List<Long> terminal, List<Long> project) implements CustomPacketPayload {
 		public static final Type<MarksPayload> TYPE = new Type<>(StorageDimensionMod.id("chest_marks"));
 		private static final StreamCodec<ByteBuf, List<Long>> LONGS = ByteBufCodecs.VAR_LONG.apply(ByteBufCodecs.list());
 		public static final StreamCodec<RegistryFriendlyByteBuf, MarksPayload> CODEC = StreamCodec.composite(
@@ -38,6 +38,7 @@ public final class ChestMarks {
 				LONGS, MarksPayload::storage,
 				LONGS, MarksPayload::filter,
 				LONGS, MarksPayload::terminal,
+				LONGS, MarksPayload::project,
 				MarksPayload::new);
 
 		@Override
@@ -81,9 +82,11 @@ public final class ChestMarks {
 		Map<Long, UUID> chests = data.chests.get(dim);
 		Map<Long, FilterChests.FilterChest> filters = data.filterChests.get(dim);
 		Set<Long> terminals = data.terminals.get(dim);
+		Map<Long, UUID> projects = data.projectChests.get(dim);
 		return new MarksPayload(dim,
 				chests == null ? List.of() : new ArrayList<>(chests.keySet()),
 				filters == null ? List.of() : new ArrayList<>(filters.keySet()),
-				terminals == null ? List.of() : new ArrayList<>(terminals));
+				terminals == null ? List.of() : new ArrayList<>(terminals),
+				projects == null ? List.of() : new ArrayList<>(projects.keySet()));
 	}
 }

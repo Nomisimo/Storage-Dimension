@@ -91,6 +91,7 @@ public final class StorageEvents {
 
 		boolean storageChest = StorageItems.isStorageChest(stack);
 		boolean filterChest = StorageItems.isFilterChest(stack);
+		boolean projectChest = StorageItems.isProjectChest(stack);
 
 		if (level.isClientSide() || !state.is(Blocks.CHEST)) {
 			return;
@@ -100,9 +101,32 @@ public final class StorageEvents {
 		String dim = Rooms.id(level);
 		BlockPos other = state.getValue(ChestBlock.TYPE) == ChestType.SINGLE ? null : pos.relative(ChestBlock.getConnectedDirection(state));
 
+		if (projectChest) {
+			if (other != null) {
+				splitChest(level, pos, state, other);
+			}
+
+			if (!(placer instanceof ServerPlayer player)) {
+				return;
+			}
+
+			// a broken project chest keeps its project
+			Projects.Project project = Projects.get(Projects.idOf(stack));
+
+			if (project == null) {
+				project = Projects.create(player.getUUID());
+			}
+
+			data.setProjectChest(dim, pos, project);
+			player.sendSystemMessage(Component.literal("Projektkiste „" + project.name + "“ gesetzt. Schleichen + Rechtsklick mit leerer Hand: "
+					+ "Items, Mengen und Name einstellen. Rechtsklick: die Projekt-Items aus dem ME-Speicher.").withStyle(ChatFormatting.DARK_PURPLE));
+			return;
+		}
+
 		if (!storageChest && !filterChest) {
 			// A plain chest never joins a special one.
-			if (other != null && (data.filterChest(dim, other) != null || data.chestOwner(dim, other) != null)) {
+			if (other != null && (data.filterChest(dim, other) != null || data.chestOwner(dim, other) != null
+					|| data.projectChest(dim, other) != null)) {
 				splitChest(level, pos, state, other);
 			}
 
@@ -217,6 +241,25 @@ public final class StorageEvents {
 			return true;
 		}
 
+		Projects.Project projectChest = data.projectChest(Rooms.id(level), pos);
+
+		if (projectChest != null) {
+			data.removeProjectChest(Rooms.id(level), pos);
+
+			if (!state.is(Blocks.CHEST)) {
+				return true;
+			}
+
+			drain((ServerLevel) level, pos, projectChest.owner);
+			level.removeBlock(pos, false);
+
+			if (!player.isCreative()) {
+				Block.popResource(level, pos, StorageItems.projectChest(projectChest));
+			}
+
+			return false;
+		}
+
 		FilterChests.FilterChest filterChest = data.filterChest(Rooms.id(level), pos);
 
 		if (filterChest != null) {
@@ -291,6 +334,17 @@ public final class StorageEvents {
 			return Islands.use(player, level, pos);
 		}
 
+		Projects.Project projectChest = data.projectChest(Rooms.id(level), pos);
+
+		if (projectChest != null) {
+			if (!level.getBlockState(pos).is(Blocks.CHEST)) {
+				data.removeProjectChest(Rooms.id(level), pos);
+				return InteractionResult.PASS;
+			}
+
+			return useProject(player, projectChest);
+		}
+
 		FilterChests.FilterChest filterChest = data.filterChest(Rooms.id(level), pos);
 
 		if (filterChest != null) {
@@ -335,6 +389,32 @@ public final class StorageEvents {
 			DecoyChestMenu.open(player);
 		}
 
+		return InteractionResult.SUCCESS;
+	}
+
+	/** Right click on a project chest, in the world or on the chest island. */
+	static InteractionResult useProject(ServerPlayer player, Projects.Project project) {
+		if (player.isSecondaryUseActive() && !player.getMainHandItem().isEmpty()) {
+			// Sneaking with an item in hand places it (e.g. a hopper) instead.
+			return InteractionResult.PASS;
+		}
+
+		if (!project.network().canAccess(player.getUUID())) {
+			DecoyChestMenu.open(player);
+			return InteractionResult.SUCCESS;
+		}
+
+		if (player.isSecondaryUseActive() || project.entries.isEmpty()) {
+			if (project.entries.isEmpty()) {
+				player.connection.send(new ClientboundSetActionBarTextPacket(
+						Component.literal("Noch keine Items im Projekt: Item auf einen Platz legen oder suchen").withStyle(ChatFormatting.YELLOW)));
+			}
+
+			ProjectMenu.open(player, project);
+			return InteractionResult.SUCCESS;
+		}
+
+		StorageMenu.openProject(player, project);
 		return InteractionResult.SUCCESS;
 	}
 
@@ -486,6 +566,35 @@ public final class StorageEvents {
 				if (level.getBlockState(pos.below()).is(Blocks.HOPPER)) {
 					restock(level, pos, resolveFilterChest(level, pos, data, chest.getValue()));
 				}
+			}
+		}
+
+		for (Map.Entry<String, Map<Long, UUID>> dim : data.projectChests.entrySet()) {
+			ServerLevel level = Rooms.levelById(server, dim.getKey());
+
+			if (level == null) {
+				continue;
+			}
+
+			Iterator<Map.Entry<Long, UUID>> it = dim.getValue().entrySet().iterator();
+
+			while (it.hasNext()) {
+				Map.Entry<Long, UUID> chest = it.next();
+				BlockPos pos = BlockPos.of(chest.getKey());
+				Projects.Project project = Projects.get(chest.getValue());
+
+				if (!level.hasChunkAt(pos)) {
+					continue;
+				}
+
+				if (project == null || !level.getBlockState(pos).is(Blocks.CHEST)) {
+					it.remove();
+					ChestMarks.changed(dim.getKey());
+					StorageData.markDirty();
+					continue;
+				}
+
+				drain(level, pos, project.owner);
 			}
 		}
 

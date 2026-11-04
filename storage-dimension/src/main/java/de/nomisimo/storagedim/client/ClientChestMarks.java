@@ -16,7 +16,7 @@ import net.minecraft.world.level.block.state.properties.ChestType;
 /** Which chests around the player are dimension chests, filter chests or ME terminals, and their textures. */
 public final class ClientChestMarks {
 	private enum Kind {
-		STORAGE, FILTER, TERMINAL
+		STORAGE, FILTER, TERMINAL, PROJECT
 	}
 
 	private static final SpriteId STORAGE = sprite("dimension_chest");
@@ -24,6 +24,7 @@ public final class ClientChestMarks {
 	private static final SpriteId FILTER_LEFT = sprite("filter_chest_left");
 	private static final SpriteId FILTER_RIGHT = sprite("filter_chest_right");
 	private static final SpriteId TERMINAL = sprite("me_terminal");
+	private static final SpriteId PROJECT = sprite("project_chest");
 
 	private static String dimension = "";
 	private static Map<Long, Kind> marks = new HashMap<>();
@@ -41,6 +42,7 @@ public final class ClientChestMarks {
 			payload.storage().forEach(pos -> next.put(pos, Kind.STORAGE));
 			payload.filter().forEach(pos -> next.put(pos, Kind.FILTER));
 			payload.terminal().forEach(pos -> next.put(pos, Kind.TERMINAL));
+			payload.project().forEach(pos -> next.put(pos, Kind.PROJECT));
 			dimension = payload.dimension();
 			marks = next;
 		});
@@ -65,6 +67,7 @@ public final class ClientChestMarks {
 		return switch (kind) {
 			case STORAGE -> STORAGE;
 			case TERMINAL -> TERMINAL;
+			case PROJECT -> PROJECT;
 			case FILTER -> state.type == ChestType.LEFT ? FILTER_LEFT : state.type == ChestType.RIGHT ? FILTER_RIGHT : FILTER;
 		};
 	}

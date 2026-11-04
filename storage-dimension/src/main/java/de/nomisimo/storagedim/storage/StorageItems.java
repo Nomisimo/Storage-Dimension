@@ -63,6 +63,27 @@ public final class StorageItems {
 		return stack;
 	}
 
+	/**
+	 * Same result as data/storagedim/recipe/project_chest.json when {@code project} is null; a broken project chest
+	 * drops one that keeps its project.
+	 */
+	public static ItemStack projectChest(Projects.Project project) {
+		ItemStack stack = new ItemStack(Items.CHEST);
+		CompoundTag tag = new CompoundTag();
+		tag.putString(Projects.ID_KEY, project == null ? "" : project.id.toString());
+		stack.set(DataComponents.CUSTOM_DATA, CustomData.of(tag));
+		stack.set(DataComponents.ITEM_NAME, Component.literal(project == null ? "Projektkiste" : "Projektkiste: " + project.name));
+		stack.set(DataComponents.ITEM_MODEL, StorageDimensionMod.id("project_chest"));
+		stack.set(DataComponents.LORE, new ItemLore(List.of(
+				Component.literal("Ein Bauprojekt: Items und Mengen festlegen").withStyle(ChatFormatting.GRAY),
+				Component.literal("Schleichen + Rechtsklick: Projekt einstellen").withStyle(ChatFormatting.GRAY))));
+		return stack;
+	}
+
+	public static boolean isProjectChest(ItemStack stack) {
+		return stack.is(Items.CHEST) && hasTag(stack, Projects.ID_KEY);
+	}
+
 	public static boolean isFilterChest(ItemStack stack) {
 		return stack.is(Items.CHEST) && hasTag(stack, FILTER_TAG);
 	}

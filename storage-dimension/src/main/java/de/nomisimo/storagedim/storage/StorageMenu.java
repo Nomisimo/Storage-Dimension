@@ -43,6 +43,7 @@ public class StorageMenu extends ChestMenu {
 	private static final int SLOT_SORT = 47;
 	private static final int SLOT_DEPOSIT = 48;
 	private static final int SLOT_INFO = 49;
+	private static final int SLOT_SETTINGS = 51;
 	private static final int SLOT_NEXT = 53;
 	private static final int ICON_MAX = 99;
 	/** Custom data key on a terminal icon with the exact stored amount. */
@@ -62,6 +63,10 @@ public class StorageMenu extends ChestMenu {
 	private final Runnable onClose;
 	/** The player has the mod on the client, which draws a search field and sort button instead of the bottom buttons. */
 	private final boolean clientUi;
+	/** The project of a project chest, whose own blocked items may be taken here; null otherwise. */
+	private final Projects.Project project;
+	/** An island chest: shows only what is not blocked for a project, as those items lie in the project chests. */
+	private final boolean freeOnly;
 	private String search;
 	private int pages = 1;
 	private int kinds;
@@ -80,8 +85,10 @@ public class StorageMenu extends ChestMenu {
 	}
 
 	private StorageMenu(int containerId, Inventory inventory, SimpleContainer display, StorageNetwork network, Predicate<ItemStack> filter,
-			String title, Runnable onClose, String search, boolean clientUi) {
+			String title, Runnable onClose, String search, boolean clientUi, Projects.Project project, boolean freeOnly) {
 		super(MenuType.GENERIC_9x6, containerId, inventory, display, 6);
+		this.project = project;
+		this.freeOnly = freeOnly;
 		this.network = network;
 		this.display = display;
 		this.viewer = inventory.player;
@@ -95,29 +102,39 @@ public class StorageMenu extends ChestMenu {
 	}
 
 	public static void open(ServerPlayer player, StorageNetwork network) {
-		open(player, network, null, "ME-Speicher", null, "");
+		open(player, network, null, "ME-Speicher", null, "", null, false);
+	}
+
+	/** The items of a project chest: only the project's items, including what is blocked for it. */
+	public static void openProject(ServerPlayer player, Projects.Project project) {
+		open(player, project.network(), project::wants, project.name, null, "", project, false);
+	}
+
+	/** A chest of the chest island: only what is not blocked for a project. */
+	public static void openIsland(ServerPlayer player, StorageNetwork network, Predicate<ItemStack> filter, String title, Runnable onClose) {
+		open(player, network, filter, title, onClose, "", null, true);
 	}
 
 	/** Opens the terminal; with a filter list only those items are shown and accepted. */
 	public static void open(ServerPlayer player, StorageNetwork network, List<ItemStack> filter) {
-		open(player, network, stack -> FilterChests.matches(filter, stack), "Filterkiste", null, "");
+		open(player, network, stack -> FilterChests.matches(filter, stack), "Filterkiste", null, "", null, false);
 	}
 
 	/** Opens the terminal limited to the items {@code filter} accepts, e.g. for one chest of the chest island. */
 	public static void open(ServerPlayer player, StorageNetwork network, Predicate<ItemStack> filter, String title, Runnable onClose) {
-		open(player, network, filter, title, onClose, "");
+		open(player, network, filter, title, onClose, "", null, false);
 	}
 
 	private static void open(ServerPlayer player, StorageNetwork network, Predicate<ItemStack> filter, String title, Runnable onClose,
-			String search) {
+			String search, Projects.Project project, boolean freeOnly) {
 		boolean clientUi = TerminalNetworking.hasClientUi(player);
 		// With the client UI the search field sits where the title would be.
 		player.openMenu(new SimpleMenuProvider(
-				(id, inventory, p) -> new StorageMenu(id, inventory, new SimpleContainer(54), network, filter, title, onClose, search, clientUi),
+				(id, inventory, p) -> new StorageMenu(id, inventory, new SimpleContainer(54), network, filter, title, onClose, search, clientUi, project, freeOnly),
 				clientUi ? Component.empty() : Component.literal(title)));
 
 		if (clientUi && player.containerMenu instanceof StorageMenu menu) {
-			TerminalNetworking.sendOpened(player, menu.containerId, menu.sort());
+			TerminalNetworking.sendOpened(player, menu.containerId, menu.sort(), project != null);
 			TerminalNetworking.sendPage(player, menu.containerId, menu.page, menu.pages, menu.kinds, menu.total);
 		}
 	}
@@ -155,6 +172,51 @@ public class StorageMenu extends ChestMenu {
 				menu.sync();
 			}
 		}
+
+		ProjectMenu.refreshAll(network);
+	}
+
+	/** The amount this screen shows of a stored item, see {@link #project} and {@link #freeOnly}. */
+	private long shownCount(StorageNetwork.StoredItem entry) {
+		if (project != null) {
+			return Projects.available(network, entry, project);
+		}
+
+		return freeOnly ? Projects.available(network, entry, null) : entry.count;
+	}
+
+	/** The icon with what projects add: in a project chest what the project needs, elsewhere which projects block how many. */
+	private ItemStack iconFor(StorageNetwork.StoredItem entry) {
+		long count = shownCount(entry);
+		ItemStack icon = icon(entry.prototype, count);
+		List<Component> extra = new ArrayList<>();
+
+		if (project != null) {
+			Projects.Entry wanted = project.entryFor(entry.prototype);
+
+			if (wanted != null) {
+				extra.add(Component.literal("Projekt braucht: " + format(wanted.target)).withStyle(ChatFormatting.AQUA));
+
+				if (count < wanted.target) {
+					extra.add(Component.literal("Fehlt: " + format(wanted.target - count)).withStyle(ChatFormatting.RED));
+				}
+			}
+		} else if (!freeOnly) {
+			List<Component> blocked = Projects.blockedLines(network, entry.prototype, null);
+
+			if (!blocked.isEmpty()) {
+				extra.addAll(blocked);
+				extra.add(Component.literal("Frei: " + format(Projects.available(network, entry, null))).withStyle(ChatFormatting.GREEN));
+			}
+		}
+
+		if (!extra.isEmpty()) {
+			List<Component> lore = new ArrayList<>(icon.getOrDefault(DataComponents.LORE, ItemLore.EMPTY).lines());
+			lore.addAll(1, extra);
+			icon.set(DataComponents.LORE, new ItemLore(lore));
+		}
+
+		return icon;
 	}
 
 	private boolean accepts(ItemStack stack) {
@@ -175,7 +237,7 @@ public class StorageMenu extends ChestMenu {
 		List<StorageNetwork.StoredItem> list = new ArrayList<>();
 
 		for (StorageNetwork.StoredItem entry : network.items) {
-			if (accepts(entry.prototype) && matchesSearch(entry.prototype)) {
+			if (accepts(entry.prototype) && matchesSearch(entry.prototype) && shownCount(entry) > 0) {
 				list.add(entry);
 			}
 		}
@@ -184,7 +246,7 @@ public class StorageMenu extends ChestMenu {
 			Collator collator = Collator.getInstance(Locale.GERMAN);
 			list.sort(Comparator.comparing((StorageNetwork.StoredItem e) -> e.prototype.getHoverName().getString(), collator));
 		} else {
-			list.sort(Comparator.comparingLong((StorageNetwork.StoredItem e) -> e.count).reversed());
+			list.sort(Comparator.comparingLong(this::shownCount).reversed());
 		}
 
 		return list;
@@ -202,12 +264,12 @@ public class StorageMenu extends ChestMenu {
 
 		for (int i = 0; i < shown.size(); i++) {
 			StorageNetwork.StoredItem entry = shown.get(i);
-			display.setItem(i, icon(entry.prototype, entry.count));
+			display.setItem(i, iconFor(entry));
 		}
 
 		this.pages = pages;
 		kinds = all.size();
-		total = all.stream().mapToLong(e -> e.count).sum();
+		total = all.stream().mapToLong(this::shownCount).sum();
 
 		// the client mod draws real buttons in the bottom row instead
 		if (clientUi) {
@@ -244,7 +306,14 @@ public class StorageMenu extends ChestMenu {
 		display.setItem(SLOT_DEPOSIT, button(Items.HOPPER, filter == null
 				? "Inventar einlagern (ohne Hotbar)" : "Passende Items einlagern (ohne Hotbar)"));
 		display.setItem(SLOT_INFO, button(Items.ENDER_EYE, "Seite " + (page + 1) + "/" + pages + " · "
-				+ all.size() + " Sorten · " + format(all.stream().mapToLong(e -> e.count).sum()) + " Items"));
+				+ all.size() + " Sorten · " + format(total) + " Items"));
+
+		if (project != null) {
+			ItemStack settings = button(Items.WRITABLE_BOOK, "Projekt einstellen");
+			settings.set(DataComponents.LORE, new ItemLore(List.of(
+					Component.literal("Items, Mengen, Name und Blocken").withStyle(ChatFormatting.GRAY))));
+			display.setItem(SLOT_SETTINGS, settings);
+		}
 	}
 
 	/**
@@ -337,6 +406,11 @@ public class StorageMenu extends ChestMenu {
 			return;
 		}
 
+		if (slot == SLOT_SETTINGS && project != null && player instanceof ServerPlayer serverPlayer) {
+			ProjectMenu.open(serverPlayer, project);
+			return;
+		}
+
 		if (slot == SLOT_DEPOSIT) {
 			Inventory inv = player.getInventory();
 
@@ -378,15 +452,29 @@ public class StorageMenu extends ChestMenu {
 		ItemStack prototype = shown.get(slot).prototype;
 		int max = prototype.getMaxStackSize();
 
+		ItemStack taken = ItemStack.EMPTY;
+
 		if (input == ContainerInput.QUICK_MOVE) {
-			ItemStack taken = network.extract(prototype, max);
+			taken = network.extract(prototype, max, project);
+			boolean got = !taken.isEmpty();
 			player.getInventory().add(taken);
 
 			if (!taken.isEmpty()) {
 				network.insert(taken);
 			}
+
+			taken = got ? prototype : ItemStack.EMPTY;
 		} else if (input == ContainerInput.PICKUP && carried.isEmpty()) {
-			setCarried(network.extract(prototype, button == 1 ? Math.max(1, max / 2) : max));
+			taken = network.extract(prototype, button == 1 ? Math.max(1, max / 2) : max, project);
+			setCarried(taken);
+		}
+
+		if (taken.isEmpty() && (input == ContainerInput.QUICK_MOVE || input == ContainerInput.PICKUP) && player instanceof ServerPlayer serverPlayer) {
+			List<Component> blocked = Projects.blockedLines(network, prototype, project);
+
+			if (!blocked.isEmpty()) {
+				serverPlayer.connection.send(new net.minecraft.network.protocol.game.ClientboundSetActionBarTextPacket(blocked.get(0)));
+			}
 		}
 	}
 
@@ -406,6 +494,7 @@ public class StorageMenu extends ChestMenu {
 			case TerminalNetworking.BUTTON_PREV -> SLOT_PREV;
 			case TerminalNetworking.BUTTON_NEXT -> SLOT_NEXT;
 			case TerminalNetworking.BUTTON_DEPOSIT -> SLOT_DEPOSIT;
+			case TerminalNetworking.BUTTON_SETTINGS -> SLOT_SETTINGS;
 			default -> -1;
 		};
 

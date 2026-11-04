@@ -62,8 +62,7 @@ final class MeChestStorage extends SnapshotParticipant<List<MeChestStorage.Chang
 	}
 
 	private long available(ItemVariant variant) {
-		StorageNetwork.StoredItem entry = network.find(variant.toStack());
-		long amount = entry == null ? 0 : entry.count;
+		long amount = network.available(variant.toStack());
 
 		for (Change change : pending) {
 			if (change.variant().equals(variant)) {

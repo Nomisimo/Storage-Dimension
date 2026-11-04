@@ -689,12 +689,34 @@ public class ClientScreenshots implements FabricClientGameTest {
 			network.insert(new ItemStack(Items.DIAMOND_PICKAXE));
 			player.setGameMode(net.minecraft.world.level.GameType.CREATIVE);
 			de.nomisimo.storagedim.storage.StorageEvents.enterRoom(player, network);
-			System.out.println("STORAGEDIM ISLAND chests=" + network.island.size() + " radius=" + network.islandRadius);
+			System.out.println("STORAGEDIM ISLAND chests=" + network.island.size() + " radius=" + network.islandRadius + " projects="
+					+ network.island.stream().filter(c -> de.nomisimo.storagedim.storage.Islands.isProject(c.key()))
+							.map(c -> c.dx() + "/" + c.dz()).toList()
+					+ " planksChest=" + network.island.stream().anyMatch(c -> c.key().is(Items.OAK_PLANKS)));
 		});
 		context.waitTicks(60);
 		world.getClientLevel().waitForChunksDownload();
 		context.waitTicks(20);
 		context.takeScreenshot("island-arrive");
+		world.getServer().runOnServer(server -> {
+			ServerPlayer player = server.getPlayerList().getPlayers().get(0);
+			var network = StorageData.get().networkFor(player.getUUID());
+			BlockPos centre = de.nomisimo.storagedim.storage.Islands.centre(network.room);
+			var project = network.island.stream().filter(c -> de.nomisimo.storagedim.storage.Islands.isProject(c.key())).findFirst().orElse(null);
+
+			if (project != null) {
+				lookAt(player, Vec3.atCenterOf(centre.offset(project.dx(), 1, project.dz())), 4);
+			}
+		});
+		context.waitTicks(20);
+		context.takeScreenshot("island-project");
+		world.getServer().runOnServer(server -> {
+			ServerPlayer player = server.getPlayerList().getPlayers().get(0);
+			var network = StorageData.get().networkFor(player.getUUID());
+			BlockPos centre = de.nomisimo.storagedim.storage.Islands.centre(network.room);
+			player.teleportTo(player.level(), centre.getX() + 0.5, centre.getY() + 1, centre.getZ() + 0.5, java.util.Set.of(), 180, 0, true);
+		});
+		context.waitTicks(10);
 		world.getServer().runOnServer(server -> {
 			ServerPlayer player = server.getPlayerList().getPlayers().get(0);
 			var network = StorageData.get().networkFor(player.getUUID());
@@ -760,6 +782,171 @@ public class ClientScreenshots implements FabricClientGameTest {
 					+ network.island.stream().anyMatch(c -> c.key().is(Items.DRAGON_EGG)));
 		});
 		context.takeScreenshot("island-chest-closed");
+	}
+
+	private static void logMenu(ServerPlayer player, String what) {
+		var menu = player.containerMenu;
+		StringBuilder line = new StringBuilder("STORAGEDIM PROJECT " + what + ": " + menu.getClass().getSimpleName() + " [");
+
+		for (int i = 0; i < 54 && i < menu.slots.size(); i++) {
+			ItemStack stack = menu.getSlot(i).getItem();
+
+			if (!stack.isEmpty() && !stack.is(Items.GRAY_STAINED_GLASS_PANE)) {
+				line.append(i).append('=').append(stack.getHoverName().getString()).append("; ");
+			}
+		}
+
+		System.out.println(line.append(']'));
+	}
+
+	/** Types into the anvil text field that opened for a name, an amount or a search, and confirms it. */
+	private static void typeInAnvil(ServerPlayer player, String text) {
+		if (player.containerMenu instanceof net.minecraft.world.inventory.AnvilMenu anvil) {
+			anvil.setItemName(text);
+			anvil.clicked(2, 0, ContainerInput.PICKUP, player);
+		} else {
+			System.out.println("STORAGEDIM PROJECT no text field, open: " + player.containerMenu.getClass().getSimpleName());
+		}
+	}
+
+	/**
+	 * Momo's project chest: placed, set up through its settings (an item laid on a slot, + 64, shift-click from the
+	 * inventory, the search, a typed amount and name, blocking on), then its item view, the blocked items in the normal
+	 * terminal (with the tooltip) and the project chest standing in the world.
+	 */
+	private static void projectTest(ClientGameTestContext context, TestSingleplayerContext world) {
+		BlockPos[] chestPos = new BlockPos[1];
+		world.getServer().runOnServer(server -> {
+			ServerPlayer player = server.getPlayerList().getPlayers().get(0);
+			ServerLevel level = player.level();
+			BlockPos base = stationBase.offset(0, 0, 12);
+			player.teleportTo(level, base.getX() + 0.5, base.getY(), base.getZ() + 0.5, java.util.Set.of(), 180, 20, true);
+			var network = StorageData.get().networkFor(player.getUUID());
+			network.insert(new ItemStack(Items.OAK_PLANKS, 300));
+			network.insert(new ItemStack(Items.STONE_BRICKS, 90));
+			network.insert(new ItemStack(Items.GLASS_PANE, 40));
+			BlockPos pos = base.offset(0, 0, -2);
+			chestPos[0] = pos;
+			level.setBlockAndUpdate(pos.above(), Blocks.AIR.defaultBlockState());
+			var state = Blocks.CHEST.defaultBlockState().setValue(ChestBlock.FACING, Direction.SOUTH);
+			level.setBlockAndUpdate(pos, state);
+			de.nomisimo.storagedim.storage.StorageEvents.onPlaced(level, pos, state, player, StorageItems.projectChest(null));
+			var project = StorageData.get().projectChest(Rooms.id(level), pos);
+			System.out.println("STORAGEDIM PROJECT placed=" + (project != null) + " name=" + (project == null ? "-" : project.name));
+
+			de.nomisimo.storagedim.storage.ProjectMenu.open(player, project);
+			var menu = player.containerMenu;
+			// lay planks on a slot: the project needs 64, then + 64
+			menu.setCarried(new ItemStack(Items.OAK_PLANKS, 64));
+			menu.clicked(0, 0, ContainerInput.PICKUP, player);
+			menu.setCarried(ItemStack.EMPTY);
+			menu.clicked(41, 0, ContainerInput.PICKUP, player);
+			// shift-click stone bricks in the own inventory
+			player.getInventory().setItem(9, new ItemStack(Items.STONE_BRICKS, 32));
+			int brickSlot = -1;
+
+			for (int i = 54; i < menu.slots.size(); i++) {
+				if (menu.getSlot(i).getItem().is(Items.STONE_BRICKS)) {
+					brickSlot = i;
+				}
+			}
+
+			menu.clicked(brickSlot, 0, ContainerInput.QUICK_MOVE, player);
+			player.getInventory().setItem(9, ItemStack.EMPTY);
+			// block in ME
+			menu.clicked(47, 0, ContainerInput.PICKUP, player);
+			// search "glass pane" and take the first hit
+			menu.clicked(48, 0, ContainerInput.PICKUP, player);
+			typeInAnvil(player, "glass_pane");
+			logMenu(player, "search");
+		});
+		context.waitTicks(10);
+		context.takeScreenshot("project-search");
+		world.getServer().runOnServer(server -> {
+			ServerPlayer player = server.getPlayerList().getPlayers().get(0);
+			var menu = player.containerMenu;
+			int pane = -1;
+
+			for (int i = 0; i < 45; i++) {
+				if (menu.getSlot(i).getItem().is(Items.GLASS_PANE)) {
+					pane = i;
+					break;
+				}
+			}
+
+			menu.clicked(pane, 0, ContainerInput.QUICK_MOVE, player);
+			// select the planks and type an amount
+			player.containerMenu.clicked(0, 0, ContainerInput.PICKUP, player);
+			player.containerMenu.clicked(39, 0, ContainerInput.PICKUP, player);
+			typeInAnvil(player, "200");
+			player.containerMenu.clicked(46, 0, ContainerInput.PICKUP, player);
+			typeInAnvil(player, "Burg");
+			var project = StorageData.get().projectChest(Rooms.id(player.level()), chestPos[0]);
+			StringBuilder entries = new StringBuilder();
+			project.entries.forEach(e -> entries.append(e.item.getHoverName().getString()).append('=').append(e.target).append(' '));
+			System.out.println("STORAGEDIM PROJECT settings name=" + project.name + " block=" + project.block + " entries=" + entries);
+			logMenu(player, "settings");
+		});
+		context.waitTicks(10);
+		context.takeScreenshot("project-settings");
+		world.getServer().runOnServer(server -> {
+			ServerPlayer player = server.getPlayerList().getPlayers().get(0);
+			player.containerMenu.clicked(52, 0, ContainerInput.PICKUP, player);
+			logMenu(player, "items");
+		});
+		context.waitTicks(10);
+		context.takeScreenshot("project-items");
+		world.getServer().runOnServer(server -> {
+			ServerPlayer player = server.getPlayerList().getPlayers().get(0);
+			var network = StorageData.get().networkFor(player.getUUID());
+			var project = StorageData.get().projectChest(Rooms.id(player.level()), chestPos[0]);
+			ItemStack planks = new ItemStack(Items.OAK_PLANKS);
+			ItemStack free = network.extract(planks, 300);
+			ItemStack own = network.extract(planks, 300, project);
+			System.out.println("STORAGEDIM PROJECT blocked: terminal took=" + free.getCount() + " project took=" + own.getCount()
+					+ " available=" + de.nomisimo.storagedim.api.StorageApi.count(player, planks));
+			network.insert(free);
+			network.insert(own);
+			player.closeContainer();
+			de.nomisimo.storagedim.storage.StorageMenu.open(player, network);
+			logMenu(player, "terminal");
+		});
+		context.waitTicks(15);
+		// hover the planks in the terminal for the tooltip with the projects that block them
+		double[] at = context.computeOnClient(client -> {
+			var menu = client.player.containerMenu;
+
+			for (int i = 0; i < 45; i++) {
+				if (menu.getSlot(i).getItem().is(Items.OAK_PLANKS)) {
+					try {
+						java.lang.reflect.Field left = net.minecraft.client.gui.screens.inventory.AbstractContainerScreen.class.getDeclaredField("leftPos");
+						java.lang.reflect.Field top = net.minecraft.client.gui.screens.inventory.AbstractContainerScreen.class.getDeclaredField("topPos");
+						left.setAccessible(true);
+						top.setAccessible(true);
+						var slot = menu.getSlot(i);
+						double scale = client.getWindow().getGuiScale();
+						System.out.println("STORAGEDIM PROJECT tooltip " + slot.getItem().getOrDefault(net.minecraft.core.component.DataComponents.LORE,
+								net.minecraft.world.item.component.ItemLore.EMPTY).lines().stream().map(Component::getString).toList());
+						return new double[] {(left.getInt(client.screen) + slot.x + 8) * scale, (top.getInt(client.screen) + slot.y + 8) * scale};
+					} catch (ReflectiveOperationException e) {
+						throw new RuntimeException(e);
+					}
+				}
+			}
+
+			return new double[] {0, 0};
+		});
+		context.getInput().setCursorPos(at[0], at[1]);
+		context.waitTicks(10);
+		context.takeScreenshot("project-blocked-tooltip");
+		context.getInput().setCursorPos(0, 0);
+		world.getServer().runOnServer(server -> {
+			ServerPlayer player = server.getPlayerList().getPlayers().get(0);
+			player.closeContainer();
+			lookAt(player, Vec3.atCenterOf(chestPos[0]), 3.5);
+		});
+		context.waitTicks(20);
+		context.takeScreenshot("project-chest");
 	}
 
 	/** Drags a stack across two inventory slots and a display slot in the open terminal, then double-click collects it again. */
@@ -863,6 +1050,7 @@ public class ClientScreenshots implements FabricClientGameTest {
 			recipe(context, world, "storage_chest", a, of(Items.ENDER_PEARL), a, of(Items.ENDER_PEARL), of(Items.CHEST), of(Items.ENDER_PEARL), a, of(Items.ENDER_PEARL), a);
 			recipe(context, world, "me_terminal", r, a, r, a, of(Items.ENDER_CHEST), a, r, a, r);
 			recipe(context, world, "filter_chest", f, f, f, f, of(Items.CHEST), f, f, of(Items.ENDER_EYE), f);
+			recipe(context, world, "project_chest", StorageItems.filterChest(), of(Items.BOOK));
 			recipe(context, world, "robot", i, of(Items.PUMPKIN), i, r, of(Items.HOPPER), r, n, null, n);
 			recipe(context, world, "me_upgrade", of(Items.ENDER_EYE), a, a, of(Items.REDSTONE_BLOCK), of(Items.PAPER));
 			recipe(context, world, "me_backpack", of(Items.BUNDLE), upgrade);
@@ -971,6 +1159,7 @@ public class ClientScreenshots implements FabricClientGameTest {
 			fullChestTest(context, world);
 			logBarrel(world);
 			slabChestTest(context, world);
+			projectTest(context, world);
 			islandTest(context, world);
 		}
 	}

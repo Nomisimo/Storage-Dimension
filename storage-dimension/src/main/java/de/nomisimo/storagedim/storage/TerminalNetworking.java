@@ -18,11 +18,12 @@ public final class TerminalNetworking {
 	}
 
 	/** Server to client: the terminal with this container id just opened. */
-	public record OpenedPayload(int containerId, String sort) implements CustomPacketPayload {
+	public record OpenedPayload(int containerId, String sort, boolean project) implements CustomPacketPayload {
 		public static final Type<OpenedPayload> TYPE = new Type<>(StorageDimensionMod.id("terminal_opened"));
 		public static final StreamCodec<RegistryFriendlyByteBuf, OpenedPayload> CODEC = StreamCodec.composite(
 				ByteBufCodecs.VAR_INT, OpenedPayload::containerId,
 				ByteBufCodecs.STRING_UTF8, OpenedPayload::sort,
+				ByteBufCodecs.BOOL, OpenedPayload::project,
 				OpenedPayload::new);
 
 		@Override
@@ -72,6 +73,8 @@ public final class TerminalNetworking {
 	public static final int BUTTON_PREV = 0;
 	public static final int BUTTON_NEXT = 1;
 	public static final int BUTTON_DEPOSIT = 2;
+	/** Only in a project chest: opens the project settings. */
+	public static final int BUTTON_SETTINGS = 3;
 
 	/** Server to client: which page the terminal shows and what is stored, for the client's bottom row. */
 	public record PagePayload(int containerId, int page, int pages, int kinds, long total) implements CustomPacketPayload {
@@ -138,7 +141,7 @@ public final class TerminalNetworking {
 		ServerPlayNetworking.send(player, new PagePayload(containerId, page, pages, kinds, total));
 	}
 
-	static void sendOpened(ServerPlayer player, int containerId, StorageMenu.Sort sort) {
-		ServerPlayNetworking.send(player, new OpenedPayload(containerId, sort.name()));
+	static void sendOpened(ServerPlayer player, int containerId, StorageMenu.Sort sort, boolean project) {
+		ServerPlayNetworking.send(player, new OpenedPayload(containerId, sort.name(), project));
 	}
 }
