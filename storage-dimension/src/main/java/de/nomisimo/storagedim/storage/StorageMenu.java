@@ -369,7 +369,7 @@ public class StorageMenu extends ChestMenu {
 				search = "";
 				page = 0;
 			} else {
-				SearchMenu.open(serverPlayer, search, text -> open(serverPlayer, network, filter, title, onClose, text));
+				SearchMenu.open(serverPlayer, search, text -> open(serverPlayer, network, filter, title, onClose, text, project, freeOnly));
 				return;
 			}
 		} else if (slotIndex >= 0 && slotIndex < 54) {
