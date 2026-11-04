@@ -862,6 +862,8 @@ public class ClientScreenshots implements FabricClientGameTest {
 			logMenu(player, "search");
 		});
 		context.waitTicks(10);
+		context.getInput().setCursorPos(0, 0);
+		context.waitTicks(2);
 		context.takeScreenshot("project-search");
 		world.getServer().runOnServer(server -> {
 			ServerPlayer player = server.getPlayerList().getPlayers().get(0);
@@ -889,6 +891,8 @@ public class ClientScreenshots implements FabricClientGameTest {
 			logMenu(player, "settings");
 		});
 		context.waitTicks(10);
+		context.getInput().setCursorPos(0, 0);
+		context.waitTicks(2);
 		context.takeScreenshot("project-settings");
 		world.getServer().runOnServer(server -> {
 			ServerPlayer player = server.getPlayerList().getPlayers().get(0);
@@ -896,6 +900,8 @@ public class ClientScreenshots implements FabricClientGameTest {
 			logMenu(player, "items");
 		});
 		context.waitTicks(10);
+		context.getInput().setCursorPos(0, 0);
+		context.waitTicks(2);
 		context.takeScreenshot("project-items");
 		world.getServer().runOnServer(server -> {
 			ServerPlayer player = server.getPlayerList().getPlayers().get(0);
