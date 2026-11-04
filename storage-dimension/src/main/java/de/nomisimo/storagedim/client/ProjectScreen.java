@@ -78,10 +78,10 @@ public class ProjectScreen extends AbstractContainerScreen<ProjectSettingsMenu> 
 			int l = leftPos;
 			int t = topPos + y;
 			minus64 = addRenderableWidget(Button.builder(Component.literal("-64"), b -> send(ProjectSettingsMenu.ACTION_ADJUST, index, -64))
-					.bounds(l + 27, t + 2, 19, 16).build());
+					.bounds(l + 26, t + 2, 20, 16).build());
 			minus1 = addRenderableWidget(Button.builder(Component.literal("-1"), b -> send(ProjectSettingsMenu.ACTION_ADJUST, index, -1))
 					.bounds(l + 47, t + 2, 14, 16).build());
-			amount = addRenderableWidget(new KeyBox(font, l + 63, t + 3, 40, 14, "Menge"));
+			amount = addRenderableWidget(new KeyBox(font, l + 63, t + 3, 36, 14, "Menge"));
 			amount.setMaxLength(10);
 			amount.setResponder(text -> {
 				if (updating) {
@@ -102,11 +102,11 @@ public class ProjectScreen extends AbstractContainerScreen<ProjectSettingsMenu> 
 				}
 			});
 			plus1 = addRenderableWidget(Button.builder(Component.literal("+1"), b -> send(ProjectSettingsMenu.ACTION_ADJUST, index, 1))
-					.bounds(l + 105, t + 2, 14, 16).build());
+					.bounds(l + 101, t + 2, 14, 16).build());
 			plus64 = addRenderableWidget(Button.builder(Component.literal("+64"), b -> send(ProjectSettingsMenu.ACTION_ADJUST, index, 64))
-					.bounds(l + 120, t + 2, 21, 16).build());
+					.bounds(l + 116, t + 2, 20, 16).build());
 			remove = addRenderableWidget(Button.builder(Component.literal("✕").withStyle(ChatFormatting.RED), b -> send(ProjectSettingsMenu.ACTION_REMOVE, index, 0))
-					.bounds(l + 143, t + 2, 14, 16).tooltip(Tooltip.create(Component.literal("Aus dem Projekt entfernen"))).build());
+					.bounds(l + 138, t + 2, 14, 16).tooltip(Tooltip.create(Component.literal("Aus dem Projekt entfernen"))).build());
 		}
 
 		void show(int index, boolean entry) {

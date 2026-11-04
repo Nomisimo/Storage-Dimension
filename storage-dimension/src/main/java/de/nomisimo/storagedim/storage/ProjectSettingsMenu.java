@@ -44,16 +44,16 @@ public class ProjectSettingsMenu extends AbstractContainerMenu {
 
 	// layout, shared with the screen
 	public static final int WIDTH = 176;
-	public static final int HEIGHT = 256;
+	public static final int HEIGHT = 230;
 	public static final int NAME_Y = 5;
-	public static final int SEARCH_Y = 20;
-	public static final int LIST_Y = 36;
+	public static final int SEARCH_Y = 19;
+	public static final int LIST_Y = 34;
 	public static final int ROW_HEIGHT = 20;
-	public static final int ROWS = 5;
-	public static final int BOOK_Y = 146;
+	public static final int ROWS = 4;
+	public static final int BOOK_Y = 120;
 	public static final int BOOK_IN_X = 44;
 	public static final int BOOK_OUT_X = 80;
-	public static final int INVENTORY_Y = 174;
+	public static final int INVENTORY_Y = 148;
 
 	// actions the screen sends
 	public static final int ACTION_SET_ITEM = 0;
