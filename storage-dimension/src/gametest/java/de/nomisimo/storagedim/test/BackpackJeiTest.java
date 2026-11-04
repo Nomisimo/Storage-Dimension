@@ -264,13 +264,16 @@ public class BackpackJeiTest implements FabricClientGameTest {
 			context.getInput().setCursorPos(meAt[0], meAt[1]);
 
 			if (shift) {
-				context.getInput().holdKey(GLFW.GLFW_KEY_LEFT_SHIFT);
-			}
-
-			context.getInput().pressMouse(mouse);
-
-			if (shift) {
-				context.getInput().releaseKey(GLFW.GLFW_KEY_LEFT_SHIFT);
+				// the test input does not pass a held shift on to mouse clicks: the click the screen sends with shift down
+				int button = i % 2;
+				world.getServer().runOnServer(server -> {
+					ServerPlayer player = server.getPlayerList().getPlayers().get(0);
+					BackpackBaseMenu menu = (BackpackBaseMenu) player.containerMenu;
+					menu.clicked(menu.BACKPACK_INV_START, button, net.minecraft.world.inventory.ContainerInput.QUICK_MOVE, player);
+					menu.broadcastChanges();
+				});
+			} else {
+				context.getInput().pressMouse(mouse);
 			}
 
 			context.waitTicks(10);
