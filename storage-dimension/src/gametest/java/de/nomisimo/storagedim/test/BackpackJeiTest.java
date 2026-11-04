@@ -253,6 +253,72 @@ public class BackpackJeiTest implements FabricClientGameTest {
 
 		context.waitTicks(5);
 
+		// Momo's clicks on an ME slot: click 1, right-click half a stack, shift-click a stack, shift-right-click fills the inventory
+		double[] meAt = context.computeOnClient(client -> screenPos(client, ((BackpackBaseMenu) client.player.containerMenu).BACKPACK_INV_START));
+		net.minecraft.world.item.Item clicked = context.computeOnClient(client -> client.player.containerMenu.getSlot(((BackpackBaseMenu) client.player.containerMenu).BACKPACK_INV_START).getItem().getItem());
+		String[] names = {"click", "right-click", "shift-click", "shift-right-click"};
+
+		for (int i = 0; i < 4; i++) {
+			boolean shift = i >= 2;
+			int mouse = i % 2 == 0 ? GLFW.GLFW_MOUSE_BUTTON_LEFT : GLFW.GLFW_MOUSE_BUTTON_RIGHT;
+			context.getInput().setCursorPos(meAt[0], meAt[1]);
+
+			if (shift) {
+				context.getInput().holdKey(GLFW.GLFW_KEY_LEFT_SHIFT);
+			}
+
+			context.getInput().pressMouse(mouse);
+
+			if (shift) {
+				context.getInput().releaseKey(GLFW.GLFW_KEY_LEFT_SHIFT);
+			}
+
+			context.waitTicks(10);
+			String name = names[i];
+			context.runOnClient(client -> {
+				var inventory = client.player.getInventory();
+				int main = 0, hotbar = 0, freeMain = 0;
+
+				for (int j = 0; j < 36; j++) {
+					var stack = inventory.getItem(j);
+
+					if (stack.is(clicked)) {
+						if (j < 9) hotbar += stack.getCount(); else main += stack.getCount();
+					} else if (stack.isEmpty() && j >= 9) {
+						freeMain++;
+					}
+				}
+
+				log("ME " + name + " on " + clicked + ": carried=" + client.player.containerMenu.getCarried().getCount()
+						+ " inventory=" + main + " hotbar=" + hotbar + " freeMain=" + freeMain);
+			});
+
+			if (i == 3) {
+				context.takeScreenshot("backpack-me-shift-right-click");
+			}
+
+			// put back what is on the cursor
+			context.getInput().setCursorPos(meAt[0], meAt[1]);
+			if (context.computeOnClient(client -> !client.player.containerMenu.getCarried().isEmpty())) {
+				context.getInput().pressMouse(GLFW.GLFW_MOUSE_BUTTON_LEFT);
+				context.waitTicks(10);
+			}
+		}
+
+		// everything taken goes back into ME storage for the tests below
+		world.getServer().runOnServer(server -> {
+			ServerPlayer player = server.getPlayerList().getPlayers().get(0);
+
+			for (int j = 0; j < 36; j++) {
+				if (player.getInventory().getItem(j).is(clicked)) {
+					StorageApi.insert(player, player.getInventory().getItem(j));
+				}
+			}
+
+			player.containerMenu.broadcastChanges();
+		});
+		context.waitTicks(10);
+
 		// a tooltip over the bottom row is drawn above the bar below it
 		context.runOnClient(client -> {
 			BackpackBaseMenu menu = (BackpackBaseMenu) client.player.containerMenu;

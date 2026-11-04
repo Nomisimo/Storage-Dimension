@@ -193,7 +193,8 @@ Das Add-on `storagedim-tb-0.6.0.jar` fügt ein echtes **ME-Upgrade** für den Up
 
 ![Der Rucksack öffnet direkt wieder in der ME-Ansicht](docs/screenshots/rucksack-me-gemerkt.png)
 
-- Die ME-Ansicht ist aufgebaut wie der ME-Speicher: oben eine graue Leiste mit Suchfeld, **J**-Schalter und Sortierung, unten ◀ / ▶, **Einlagern** sowie Seite, Sorten und Gesamtmenge. Die Knöpfe des Rucksacks sind in der ME-Ansicht ausgeblendet. Klicks funktionieren wie im ME-Speicher.
+- Die ME-Ansicht ist aufgebaut wie der ME-Speicher: oben eine graue Leiste mit Suchfeld, **J**-Schalter und Sortierung, unten ◀ / ▶, **Einlagern** sowie Seite, Sorten und Gesamtmenge. Die Knöpfe des Rucksacks sind in der ME-Ansicht ausgeblendet.
+- Herausnehmen in der ME-Ansicht: Klick nimmt 1 Item, Rechtsklick einen halben Stapel, Shift-Klick legt einen Stapel ins Inventar, Shift-Rechtsklick füllt das Inventar (ohne Hotbar) mit dem Item. Ein Item auf dem Cursor ins Fenster klicken lagert es ein.
 - Der Rucksack muss nicht in der Hand sein: auf dem Rücken tragen und mit der Rucksack-Taste (Standard **B**) öffnen reicht.
 - **Crafting aus dem ME-Speicher:** Hat der Rucksack zusätzlich das Crafting-Upgrade, holt der „+“-Knopf von JEI fehlende Zutaten auch aus dem ME-Speicher, genauso wie aus Inventar und Rucksack. „+“ ist nur grün, wenn alle Zutaten zusammen vorhanden sind, sonst markiert JEI die fehlenden rot. Shift + „+“ füllt das Raster für so viele Durchgänge wie möglich (bis zu einem Stapel). Was vorher im Raster lag, kommt zurück ins Inventar oder, wenn das voll ist, in den Speicher.
 - Der kleine Schalter neben dem ME-Symbol stellt zwischen *ME als Quelle* (Standard) und *nur Inventar* um.

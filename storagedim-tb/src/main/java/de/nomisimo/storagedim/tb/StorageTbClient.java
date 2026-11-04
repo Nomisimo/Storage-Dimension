@@ -380,7 +380,10 @@ public class StorageTbClient implements ClientModInitializer {
 		}
 
 		if (searchBox.isMouseOver(event.x(), event.y())) {
+			// the screen may still hold the field as focused while the field itself lost focus (a click on a slot),
+			// then setFocused does not refocus it and typing went nowhere
 			screen.setFocused(searchBox);
+			searchBox.setFocused(true);
 			searchBox.mouseClicked(event, false);
 			return true;
 		}
@@ -392,6 +395,10 @@ public class StorageTbClient implements ClientModInitializer {
 
 		if (searchBox.isFocused()) {
 			searchBox.setFocused(false);
+		}
+
+		if (screen.getFocused() == searchBox) {
+			screen.setFocused(null);
 		}
 
 		return false;

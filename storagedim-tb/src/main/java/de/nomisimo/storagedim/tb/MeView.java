@@ -337,7 +337,10 @@ final class MeView {
 		ItemStack prototype = shown.get(k);
 		int max = prototype.getMaxStackSize();
 
-		if (input == ContainerInput.QUICK_MOVE) {
+		if (input == ContainerInput.QUICK_MOVE && button == 1) {
+			fillInventory(player, prototype, max);
+		} else if (input == ContainerInput.QUICK_MOVE) {
+			// shift-click: one stack into the inventory
 			ItemStack taken = MeBridge.extract(player, prototype, max);
 			player.getInventory().add(taken);
 
@@ -345,7 +348,38 @@ final class MeView {
 				MeBridge.insert(player, taken);
 			}
 		} else if (input == ContainerInput.PICKUP && carried.isEmpty()) {
-			menu.setCarried(MeBridge.extract(player, prototype, button == 1 ? Math.max(1, max / 2) : max));
+			// click: one item, right-click: half a stack
+			menu.setCarried(MeBridge.extract(player, prototype, button == 1 ? Math.max(1, max / 2) : 1));
 		}
+	}
+
+	/** Shift-right-click: fills the main inventory (not the hotbar) with the item, topping up its stacks first. */
+	private static void fillInventory(ServerPlayer player, ItemStack prototype, int max) {
+		var inventory = player.getInventory();
+
+		for (boolean emptySlots : new boolean[] {false, true}) {
+			for (int i = 9; i < 36; i++) {
+				ItemStack stack = inventory.getItem(i);
+				boolean fits = emptySlots ? stack.isEmpty() : !stack.isEmpty() && ItemStack.isSameItemSameComponents(stack, prototype);
+
+				if (!fits || stack.getCount() >= max) {
+					continue;
+				}
+
+				ItemStack taken = MeBridge.extract(player, prototype, max - stack.getCount());
+
+				if (taken.isEmpty()) {
+					return;
+				}
+
+				if (stack.isEmpty()) {
+					inventory.setItem(i, taken);
+				} else {
+					stack.grow(taken.getCount());
+				}
+			}
+		}
+
+		inventory.setChanged();
 	}
 }
