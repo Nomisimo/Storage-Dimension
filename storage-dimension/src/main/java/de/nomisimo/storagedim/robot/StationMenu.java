@@ -53,16 +53,17 @@ public class StationMenu extends AbstractContainerMenu {
 
 	// layout, shared with the screen (item positions inside the window)
 	public static final int WIDTH = 176;
-	public static final int HEIGHT = 216;
+	public static final int HEIGHT = 232;
 	public static final int FILTER_X = 8;
 	public static final int FILTER_Y = 30;
 	public static final int MODE_Y = 50;
 	public static final int RANGE_Y = 66;
-	public static final int BUTTONS_Y = 82;
+	public static final int AREA_Y = 82;
+	public static final int BUTTONS_Y = 98;
 	public static final int INPUT_X = 100;
 	public static final int OUTPUT_X = 140;
-	public static final int IO_Y = 108;
-	public static final int INVENTORY_Y = 134;
+	public static final int IO_Y = 124;
+	public static final int INVENTORY_Y = 150;
 
 	// actions the screen sends
 	public static final int ACTION_RANGE = 0;
@@ -71,6 +72,7 @@ public class StationMenu extends AbstractContainerMenu {
 	public static final int ACTION_RECALL = 3;
 	public static final int ACTION_STATION_NAME = 4;
 	public static final int ACTION_ROBOT_NAME = 5;
+	public static final int ACTION_AREA_NAME = 6;
 
 	private final Container filterSlots;
 	private final Container io;
@@ -113,7 +115,7 @@ public class StationMenu extends AbstractContainerMenu {
 		addSlot(new Slot(io, 0, INPUT_X, IO_Y) {
 			@Override
 			public boolean mayPlace(ItemStack stack) {
-				return stack.is(Robots.ROBOT_ITEM);
+				return stack.is(Robots.ROBOT_ITEM) || stack.is(AntennaBlock.ITEM);
 			}
 		});
 		addSlot(new Slot(io, 1, OUTPUT_X, IO_Y) {
@@ -167,6 +169,10 @@ public class StationMenu extends AbstractContainerMenu {
 				// for the robots set up from now on; placed ones keep their own name
 				config = config.withName(clean(text));
 			}
+			case ACTION_AREA_NAME -> {
+				StorageData data = StorageData.get();
+				data.setStationArea(dim, pos, data.stationArea(dim, pos).withName(clean(text)));
+			}
 			default -> {
 				return;
 			}
@@ -196,7 +202,7 @@ public class StationMenu extends AbstractContainerMenu {
 				Slot slot = slots.get(slotIndex);
 				ItemStack stack = slot.getItem();
 
-				if (stack.is(Robots.ROBOT_ITEM)) {
+				if (stack.is(Robots.ROBOT_ITEM) || stack.is(AntennaBlock.ITEM)) {
 					moveItemStackTo(stack, SLOT_INPUT, SLOT_INPUT + 1, false);
 					slot.setChanged();
 				} else if (!stack.isEmpty()) {
@@ -244,33 +250,47 @@ public class StationMenu extends AbstractContainerMenu {
 		save();
 	}
 
-	/** Moves robots from the input to the output slot, set up for this station; robots already there get the new settings. */
+	/**
+	 * Moves robots and antennas from the input to the output slot, set up for (or paired with) this station; what
+	 * already lies in the output gets the new settings.
+	 */
 	private void configureOutput() {
 		ItemStack in = io.getItem(0);
 		ItemStack out = io.getItem(1);
 
 		if (!out.isEmpty()) {
-			ItemStack updated = new ItemStack(Robots.ROBOT_ITEM, out.getCount());
-			config.write(updated, viewer.level().registryAccess());
+			ItemStack updated = configured(out);
 			io.setItem(1, updated);
 			out = updated;
 		}
 
-		if (!in.is(Robots.ROBOT_ITEM)) {
+		if (!in.is(Robots.ROBOT_ITEM) && !in.is(AntennaBlock.ITEM)) {
 			return;
 		}
 
-		ItemStack configured = new ItemStack(Robots.ROBOT_ITEM, in.getCount());
-		config.write(configured, viewer.level().registryAccess());
+		ItemStack configured = configured(in);
 
 		if (out.isEmpty()) {
 			io.setItem(1, configured);
 			io.setItem(0, ItemStack.EMPTY);
-		} else {
+		} else if (ItemStack.isSameItemSameComponents(out, configured)) {
 			int moved = Math.min(in.getCount(), out.getMaxStackSize() - out.getCount());
 			out.grow(moved);
 			in.shrink(moved);
 		}
+	}
+
+	/** A robot set up for this station, or an antenna paired with it. */
+	private ItemStack configured(ItemStack stack) {
+		ItemStack result = new ItemStack(stack.getItem(), stack.getCount());
+
+		if (stack.is(AntennaBlock.ITEM)) {
+			AntennaItem.pair(result, new AntennaItem.Link(dim, pos, config.stationName()));
+		} else {
+			config.write(result, viewer.level().registryAccess());
+		}
+
+		return result;
 	}
 
 	private static int step(int[] values, int current, int direction) {
@@ -316,8 +336,13 @@ public class StationMenu extends AbstractContainerMenu {
 			}
 		}
 
+		StationArea area = StorageData.get().stationArea(dim, pos);
+		// 0: no antenna, 1: one of the two placed, 2: both, the robots work in the box
+		int antennas = area.connected() ? 2 : area.hasAntenna() ? 1 : 0;
+		String areaState = area.connected() ? (area.enabled() ? Areas.autoPaused(dim, pos) ? "pausiert (Auto)" : "an" : "aus") : "";
 		StationNetworking.SyncPayload payload = new StationNetworking.SyncPayload(containerId, config.stationName(), config.name(),
-				config.range(), config.color(), config.exclude(), names, states);
+				config.range(), config.color(), config.exclude(), antennas, area.name(), area.connected() ? area.sizeText(pos) : "", areaState,
+				names, states);
 
 		if (force || !Objects.equals(payload, lastSync)) {
 			lastSync = payload;

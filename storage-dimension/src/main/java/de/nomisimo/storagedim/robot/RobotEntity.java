@@ -172,6 +172,12 @@ public class RobotEntity extends PathfinderMob {
 	/** Every chest next to its station is full (for what it carries or what lies around): it waits for room. */
 	private boolean chestsFull;
 	private String stationName = "";
+	/** The antenna area of its station, or null: then it works within its range around the station. */
+	private AABB area;
+	private String areaLabel = "";
+	private int areaReach;
+	/** Its station's area is switched off or paused: it waits at the station. */
+	private boolean areaOff;
 	private long recallSeen;
 	/** The player who called it back, watched while coming back and waiting. */
 	private UUID recaller;
@@ -328,13 +334,43 @@ public class RobotEntity extends PathfinderMob {
 		}
 
 		applyName(name);
-		stationName = data.station(dim, station).stationName();
+		RobotConfig stationConfig = data.station(dim, station);
+		stationName = stationConfig.stationName();
+		syncArea(data.stationArea(dim, station), stationConfig, dim);
 		Long recall = RECALLS.get(dim + "@" + station.asLong());
 
 		if (recall != null && recall > recallSeen && level().getGameTime() - recall < RECALL_VALID_TICKS) {
 			recallSeen = recall;
 			recaller = RECALLERS.get(dim + "@" + station.asLong());
 			startRecall();
+		}
+	}
+
+	/**
+	 * With both antennas standing it works only inside their box, in the area's colour (set at the station), and
+	 * waits at the station while the area is switched off or paused.
+	 */
+	private void syncArea(StationArea stationArea, RobotConfig stationConfig, String dim) {
+		AABB box = stationArea.connected() ? stationArea.box(station) : null;
+
+		if (!java.util.Objects.equals(box, area)) {
+			area = box;
+			areaReach = box == null ? 0 : stationArea.reach(station);
+			applyRange();
+			release();
+		}
+
+		boolean off = box != null && !Areas.working(dim, station);
+
+		if (off && !areaOff) {
+			release();
+		}
+
+		areaOff = off;
+		areaLabel = box == null ? "" : stationArea.name().isEmpty() ? stationArea.sizeText(station) : stationArea.name();
+
+		if (box != null) {
+			entityData.set(COLOR, stationConfig.color());
 		}
 	}
 
@@ -554,6 +590,10 @@ public class RobotEntity extends PathfinderMob {
 			return Component.literal("Fehler: Station fehlt").withStyle(ChatFormatting.RED);
 		}
 
+		if (areaOff && getCarried().isEmpty()) {
+			return Component.literal("Pause: Area aus").withStyle(ChatFormatting.AQUA);
+		}
+
 		// while it is busy it shows what it does; an old error from before does not count
 		if (!getCarried().isEmpty() && delivery != null) {
 			return Component.literal("Bringt ").append(getCarried().getHoverName()).append(" weg").withStyle(ChatFormatting.GREEN);
@@ -589,7 +629,7 @@ public class RobotEntity extends PathfinderMob {
 	private void updateInfo() {
 		entityData.set(INFO_STATION, Component.literal("Station: ").withStyle(ChatFormatting.GRAY)
 				.append(Component.literal(station == null ? "keine" : stationName.isEmpty() ? station.toShortString() : stationName).withStyle(ChatFormatting.WHITE))
-				.append(Component.literal(" · " + range / 16 + (range == 16 ? " Chunk" : " Chunks")).withStyle(ChatFormatting.GRAY)));
+				.append(Component.literal(area != null ? " · Area " + areaLabel : " · " + range / 16 + (range == 16 ? " Chunk" : " Chunks")).withStyle(ChatFormatting.GRAY)));
 		entityData.set(INFO_FILTER, Component.literal("Sammelt: ").withStyle(ChatFormatting.GRAY)
 				.append(RobotConfig.describeFilter(filter, excludeFilter).withStyle(ChatFormatting.WHITE)));
 		entityData.set(INFO_STATUS, status());
@@ -908,6 +948,11 @@ public class RobotEntity extends PathfinderMob {
 	}
 
 	private boolean inRange(Vec3 pos) {
+		if (area != null) {
+			return pos.x >= area.minX && pos.x <= area.maxX && pos.z >= area.minZ && pos.z <= area.maxZ
+					&& pos.y >= area.minY - 0.01 && pos.y <= area.maxY;
+		}
+
 		BlockPos h = home();
 		double dx = pos.x - h.getX();
 		double dz = pos.z - h.getZ();
@@ -924,8 +969,12 @@ public class RobotEntity extends PathfinderMob {
 			return null;
 		}
 
+		if (areaOff) {
+			return null;
+		}
+
 		BlockPos h = home();
-		AABB area = new AABB(h).inflate(range, VERTICAL_RANGE, range);
+		AABB area = this.area != null ? this.area.inflate(0.5) : new AABB(h).inflate(range, VERTICAL_RANGE, range);
 		long now = level().getGameTime();
 		ignoredItems.values().removeIf(until -> until < now);
 		List<ItemEntity> items = new ArrayList<>(level().getEntitiesOfClass(ItemEntity.class, area,
@@ -1181,6 +1230,12 @@ public class RobotEntity extends PathfinderMob {
 			if (stationMissing()) {
 				release();
 				return false;
+			}
+
+			// its area is switched off: back to the station, waiting there until it is on again
+			if (areaOff) {
+				release();
+				return (!nearHome() || isInWater()) && level().getGameTime() >= homeUnreachableUntil;
 			}
 
 			if ((target == null || !target.isAlive()) && level().getGameTime() >= nextSearch) {
@@ -1536,7 +1591,7 @@ public class RobotEntity extends PathfinderMob {
 
 	/** Paths may be as long as its range, so it can work out the whole way to anything in range. */
 	private void applyRange() {
-		getAttribute(Attributes.FOLLOW_RANGE).setBaseValue(range + 16);
+		getAttribute(Attributes.FOLLOW_RANGE).setBaseValue((area != null ? areaReach : range) + 16);
 		getNavigation().updatePathfinderMaxVisitedNodes();
 	}
 

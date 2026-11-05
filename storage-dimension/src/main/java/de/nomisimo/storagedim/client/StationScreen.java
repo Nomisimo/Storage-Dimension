@@ -37,8 +37,11 @@ public class StationScreen extends AbstractContainerScreen<StationMenu> {
 	private StationNetworking.SyncPayload data;
 	private EditBox stationName;
 	private EditBox robotName;
+	private EditBox areaName;
 	private Button mode;
 	private Button color;
+	private Button rangeDown;
+	private Button rangeUp;
 	private int scroll;
 
 	public StationScreen(StationMenu menu, Inventory inventory, Component title) {
@@ -68,14 +71,18 @@ public class StationScreen extends AbstractContainerScreen<StationMenu> {
 				.bounds(l + 8, t + StationMenu.MODE_Y, 160, 14)
 				.tooltip(Tooltip.create(Component.literal("Umschalten: die Items im Filter sammeln oder liegen lassen")))
 				.build());
-		addRenderableWidget(Button.builder(Component.literal("−"), b -> send(StationMenu.ACTION_RANGE, -1, ""))
+		rangeDown = addRenderableWidget(Button.builder(Component.literal("−"), b -> send(StationMenu.ACTION_RANGE, -1, ""))
 				.bounds(l + 8, t + StationMenu.RANGE_Y, 20, 14).tooltip(Tooltip.create(Component.literal("Reichweite kleiner"))).build());
-		addRenderableWidget(Button.builder(Component.literal("+"), b -> send(StationMenu.ACTION_RANGE, 1, ""))
+		rangeUp = addRenderableWidget(Button.builder(Component.literal("+"), b -> send(StationMenu.ACTION_RANGE, 1, ""))
 				.bounds(l + 148, t + StationMenu.RANGE_Y, 20, 14).tooltip(Tooltip.create(Component.literal("Reichweite größer"))).build());
+		areaName = addRenderableWidget(new NameBox(font, l + 8, t + StationMenu.AREA_Y + 1, 94, 12, "Area-Name …"));
+		areaName.setResponder(text -> send(StationMenu.ACTION_AREA_NAME, 0, text));
+		areaName.setTooltip(Tooltip.create(Component.literal("Name der Antennen-Area, so steht sie in der Fernbedienung")));
 		color = addRenderableWidget(Button.builder(Component.empty(), b -> send(StationMenu.ACTION_COLOR, 1, ""))
-				.bounds(l + 8, t + StationMenu.BUTTONS_Y, 78, 14).tooltip(Tooltip.create(Component.literal("Klick: nächste Farbe"))).build());
+				.bounds(l + 106, t + StationMenu.AREA_Y, 62, 14)
+				.tooltip(Tooltip.create(Component.literal("Farbe der Area und ihrer Roboter. Klick: nächste Farbe"))).build());
 		addRenderableWidget(Button.builder(Component.literal("Zurückrufen"), b -> send(StationMenu.ACTION_RECALL, 0, ""))
-				.bounds(l + 90, t + StationMenu.BUTTONS_Y, 78, 14)
+				.bounds(l + 8, t + StationMenu.BUTTONS_Y, 160, 14)
 				.tooltip(Tooltip.create(Component.literal("Alle Roboter kommen zur Station und warten dort eine Minute. "
 						+ "Wer keinen Weg zur Station findet, teleportiert sich her.")))
 				.build());
@@ -102,8 +109,17 @@ public class StationScreen extends AbstractContainerScreen<StationMenu> {
 			robotName.setValue(data.robotName());
 		}
 
+		if (!areaName.isFocused() && !areaName.getValue().equals(data.areaName())) {
+			areaName.setValue(data.areaName());
+		}
+
+		// with antennas the area replaces the range
+		rangeDown.visible = data.antennas() == 0;
+		rangeUp.visible = data.antennas() == 0;
+
 		mode.setMessage(Component.literal(data.exclude() ? "Sammelt alles AUSSER Filter" : "Sammelt nur den Filter"));
-		color.setMessage(Component.literal("■ ").withColor(data.color()).append(Component.literal(RobotConfig.colorName(data.color()))
+		String colorName = RobotConfig.colorName(data.color());
+		color.setMessage(Component.literal("■ ").withColor(data.color()).append(Component.literal(colorName.startsWith("Standard") ? "Standard" : colorName)
 				.withStyle(ChatFormatting.WHITE)));
 	}
 
@@ -143,14 +159,27 @@ public class StationScreen extends AbstractContainerScreen<StationMenu> {
 	protected void extractLabels(GuiGraphicsExtractor graphics, int mouseX, int mouseY) {
 		graphics.text(font, playerInventoryTitle, inventoryLabelX, inventoryLabelY, TEXT, false);
 		graphics.text(font, "Filter (leer = alles)", 8, StationMenu.FILTER_Y - 10, TEXT, false);
-		graphics.text(font, "Roboter hineinlegen:", 8, StationMenu.IO_Y - 10, TEXT, false);
+		graphics.text(font, "Roboter oder Antenne:", 8, StationMenu.IO_Y - 10, TEXT, false);
 		graphics.text(font, "→", StationMenu.INPUT_X + 23, StationMenu.IO_Y + 4, TEXT, false);
 
 		if (data == null) {
 			return;
 		}
 
-		graphics.centeredText(font, Component.literal(RobotConfig.rangeText(data.range())), 88, StationMenu.RANGE_Y + 3, 0xFFFFFFFF);
+		Component range;
+
+		if (data.antennas() == 2) {
+			// green while the robots work, gold while the area is switched off or paused
+			ChatFormatting style = data.areaState().equals("an") ? ChatFormatting.DARK_GREEN : ChatFormatting.GOLD;
+			String text = "Antenne verbunden · " + data.areaSize();
+			range = Component.literal(font.width(text) <= 156 ? text : "Antenne verbunden").withStyle(style);
+		} else if (data.antennas() == 1) {
+			range = Component.literal("Antenne: 1 von 2 gesetzt").withStyle(ChatFormatting.GOLD);
+		} else {
+			range = Component.literal(RobotConfig.rangeText(data.range()));
+		}
+
+		graphics.centeredText(font, range, 88, StationMenu.RANGE_Y + 3, 0xFFFFFFFF);
 
 		int x = imageWidth + LIST_GAP;
 		List<Component> names = data.names();
