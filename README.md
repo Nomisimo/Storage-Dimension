@@ -238,7 +238,10 @@ Das Add-on `storagedim-tb-0.7.0.jar` fügt ein echtes **ME-Upgrade** für den Up
 
 - **Rezept** (formlos): Leeres Upgrade (Traveler's Backpack), Enderauge, 2× Amethystscherbe, Redstoneblock. Mit dem Add-on ergibt auch das normale ME-Upgrade-Rezept (mit Papier) dieses Upgrade. Es passt in den Upgrade-Slot und macht mit einem Bündel auch einen ME-Rucksack.
 - **ME-Ansicht:** Upgrade in einen Upgrade-Slot legen. Linksklick auf das ME-Symbol zeigt den ME-Speicher direkt im Rucksack-Fenster an Stelle des Rucksack-Inhalts. Crafting und die anderen Upgrades bleiben daneben. Ein zweiter Linksklick zeigt wieder den Rucksack, Rechtsklick nimmt das Upgrade heraus.
-- Der Rucksack öffnet sich so, wie er zuletzt geschlossen wurde: in der ME-Ansicht oder als Rucksack. Auch die Sortierung der ME-Ansicht bleibt gespeichert, über Neustarts hinweg (Datei `storagedim-tb.json` im Weltordner).
+- Der Rucksack öffnet sich so, wie er zuletzt geschlossen wurde: in der ME-Ansicht oder als Rucksack. Die ME-Ansicht ist dabei sofort da, der Rucksack-Inhalt blitzt nicht erst auf. Auch die Sortierung der ME-Ansicht bleibt gespeichert, über Neustarts hinweg (Datei `storagedim-tb.json` im Weltordner).
+- **Abschalten:** Wer das nicht will, schaltet in den Mod-Einstellungen (über [Mod Menu](https://modrinth.com/mod/modmenu): Mods → Storage Dimension: Traveler's Backpack → Einstellungen) **ME-Ansicht automatisch öffnen** aus. Dann öffnet sich der Rucksack immer mit seinem eigenen Inhalt. Die Einstellung gilt nur für den eigenen Client und steht in `config/storagedim-tb-client.json` (`"autoOpenMeView": false`), dort lässt sie sich auch ohne Mod Menu ändern.
+
+![Mod-Einstellungen des Add-ons mit dem Schalter für die ME-Ansicht](docs/screenshots/rucksack-einstellungen.png)
 
 ![Der Rucksack öffnet direkt wieder in der ME-Ansicht](docs/screenshots/rucksack-me-gemerkt.png)
 
@@ -250,7 +253,7 @@ Das Add-on `storagedim-tb-0.7.0.jar` fügt ein echtes **ME-Upgrade** für den Up
 - Der Rucksack muss nicht in der Hand sein: auf dem Rücken tragen und mit der Rucksack-Taste (Standard **B**) öffnen reicht.
 - **Crafting aus dem ME-Speicher:** Hat der Rucksack zusätzlich das Crafting-Upgrade, holt der „+“-Knopf von JEI fehlende Zutaten auch aus dem ME-Speicher, genauso wie aus Inventar und Rucksack. „+“ ist nur grün, wenn alle Zutaten zusammen vorhanden sind, sonst markiert JEI die fehlenden rot. Shift + „+“ füllt das Raster für so viele Durchgänge wie möglich (bis zu einem Stapel). Was vorher im Raster lag, kommt zurück ins Inventar oder, wenn das voll ist, in den Speicher.
 - Der kleine Schalter neben dem ME-Symbol stellt zwischen *ME als Quelle* (Standard) und *nur Inventar* um.
-- **Installation:** `storagedim-tb-0.7.0.jar` und `storage-dimension-0.7.0.jar` auf Server und Clients, dazu Traveler's Backpack, [Forge Config API Port](https://modrinth.com/mod/forge-config-api-port) und Fabric API. JEI wird nur für „+“ und die Rezeptanzeige gebraucht.
+- **Installation:** `storagedim-tb-0.7.0.jar` und `storage-dimension-0.7.0.jar` auf Server und Clients, dazu Traveler's Backpack, [Forge Config API Port](https://modrinth.com/mod/forge-config-api-port) und Fabric API. JEI wird nur für „+“ und die Rezeptanzeige gebraucht, Mod Menu (optional, nur im Client) für die Einstellungen.
 
 ![ME-Ansicht im Rucksack mit Suchleiste, Sortierung und Knöpfen wie im ME-Speicher](docs/screenshots/rucksack-me-suche.png)
 
