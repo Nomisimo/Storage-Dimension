@@ -119,8 +119,8 @@ Eine Kiste für ein Bauprojekt: Du legst fest, welche Items in welcher Menge geb
 
 ### Trichter und Maschinen
 
-- Trichter, die in eine Dimensionskiste oder Filterkiste zeigen, liefern direkt in den Speicher. Zum Anbauen mit einem Item in der Hand schleichen.
-- Maschinen anderer Mods (z. B. Tech Reborn, Advanced Reborn) sind über die Fabric-Transfer-API angebunden. Was eine Maschine in eine Dimensions- oder Filterkiste schiebt, landet im ME-Speicher, und aus einer Filterkiste können Maschinen die Filter-Items herausziehen.
+- Trichter, die in eine Dimensionskiste, Filterkiste oder ein ME-Terminal zeigen, liefern direkt in den Speicher. Zum Anbauen mit einem Item in der Hand schleichen. Ein Terminal füllt den Speicher dessen, der es hingestellt hat (bei `sharedStorage = false` nehmen Terminals von vor dieser Version nichts an, bis sie neu hingestellt werden).
+- Maschinen anderer Mods (z. B. Tech Reborn, Advanced Reborn) sind über die Fabric-Transfer-API angebunden. Was eine Maschine in eine Dimensions- oder Filterkiste oder ein ME-Terminal schiebt, landet im ME-Speicher, und aus einer Filterkiste können Maschinen die Filter-Items herausziehen.
 
 ## Sammelroboter
 
