@@ -1,5 +1,7 @@
 Storage Dimension für **Minecraft 26.1.2** (Fabric).
 
+**Neu in 0.7.1:** JEI zeigt die Rezepte jetzt auch auf Servern ohne JEI: Die Mod schickt alle Rezepte selbst an die Spieler, auf dem Server reichen Fabric API und Storage Dimension (0.7.1 muss dafür auf Server und Clients liegen). Das ME-Terminal nimmt Items von Trichtern und Maschinen an und lagert sie direkt im ME-Speicher ein. Die Antenne wird jetzt mit Blitzableiter statt End-Rute gecraftet. Traveler's-Backpack-Add-on 0.7.1: Die ME-Ansicht ist beim Öffnen des Rucksacks sofort da, ohne Verzögerung; wer das nicht will, schaltet in den Mod-Einstellungen (Mod Menu) „ME-Ansicht automatisch öffnen“ aus.
+
 **Neu in 0.7.0:** Antennen und Fernbedienung für Roboter-Areas: Eine Antenne, gepaart über den Eingang der Station, kommt direkt auf die Station, eine zweite an die Gegenecke. Dazwischen liegt eine 3D-Area (bis 160 Blöcke je Achse), die sofort für alle Roboter der Station gilt; fehlt eine Antenne, gilt wieder die Chunk-Reichweite. Die Station zeigt Area-Name, Farbe, Größe und Zustand (auch in Jade), Zurückrufen hat eine eigene Zeile. Die Fernbedienung zeigt in der Hand die Areas in der Nähe als Umriss mit Namen, Rechtsklick schaltet sie an oder aus (dann warten die Roboter an der Station); im Auto-Modus pausieren die Areas, in denen ein Spieler mit Fernbedienung steht. Neue Projektkiste: Items und Mengen für ein Bauprojekt festlegen (eigenes Einstellungsfenster, JEI-Drag, Rezeptbuch), die Kiste zeigt sie aus dem ME-Speicher mit grünen Zahlen, sobald genug da ist, blockt die Mengen im ME und steht auf der Kisten-Insel im Ring um den Ankunftsplatz. Neue Klick-Logik beim Herausnehmen aus ME-Terminal, Kisten und Rucksack: Linksklick ein Stapel, Rechtsklick ein Item, Shift-Linksklick füllt das Inventar (ohne Hotbar), Shift-Rechtsklick die Hälfte. Das Mausrad scrollt ME-Terminal und Rucksack-ME-Ansicht zeilenweise. Roboter lagern nur noch in Kisten, die sie sehen (nicht durch Stufen oder Wände), schwimmen unter Decken zu offenem Wasser und lassen blockierte Deckel zu. Traveler's-Backpack-Add-on 0.7.0: Der Rucksack öffnet sich in der zuletzt benutzten Ansicht und merkt sich die ME-Sortierung; das Suchfeld nimmt nach einem Klick wieder Eingaben an.
 
 **Neu in 0.6.0:** Die Storage Dimension ist jetzt eine Kisten-Insel in der Form der End-Insel statt eines Lagerraums. Der Boden ist aus Fässern, darauf steht für jede gespeicherte Item-Sorte eine eigene Kiste, sortiert nach Mod und Name, mit dem Item schwebend darüber. Jede Kiste hält beliebig viele Items ihrer Sorte und nimmt nichts anderes an; was man herausnimmt, ist auch aus dem ME-Speicher weg. Werkzeuge teilen sich eine Kiste pro Item, verzauberte Bücher und Tränke bekommen je Variante eine eigene. Neue Sorten bekommen sofort eine Kiste am Rand, leere Kisten verschwinden, sobald niemand auf der Insel ist. Darüber liegt der End-Himmel mit kleinen weißen und grauen Kisten als Sternen und einer großen Kiste als Mond. Auf der Insel lässt sich nichts abbauen oder hinstellen, wer herunterfällt, landet wieder in der Mitte; raus geht es über den Leuchtstein oder `/storage raus`. Mit `sharedStorage = false` hat jeder Speicher seine eigene Insel. Der alte Raum wird beim ersten Betreten abgebaut, was noch in Ofen oder Kisten lag, landet im Speicher.
@@ -16,18 +18,18 @@ Storage Dimension für **Minecraft 26.1.2** (Fabric).
 
 **Neu in 0.4.1:** Im ME-Speicher (auch über das Rucksack-Upgrade) und im Filter-Fenster lassen sich Items im eigenen Inventar wieder ziehen und verteilen sowie per Doppelklick sammeln; vorher sprangen sie zurück in die Hand.
 
-**Neu in 0.4.0:** Sammelroboter, eigene Texturen für Dimensionskiste, Filterkiste, ME-Terminal und die ME-Items, Rezepte in JEI, Anbindung an Maschinen (z. B. Tech Reborn), doppelte Filterkisten mit 14 Filtern. Ab dieser Version brauchen **alle Spieler** `storage-dimension-0.7.0.jar`.
+**Neu in 0.4.0:** Sammelroboter, eigene Texturen für Dimensionskiste, Filterkiste, ME-Terminal und die ME-Items, Rezepte in JEI, Anbindung an Maschinen (z. B. Tech Reborn), doppelte Filterkisten mit 14 Filtern. Ab dieser Version brauchen **alle Spieler** `storage-dimension-0.7.1.jar`.
 
 ## Server, in den Ordner `mods`
 
-- `storage-dimension-0.7.0.jar`
-- `storagedim-tb-0.7.0.jar`
+- `storage-dimension-0.7.1.jar`
+- `storagedim-tb-0.7.1.jar`
 - dazu [Fabric API](https://modrinth.com/mod/fabric-api), [Traveler's Backpack](https://modrinth.com/mod/travelersbackpack) und [Forge Config API Port](https://modrinth.com/mod/forge-config-api-port), alle für 26.1.2
 
 ## Jeder Spieler, in den Ordner `mods`
 
-- `storage-dimension-0.7.0.jar`
-- `storagedim-tb-0.7.0.jar`
+- `storage-dimension-0.7.1.jar`
+- `storagedim-tb-0.7.1.jar`
 - dazu [Fabric API](https://modrinth.com/mod/fabric-api), [Traveler's Backpack](https://modrinth.com/mod/travelersbackpack), [Forge Config API Port](https://modrinth.com/mod/forge-config-api-port) und [JEI](https://modrinth.com/mod/jei), alle für 26.1.2
 
 ## Nur Storage Dimension, ohne Traveler's Backpack
