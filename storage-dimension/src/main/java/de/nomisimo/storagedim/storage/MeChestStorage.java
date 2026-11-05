@@ -3,6 +3,7 @@ package de.nomisimo.storagedim.storage;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
+import java.util.UUID;
 
 import net.fabricmc.fabric.api.transfer.v1.item.ItemStorage;
 import net.fabricmc.fabric.api.transfer.v1.item.ItemVariant;
@@ -10,6 +11,7 @@ import net.fabricmc.fabric.api.transfer.v1.storage.Storage;
 import net.fabricmc.fabric.api.transfer.v1.storage.StorageView;
 import net.fabricmc.fabric.api.transfer.v1.transaction.TransactionContext;
 import net.fabricmc.fabric.api.transfer.v1.transaction.base.SnapshotParticipant;
+import de.nomisimo.storagedim.StorageConfig;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
@@ -19,6 +21,9 @@ import net.minecraft.world.level.block.Blocks;
  * Lets machines from other mods (Tech Reborn, pipes, ...) talk to dimension and filter chests through the Fabric
  * transfer API: whatever they insert goes straight into ME storage, and a filter chest also hands out its filter
  * items. Vanilla hoppers keep using the chest's own slots.
+ * <p>
+ * ME terminals (ender chests) take items the same way, also from hoppers, which Fabric lets insert into a block
+ * without slots through this API. They give nothing out.
  */
 final class MeChestStorage extends SnapshotParticipant<List<MeChestStorage.Change>> implements Storage<ItemVariant> {
 	/** Positive amounts are insertions, negative ones extractions, applied when the outer transaction commits. */
@@ -37,6 +42,24 @@ final class MeChestStorage extends SnapshotParticipant<List<MeChestStorage.Chang
 
 	static void register() {
 		ItemStorage.SIDED.registerForBlocks((level, pos, state, blockEntity, side) -> find(level, pos), Blocks.CHEST);
+		ItemStorage.SIDED.registerForBlocks((level, pos, state, blockEntity, side) -> terminal(level, pos), Blocks.ENDER_CHEST);
+	}
+
+	/** The storage behind an ME terminal: its placer's network, or the shared one for terminals without a known placer. */
+	private static MeChestStorage terminal(Level level, BlockPos pos) {
+		StorageData data = StorageData.get();
+
+		if (level.isClientSide() || data == null || !data.isTerminal(Rooms.id(level), pos)) {
+			return null;
+		}
+
+		UUID owner = data.terminalOwner(Rooms.id(level), pos);
+
+		if (owner == null && !StorageConfig.get().sharedStorage) {
+			return null;
+		}
+
+		return new MeChestStorage(data.networkFor(owner == null ? new UUID(0, 0) : owner), null);
 	}
 
 	private static MeChestStorage find(Level level, BlockPos pos) {

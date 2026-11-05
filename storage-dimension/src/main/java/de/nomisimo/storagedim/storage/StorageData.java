@@ -56,6 +56,8 @@ public final class StorageData {
 	public final Map<String, Map<Long, UUID>> projectChests = new HashMap<>();
 	/** Dimension id to packed positions of placed ME terminals. */
 	public final Map<String, Set<Long>> terminals = new HashMap<>();
+	/** Dimension id to packed position to the player who placed the terminal; whose storage hoppers fill. */
+	public final Map<String, Map<Long, UUID>> terminalOwners = new HashMap<>();
 	/** Settings of each robot station per dimension, applied to robots configured there. */
 	public final Map<String, Map<Long, RobotConfig>> stations = new HashMap<>();
 	/** Robots placed for each station per dimension: robot id to its name, in the order they were placed. */
@@ -268,7 +270,25 @@ public final class StorageData {
 		return set != null && set.contains(pos.asLong());
 	}
 
+	/** The player who placed this terminal, or null (placed before 0.8.0). */
+	public UUID terminalOwner(String dimension, BlockPos pos) {
+		return terminalOwners.getOrDefault(dimension, Map.of()).get(pos.asLong());
+	}
+
+	public void setTerminal(String dimension, BlockPos pos, boolean present, UUID owner) {
+		setTerminal(dimension, pos, present);
+
+		if (present && owner != null) {
+			terminalOwners.computeIfAbsent(dimension, d -> new HashMap<>()).put(pos.asLong(), owner);
+			markDirty();
+		}
+	}
+
 	public void setTerminal(String dimension, BlockPos pos, boolean present) {
+		if (!present && terminalOwners.containsKey(dimension) && terminalOwners.get(dimension).remove(pos.asLong()) != null) {
+			markDirty();
+		}
+
 		Set<Long> set = terminals.computeIfAbsent(dimension, d -> new HashSet<>());
 
 		if (present ? set.add(pos.asLong()) : set.remove(pos.asLong())) {
@@ -409,6 +429,14 @@ public final class StorageData {
 			terminalObj.add(dim, arr);
 		});
 		root.add("terminals", terminalObj);
+
+		JsonObject terminalOwnerObj = new JsonObject();
+		terminalOwners.forEach((dim, map) -> {
+			JsonObject d = new JsonObject();
+			map.forEach((pos, id) -> d.addProperty(Long.toString(pos), id.toString()));
+			terminalOwnerObj.add(dim, d);
+		});
+		root.add("terminalOwners", terminalOwnerObj);
 
 		JsonObject stationObj = new JsonObject();
 		stations.forEach((dim, map) -> {
@@ -569,6 +597,15 @@ public final class StorageData {
 				Set<Long> set = new HashSet<>();
 				dim.getValue().getAsJsonArray().forEach(e -> set.add(e.getAsLong()));
 				terminals.put(dim.getKey(), set);
+			});
+		}
+
+		if (root.has("terminalOwners")) {
+			root.getAsJsonObject("terminalOwners").entrySet().forEach(dim -> {
+				Map<Long, UUID> map = new HashMap<>();
+				dim.getValue().getAsJsonObject().entrySet().forEach(e ->
+						map.put(Long.parseLong(e.getKey()), UUID.fromString(e.getValue().getAsString())));
+				terminalOwners.put(dim.getKey(), map);
 			});
 		}
 

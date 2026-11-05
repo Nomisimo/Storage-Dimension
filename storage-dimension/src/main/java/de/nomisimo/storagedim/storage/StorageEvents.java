@@ -85,7 +85,7 @@ public final class StorageEvents {
 	/** Called from the BlockItem mixin right after a block was placed from an item. */
 	public static void onPlaced(Level level, BlockPos pos, BlockState state, LivingEntity placer, ItemStack stack) {
 		if (!level.isClientSide() && StorageItems.isTerminal(stack) && state.is(Blocks.ENDER_CHEST)) {
-			StorageData.get().setTerminal(Rooms.id(level), pos, true);
+			StorageData.get().setTerminal(Rooms.id(level), pos, true, placer == null ? null : placer.getUUID());
 			return;
 		}
 

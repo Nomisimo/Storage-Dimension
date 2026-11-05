@@ -81,6 +81,35 @@ public class ClientScreenshots implements FabricClientGameTest {
 		context.waitTicks(5);
 	}
 
+	/** A hopper on top of an ME terminal feeds it: the diamonds end up in ME storage, the hopper runs empty. */
+	private static void hopperIntoTerminal(ClientGameTestContext context, TestSingleplayerContext world) {
+		long[] before = new long[1];
+		world.getServer().runOnServer(server -> {
+			ServerPlayer player = server.getPlayerList().getPlayers().get(0);
+			ServerLevel level = (ServerLevel) player.level();
+			BlockPos terminal = player.blockPosition().offset(2, 0, 3);
+			level.setBlockAndUpdate(terminal, Blocks.ENDER_CHEST.defaultBlockState());
+			StorageData.get().setTerminal(Rooms.id(level), terminal, true, player.getUUID());
+			level.setBlockAndUpdate(terminal.above(), Blocks.HOPPER.defaultBlockState()
+					.setValue(net.minecraft.world.level.block.HopperBlock.FACING, Direction.DOWN));
+
+			if (level.getBlockEntity(terminal.above()) instanceof net.minecraft.world.level.block.entity.HopperBlockEntity hopper) {
+				hopper.setItem(0, new ItemStack(Items.DIAMOND, 9));
+			}
+
+			before[0] = de.nomisimo.storagedim.api.StorageApi.count(player, new ItemStack(Items.DIAMOND));
+		});
+		context.waitTicks(100);
+		world.getServer().runOnServer(server -> {
+			ServerPlayer player = server.getPlayerList().getPlayers().get(0);
+			BlockPos terminal = player.blockPosition().offset(2, 0, 3);
+			long after = de.nomisimo.storagedim.api.StorageApi.count(player, new ItemStack(Items.DIAMOND));
+			int left = player.level().getBlockEntity(terminal.above()) instanceof net.minecraft.world.level.block.entity.HopperBlockEntity hopper
+					? hopper.getItem(0).getCount() : -1;
+			System.out.println("STORAGEDIM hopper into terminal: diamonds before=" + before[0] + " after=" + after + " left in hopper=" + left);
+		});
+	}
+
 	private static ItemStack of(net.minecraft.world.item.Item item) {
 		return new ItemStack(item);
 	}
@@ -1220,6 +1249,7 @@ public class ClientScreenshots implements FabricClientGameTest {
 				recipe(context, world, "tb_me_upgrade", of(Items.ENDER_EYE), new ItemStack(blank), a, a, of(Items.REDSTONE_BLOCK));
 			}
 
+			hopperIntoTerminal(context, world);
 			dragInTerminal(context, world);
 			terminalCounts(context, world);
 
