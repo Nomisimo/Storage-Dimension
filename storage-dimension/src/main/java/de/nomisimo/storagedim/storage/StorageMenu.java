@@ -32,12 +32,16 @@ import net.minecraft.world.item.component.CustomData;
 import net.minecraft.world.item.component.ItemLore;
 
 /**
- * The ME terminal: a 6-row chest screen showing the network contents page by page.
+ * The ME terminal: a 6-row chest screen showing the network contents page by page; with the client mod the mouse
+ * wheel also scrolls through them row by row.
  * The top inventory is display-only; every click is handled here and then resynced.
  * A filter chest, and every chest of the chest island, opens the same screen limited to its items.
  */
 public class StorageMenu extends ChestMenu {
 	private static final int ITEM_SLOTS = 45;
+	private static final int COLUMNS = 9;
+	/** Rows the page buttons move. */
+	private static final int PAGE_ROWS = ITEM_SLOTS / COLUMNS;
 	private static final int SLOT_PREV = 45;
 	private static final int SLOT_SEARCH = 46;
 	private static final int SLOT_SORT = 47;
@@ -71,10 +75,12 @@ public class StorageMenu extends ChestMenu {
 	private final boolean freeOnly;
 	private String search;
 	private int pages = 1;
+	/** The first shown row: the page buttons move 5 rows, the mouse wheel 1. */
+	private int row;
+	private int maxRow;
 	private int kinds;
 	private long total;
 	private List<StorageNetwork.StoredItem> shown = new ArrayList<>();
-	private int page;
 
 	public enum Sort {
 		AMOUNT("Menge"), NAME("Alphabet");
@@ -137,7 +143,7 @@ public class StorageMenu extends ChestMenu {
 
 		if (clientUi && player.containerMenu instanceof StorageMenu menu) {
 			TerminalNetworking.sendOpened(player, menu.containerId, menu.sort(), project != null);
-			TerminalNetworking.sendPage(player, menu.containerId, menu.page, menu.pages, menu.kinds, menu.total);
+			menu.sendPage(player);
 		}
 	}
 
@@ -151,7 +157,7 @@ public class StorageMenu extends ChestMenu {
 
 		if (!clean.equals(search)) {
 			search = clean;
-			page = 0;
+			row = 0;
 			refresh();
 			sync();
 		}
@@ -160,7 +166,7 @@ public class StorageMenu extends ChestMenu {
 	/** Switches the sort order and returns the new one. */
 	public Sort toggleSort() {
 		SORTS.put(viewer.getUUID(), next(sort()));
-		page = 0;
+		row = 0;
 		refresh();
 		sync();
 		return sort();
@@ -262,8 +268,9 @@ public class StorageMenu extends ChestMenu {
 	private void refresh() {
 		List<StorageNetwork.StoredItem> all = visible();
 		int pages = Math.max(1, (all.size() + ITEM_SLOTS - 1) / ITEM_SLOTS);
-		page = Math.min(page, pages - 1);
-		shown = all.subList(page * ITEM_SLOTS, Math.min(all.size(), (page + 1) * ITEM_SLOTS));
+		maxRow = Math.max(0, (all.size() + COLUMNS - 1) / COLUMNS - ITEM_SLOTS / COLUMNS);
+		row = Math.clamp(row, 0, maxRow);
+		shown = all.subList(row * COLUMNS, Math.min(all.size(), row * COLUMNS + ITEM_SLOTS));
 
 		for (int i = 0; i < 54; i++) {
 			display.setItem(i, ItemStack.EMPTY);
@@ -289,11 +296,11 @@ public class StorageMenu extends ChestMenu {
 			display.setItem(i, filler.copy());
 		}
 
-		if (page > 0) {
+		if (row > 0) {
 			display.setItem(SLOT_PREV, button(Items.ARROW, "Vorherige Seite"));
 		}
 
-		if (page < pages - 1) {
+		if (row < maxRow) {
 			display.setItem(SLOT_NEXT, button(Items.ARROW, "Nächste Seite"));
 		}
 
@@ -312,7 +319,7 @@ public class StorageMenu extends ChestMenu {
 
 		display.setItem(SLOT_DEPOSIT, button(Items.HOPPER, filter == null
 				? "Inventar einlagern (ohne Hotbar)" : "Passende Items einlagern (ohne Hotbar)"));
-		display.setItem(SLOT_INFO, button(Items.ENDER_EYE, "Seite " + (page + 1) + "/" + pages + " · "
+		display.setItem(SLOT_INFO, button(Items.ENDER_EYE, "Seite " + (page() + 1) + "/" + pages + " · "
 				+ all.size() + " Sorten · " + format(total) + " Items"));
 
 		if (project != null) {
@@ -346,9 +353,10 @@ public class StorageMenu extends ChestMenu {
 		icon.set(DataComponents.CUSTOM_DATA, CustomData.of(tag));
 		icon.set(DataComponents.LORE, new ItemLore(List.of(
 				Component.literal("Gespeichert: " + format(count)).withStyle(ChatFormatting.GOLD),
-				Component.literal("Linksklick: Stapel nehmen").withStyle(ChatFormatting.GRAY),
-				Component.literal("Rechtsklick: halben Stapel nehmen").withStyle(ChatFormatting.GRAY),
-				Component.literal("Shift-Klick: ins Inventar").withStyle(ChatFormatting.GRAY))));
+				Component.literal("Linksklick: 1 Stapel nehmen").withStyle(ChatFormatting.GRAY),
+				Component.literal("Rechtsklick: 1 Item nehmen").withStyle(ChatFormatting.GRAY),
+				Component.literal("Shift-Linksklick: Inventar füllen (ohne Hotbar)").withStyle(ChatFormatting.GRAY),
+				Component.literal("Shift-Rechtsklick: halbes Inventar füllen").withStyle(ChatFormatting.GRAY))));
 		return icon;
 	}
 
@@ -374,7 +382,7 @@ public class StorageMenu extends ChestMenu {
 		} else if (slotIndex == SLOT_SEARCH && !clientUi && player instanceof ServerPlayer serverPlayer) {
 			if (buttonNum == 1) {
 				search = "";
-				page = 0;
+				row = 0;
 			} else {
 				SearchMenu.open(serverPlayer, search, text -> open(serverPlayer, network, filter, title, onClose, text, project, freeOnly));
 				return;
@@ -397,19 +405,19 @@ public class StorageMenu extends ChestMenu {
 	}
 
 	private void clickTop(int slot, int button, ContainerInput input, Player player) {
-		if (slot == SLOT_PREV && page > 0) {
-			page--;
+		if (slot == SLOT_PREV && row > 0) {
+			row = Math.max(0, row - PAGE_ROWS);
 			return;
 		}
 
 		if (slot == SLOT_NEXT) {
-			page++;
+			row = Math.min(maxRow, row + PAGE_ROWS);
 			return;
 		}
 
 		if (slot == SLOT_SORT && !clientUi) {
 			SORTS.put(player.getUUID(), next(sort()));
-			page = 0;
+			row = 0;
 			return;
 		}
 
@@ -462,17 +470,12 @@ public class StorageMenu extends ChestMenu {
 		ItemStack taken = ItemStack.EMPTY;
 
 		if (input == ContainerInput.QUICK_MOVE) {
-			taken = network.extract(prototype, max, project);
-			boolean got = !taken.isEmpty();
-			player.getInventory().add(taken);
-
-			if (!taken.isEmpty()) {
-				network.insert(taken);
-			}
-
-			taken = got ? prototype : ItemStack.EMPTY;
+			// shift-click fills the inventory without the hotbar, shift-right-click half of it
+			int got = InventoryFill.fill(player.getInventory(), prototype, button == 1, amount -> network.extract(prototype, amount, project));
+			taken = got > 0 ? prototype : ItemStack.EMPTY;
 		} else if (input == ContainerInput.PICKUP && carried.isEmpty()) {
-			taken = network.extract(prototype, button == 1 ? Math.max(1, max / 2) : max, project);
+			// click: one stack, right-click: one item
+			taken = network.extract(prototype, button == 1 ? 1 : max, project);
 			setCarried(taken);
 		}
 
@@ -490,8 +493,28 @@ public class StorageMenu extends ChestMenu {
 			sendAllDataToRemote();
 
 			if (clientUi) {
-				TerminalNetworking.sendPage(player, containerId, page, pages, kinds, total);
+				sendPage(player);
 			}
+		}
+	}
+
+	/** The page the shown rows belong to; after scrolling to the end it is the last one. */
+	private int page() {
+		return row >= maxRow ? pages - 1 : row / PAGE_ROWS;
+	}
+
+	private void sendPage(ServerPlayer player) {
+		TerminalNetworking.sendPage(player, containerId, page(), pages, kinds, total, row > 0, row < maxRow);
+	}
+
+	/** The client mod's mouse wheel: scrolls the shown items by whole rows, positive is down. */
+	public void scroll(int rows) {
+		int before = row;
+		row = Math.clamp((long) row + rows, 0, maxRow);
+
+		if (row != before) {
+			refresh();
+			sync();
 		}
 	}
 

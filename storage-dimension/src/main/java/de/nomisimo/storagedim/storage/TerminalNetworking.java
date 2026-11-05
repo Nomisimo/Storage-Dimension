@@ -77,7 +77,7 @@ public final class TerminalNetworking {
 	public static final int BUTTON_SETTINGS = 3;
 
 	/** Server to client: which page the terminal shows and what is stored, for the client's bottom row. */
-	public record PagePayload(int containerId, int page, int pages, int kinds, long total) implements CustomPacketPayload {
+	public record PagePayload(int containerId, int page, int pages, int kinds, long total, boolean prev, boolean next) implements CustomPacketPayload {
 		public static final Type<PagePayload> TYPE = new Type<>(StorageDimensionMod.id("terminal_page"));
 		public static final StreamCodec<RegistryFriendlyByteBuf, PagePayload> CODEC = StreamCodec.composite(
 				ByteBufCodecs.VAR_INT, PagePayload::containerId,
@@ -85,7 +85,22 @@ public final class TerminalNetworking {
 				ByteBufCodecs.VAR_INT, PagePayload::pages,
 				ByteBufCodecs.VAR_INT, PagePayload::kinds,
 				ByteBufCodecs.VAR_LONG, PagePayload::total,
+				ByteBufCodecs.BOOL, PagePayload::prev,
+				ByteBufCodecs.BOOL, PagePayload::next,
 				PagePayload::new);
+
+		@Override
+		public Type<? extends CustomPacketPayload> type() {
+			return TYPE;
+		}
+	}
+
+	/** Client to server: the mouse wheel turned over the terminal, by this many rows (positive is down). */
+	public record ScrollPayload(int rows) implements CustomPacketPayload {
+		public static final Type<ScrollPayload> TYPE = new Type<>(StorageDimensionMod.id("terminal_scroll"));
+		public static final StreamCodec<RegistryFriendlyByteBuf, ScrollPayload> CODEC = StreamCodec.composite(
+				ByteBufCodecs.VAR_INT, ScrollPayload::rows,
+				ScrollPayload::new);
 
 		@Override
 		public Type<? extends CustomPacketPayload> type() {
@@ -114,6 +129,12 @@ public final class TerminalNetworking {
 				menu.pressButton(payload.button());
 			}
 		});
+		PayloadTypeRegistry.serverboundPlay().register(ScrollPayload.TYPE, ScrollPayload.CODEC);
+		ServerPlayNetworking.registerGlobalReceiver(ScrollPayload.TYPE, (payload, context) -> {
+			if (context.player().containerMenu instanceof StorageMenu menu) {
+				menu.scroll(Math.clamp(payload.rows(), -64, 64));
+			}
+		});
 		PayloadTypeRegistry.clientboundPlay().register(OpenedPayload.TYPE, OpenedPayload.CODEC);
 		PayloadTypeRegistry.clientboundPlay().register(SortedPayload.TYPE, SortedPayload.CODEC);
 		PayloadTypeRegistry.serverboundPlay().register(SearchPayload.TYPE, SearchPayload.CODEC);
@@ -137,8 +158,8 @@ public final class TerminalNetworking {
 		return ServerPlayNetworking.canSend(player, OpenedPayload.TYPE);
 	}
 
-	static void sendPage(ServerPlayer player, int containerId, int page, int pages, int kinds, long total) {
-		ServerPlayNetworking.send(player, new PagePayload(containerId, page, pages, kinds, total));
+	static void sendPage(ServerPlayer player, int containerId, int page, int pages, int kinds, long total, boolean prev, boolean next) {
+		ServerPlayNetworking.send(player, new PagePayload(containerId, page, pages, kinds, total, prev, next));
 	}
 
 	static void sendOpened(ServerPlayer player, int containerId, StorageMenu.Sort sort, boolean project) {
