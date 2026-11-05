@@ -1088,6 +1088,8 @@ public class ClientScreenshots implements FabricClientGameTest {
 			drop(level, station.getX() + 3.5, station.getY() + 0.2, station.getZ() + 4.5, new ItemStack(Items.WHEAT, 5));
 			drop(level, station.getX() - 2.5, station.getY() + 0.2, station.getZ() - 2.5, new ItemStack(Items.CARROT, 5));
 			player.setItemInHand(InteractionHand.MAIN_HAND, ItemStack.EMPTY);
+			// the menu closes again when the player is far from the station
+			player.teleportTo(level, station.getX() + 0.5, station.getY(), station.getZ() + 3.5, java.util.Set.of(), 180, 30, true);
 			StationMenu.open(player, station);
 		});
 		context.waitTicks(15);
@@ -1096,7 +1098,10 @@ public class ClientScreenshots implements FabricClientGameTest {
 			ServerPlayer player = server.getPlayerList().getPlayers().get(0);
 			player.closeContainer();
 			player.setItemInHand(InteractionHand.MAIN_HAND, new ItemStack(de.nomisimo.storagedim.robot.RemoteItem.ITEM));
-			lookAt(player, Vec3.atCenterOf(antennaStation.offset(3, 1, 3)), 13);
+			// flying, so the view from above stays put while the outlines arrive
+			player.getAbilities().flying = true;
+			player.onUpdateAbilities();
+			lookAt(player, Vec3.atCenterOf(antennaStation.offset(3, 1, 3)), 12);
 		});
 		context.waitTicks(80);
 		context.takeScreenshot("antenna-outlines");
