@@ -375,6 +375,23 @@ public class BackpackJeiTest implements FabricClientGameTest {
 		context.runOnClient(client -> client.player.closeContainer());
 		context.waitTicks(5);
 
+		// the mod setting switches that off: then the backpack opens with its own contents, also when left as ME
+		context.setScreen(() -> tbScreen("TbConfigScreen"));
+		context.waitTicks(5);
+		context.getInput().setCursorPos(0, 0);
+		context.takeScreenshot("tb-config");
+		context.setScreen(() -> null);
+		tbAutoMe(context, false);
+		context.waitTicks(5);
+		reopenBackpack(context, world, "auto off");
+		context.runOnClient(client -> client.player.closeContainer());
+		context.waitTicks(5);
+		tbAutoMe(context, true);
+		context.waitTicks(5);
+		reopenBackpack(context, world, "auto on again");
+		context.runOnClient(client -> client.player.closeContainer());
+		context.waitTicks(5);
+
 		// search sync: text in JEI's search bar also searches the ME terminal
 		context.runOnClient(client -> StorageConfig.get().jeiSearchSync = true);
 		world.getServer().runOnServer(server -> {
@@ -400,8 +417,31 @@ public class BackpackJeiTest implements FabricClientGameTest {
 			BackpackContainer.openBackpack(player, player.getInventory().getItem(0), Reference.ITEM_SCREEN_ID, 0);
 		});
 		context.waitFor(client -> client.screen instanceof BackpackScreen, 200);
+		// the ME view must be there at once, not a moment after the window
+		context.runOnClient(client -> log("reopen " + label + ": at once title=" + client.screen.getTitle().getString()));
 		context.waitTicks(25);
 		context.runOnClient(client -> log("reopen " + label + ": title=" + client.screen.getTitle().getString()));
+	}
+
+	/** The add-on's own client setting, through reflection: the test does not compile against the add-on. */
+	private static void tbAutoMe(ClientGameTestContext context, boolean on) {
+		context.runOnClient(client -> {
+			try {
+				Class.forName("de.nomisimo.storagedim.tb.TbClientConfig").getMethod("setAutoMe", boolean.class).invoke(null, on);
+				log("auto ME view " + on);
+			} catch (ReflectiveOperationException e) {
+				throw new RuntimeException(e);
+			}
+		});
+	}
+
+	private static net.minecraft.client.gui.screens.Screen tbScreen(String name) {
+		try {
+			return (net.minecraft.client.gui.screens.Screen) Class.forName("de.nomisimo.storagedim.tb." + name)
+					.getConstructor(net.minecraft.client.gui.screens.Screen.class).newInstance((Object) null);
+		} catch (ReflectiveOperationException e) {
+			throw new RuntimeException(e);
+		}
 	}
 
 	/** Where a slot of the open screen is, in window pixels for the test input. Client thread only. */

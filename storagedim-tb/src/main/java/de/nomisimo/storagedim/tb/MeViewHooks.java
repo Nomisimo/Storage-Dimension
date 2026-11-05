@@ -2,6 +2,7 @@ package de.nomisimo.storagedim.tb;
 
 import com.tiviacz.travelersbackpack.inventory.menu.BackpackBaseMenu;
 
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.ContainerInput;
 
@@ -29,5 +30,9 @@ public final class MeViewHooks {
 		if (view != null) {
 			view.apply();
 		}
+	}
+
+	public static void menuOpened(ServerPlayer player) {
+		MeNetworking.opened(player);
 	}
 }

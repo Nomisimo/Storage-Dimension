@@ -18,6 +18,9 @@
 		],
 		"jei_mod_plugin": [
 			"de.nomisimo.storagedim.tb.TbJeiPlugin"
+		],
+		"modmenu": [
+			"de.nomisimo.storagedim.tb.TbModMenu"
 		]
 	},
 	"depends": {
@@ -32,6 +35,7 @@
 		"storagedim_tb.mixins.json"
 	],
 	"suggests": {
-		"jei": "*"
+		"jei": "*",
+		"modmenu": "*"
 	}
 }

@@ -4,7 +4,9 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 
 import com.tiviacz.travelersbackpack.inventory.menu.BackpackBaseMenu;
 
@@ -29,6 +31,8 @@ final class MeNetworking {
 	private static final Map<UUID, long[]> SENT = new HashMap<>();
 	/** Per player: the backpack window that was already switched to the view they left it in last time. */
 	private static final Map<UUID, Integer> OPENED = new HashMap<>();
+	/** Players who switched off in their mod settings that the backpack opens in the ME view. */
+	private static final Set<UUID> NO_AUTO = ConcurrentHashMap.newKeySet();
 
 	private MeNetworking() {
 	}
@@ -38,6 +42,19 @@ final class MeNetworking {
 		static final TogglePayload INSTANCE = new TogglePayload();
 		static final Type<TogglePayload> TYPE = new Type<>(StorageTbMod.id("toggle_me_view"));
 		static final StreamCodec<RegistryFriendlyByteBuf, TogglePayload> CODEC = StreamCodec.unit(INSTANCE);
+
+		@Override
+		public Type<? extends CustomPacketPayload> type() {
+			return TYPE;
+		}
+	}
+
+	/** Client to server: the player's mod setting, whether the backpack may open in the ME view by itself. */
+	record AutoPayload(boolean on) implements CustomPacketPayload {
+		static final Type<AutoPayload> TYPE = new Type<>(StorageTbMod.id("me_view_auto"));
+		static final StreamCodec<RegistryFriendlyByteBuf, AutoPayload> CODEC = StreamCodec.composite(
+				ByteBufCodecs.BOOL, AutoPayload::on,
+				AutoPayload::new);
 
 		@Override
 		public Type<? extends CustomPacketPayload> type() {
@@ -168,6 +185,14 @@ final class MeNetworking {
 				view.setSearch(context.player(), payload.text());
 			}
 		});
+		PayloadTypeRegistry.serverboundPlay().register(AutoPayload.TYPE, AutoPayload.CODEC);
+		ServerPlayNetworking.registerGlobalReceiver(AutoPayload.TYPE, (payload, context) -> {
+			if (payload.on()) {
+				NO_AUTO.remove(context.player().getUUID());
+			} else {
+				NO_AUTO.add(context.player().getUUID());
+			}
+		});
 		ServerTickEvents.END_SERVER_TICK.register(MeNetworking::tick);
 	}
 
@@ -201,10 +226,29 @@ final class MeNetworking {
 		menu.sendAllDataToRemote();
 	}
 
-	private static void tick(MinecraftServer server) {
-		if (server.getTickCount() % SYNC_TICKS != 0) {
-			return;
+	/**
+	 * Right after a window opened (from the {@code ServerPlayer.openMenu} mixin): a backpack the player left in the ME
+	 * view opens in it at once, in the same batch of packets as the window itself, so the backpack contents never show.
+	 */
+	static void opened(ServerPlayer player) {
+		if (player.containerMenu instanceof BackpackBaseMenu menu && hasMe(menu)) {
+			autoOpen(player, menu);
 		}
+	}
+
+	/** Switches a newly opened backpack window to the ME view, if the player left it there and did not turn that off. */
+	private static void autoOpen(ServerPlayer player, BackpackBaseMenu menu) {
+		Integer opened = OPENED.put(player.getUUID(), menu.containerId);
+
+		if ((opened == null || opened != menu.containerId) && TbSettings.ME_VIEW.contains(player.getUUID())
+				&& !NO_AUTO.contains(player.getUUID()) && !MeView.isOpen(menu)) {
+			setView(player, menu, true);
+			sendStock(player, menu);
+		}
+	}
+
+	private static void tick(MinecraftServer server) {
+		boolean sync = server.getTickCount() % SYNC_TICKS == 0;
 
 		for (ServerPlayer player : server.getPlayerList().getPlayers()) {
 			if (!(player.containerMenu instanceof BackpackBaseMenu menu) || !hasMe(menu)) {
@@ -217,11 +261,12 @@ final class MeNetworking {
 				continue;
 			}
 
-			// a newly opened backpack window starts in the ME view if the player left it there last time
-			Integer opened = OPENED.put(player.getUUID(), menu.containerId);
+			// a newly opened backpack window starts in the ME view if the player left it there last time (normally
+			// done right when it opens; this catches windows opened some other way)
+			autoOpen(player, menu);
 
-			if ((opened == null || opened != menu.containerId) && TbSettings.ME_VIEW.contains(player.getUUID()) && !MeView.isOpen(menu)) {
-				setView(player, menu, true);
+			if (!sync) {
+				continue;
 			}
 
 			MeView view = MeView.of(menu);

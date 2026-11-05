@@ -13,6 +13,7 @@ import de.nomisimo.storagedim.tb.mixin.ScreenTitleAccessor;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
+import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
 import net.fabricmc.fabric.api.client.screen.v1.ScreenEvents;
 import net.fabricmc.fabric.api.client.screen.v1.ScreenKeyboardEvents;
@@ -84,6 +85,8 @@ public class StorageTbClient implements ClientModInitializer {
 
 	@Override
 	public void onInitializeClient() {
+		// the server learns the player's own setting for opening the ME view by itself
+		ClientPlayConnectionEvents.JOIN.register((handler, sender, client) -> TbClientConfig.sendToServer());
 		ClientPlayNetworking.registerGlobalReceiver(MeNetworking.ViewPayload.TYPE, (payload, context) -> {
 			if (context.player().containerMenu instanceof BackpackBaseMenu menu && menu.containerId == payload.containerId()) {
 				MeView.set(menu, payload.on(), true);

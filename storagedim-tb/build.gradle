@@ -65,9 +65,16 @@ java {
 	targetCompatibility = JavaVersion.VERSION_25
 }
 
+sourcesJar {
+	exclude 'com/terraformersmc/**'
+}
+
 jar {
 	def projectName = project.name
 	inputs.property "projectName", projectName
+
+	// compile-time copy of Mod Menu's API; Mod Menu brings the real one
+	exclude 'com/terraformersmc/**'
 
 	from("LICENSE") {
 		rename { "${it}_$projectName"}
