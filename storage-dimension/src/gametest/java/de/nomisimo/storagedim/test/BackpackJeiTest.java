@@ -31,7 +31,12 @@ import net.fabricmc.fabric.api.client.gametest.v1.context.TestServerConnection;
 import net.fabricmc.fabric.api.client.gametest.v1.context.TestSingleplayerContext;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
 import net.fabricmc.loader.api.FabricLoader;
+import net.minecraft.client.gui.screens.ConnectScreen;
+import net.minecraft.client.gui.screens.TitleScreen;
+import net.minecraft.client.multiplayer.ServerData;
+import net.minecraft.client.multiplayer.resolver.ServerAddress;
 import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.network.chat.Component;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerPlayer;
@@ -79,6 +84,42 @@ public class BackpackJeiTest implements FabricClientGameTest {
 			logOwnRecipes(context, "server");
 		} catch (Exception e) {
 			log("server test failed: " + e);
+			e.printStackTrace();
+		}
+
+		externalServerTest(context);
+	}
+
+	/**
+	 * The dedicated server above runs in this JVM and so has JEI's server half too, which sends all recipes.
+	 * The workflow therefore also starts a real server in its own process, with only our mod and Fabric API.
+	 */
+	private static void externalServerTest(ClientGameTestContext context) {
+		String address = System.getenv("STORAGEDIM_EXTERNAL_SERVER");
+
+		if (address == null || address.isBlank()) {
+			return;
+		}
+
+		TestJeiPlugin.runtime = null;
+
+		try {
+			context.runOnClient(client -> ConnectScreen.startConnecting(client.screen, client, ServerAddress.parseString(address),
+					new ServerData("extern", address, ServerData.Type.OTHER), false, null));
+			context.waitFor(client -> client.level != null && client.player != null, 1200);
+			waitForJei(context);
+			logOwnRecipes(context, "external server");
+			context.runOnClient(client -> {
+				List<String> own = craftingRecipes().stream().map(holder -> holder.id().identifier().toString()).toList();
+				log("CHECK external server " + (own.contains("storagedim:robot") && own.contains("storagedim:storage_chest") ? "OK" : "FEHLT"));
+				client.level.disconnect(Component.literal("Disconnecting"));
+				client.disconnectWithSavingScreen();
+			});
+			context.waitFor(client -> client.level == null);
+			context.waitTicks(2);
+			context.setScreen(TitleScreen::new);
+		} catch (Throwable e) {
+			log("CHECK external server FEHLT: " + e);
 			e.printStackTrace();
 		}
 	}
