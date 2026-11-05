@@ -272,12 +272,12 @@ Alle Rezepte stehen auch in [JEI](https://modrinth.com/mod/jei).
 | Dimensionskiste | Amethystscherben, Enderperlen, Kiste | ![Rezept Dimensionskiste](docs/screenshots/rezept-storage-chest.png) |
 | ME-Terminal | Redstone, Amethystscherben, Enderkiste | ![Rezept ME-Terminal](docs/screenshots/rezept-me-terminal.png) |
 | Filterkiste | 8 Rahmen um eine Kiste, unten mittig ein Enderauge | ![Rezept Filterkiste](docs/screenshots/rezept-filter-chest.png) |
-| Projektkiste | formlos: Filterkiste + Buch | ![Rezept Projektkiste](docs/screenshots/rezept-project-chest.png) |
+| Projektkiste | formlos: Filterkiste + Buch | ![Rezept Projektkiste](docs/screenshots/rezept-projektkiste.png) |
 | Sammelroboter | Eisenbarren, Kürbis, Redstone, Trichter, Eisennuggets | ![Rezept Sammelroboter](docs/screenshots/rezept-robot.png) |
 | Roboter-Station | Blitzableiter, Eisenbarren, Redstoneblock, Kiste | ![Rezept Roboter-Station](docs/screenshots/rezept-robot-station.png) |
 | Roboter-Barriere (8 Stück) | 8 Glas um eine Amethystscherbe | ![Rezept Roboter-Barriere](docs/screenshots/rezept-robot-barrier.png) |
-| Antenne | formlos: End-Rute, 2× Kupferbarren, Redstone | ![Rezept Antenne](docs/screenshots/rezept-antenna.png) |
-| Fernbedienung | Redstone oben mittig, Glasscheibe in der Mitte, Enderperle unten mittig, 4 Kupferbarren links und rechts davon | ![Rezept Fernbedienung](docs/screenshots/rezept-remote.png) |
+| Antenne | formlos: Blitzableiter, 2× Kupferbarren, Redstone | ![Rezept Antenne](docs/screenshots/rezept-antenne.png) |
+| Fernbedienung | Redstone oben mittig, Glasscheibe in der Mitte, Enderperle unten mittig, 4 Kupferbarren links und rechts davon | ![Rezept Fernbedienung](docs/screenshots/rezept-fernbedienung.png) |
 | ME-Upgrade | formlos: Enderauge, 2× Amethystscherbe, Redstoneblock, Papier | ![Rezept ME-Upgrade](docs/screenshots/rezept-me-upgrade.png) |
 | ME-Rucksack | formlos: beliebiges Bündel + ME-Upgrade | ![Rezept ME-Rucksack](docs/screenshots/rezept-me-backpack.png) |
 | ME-Upgrade (Add-on) | formlos: Leeres Upgrade, Enderauge, 2× Amethystscherbe, Redstoneblock (mit dem Add-on geht auch das Papier-Rezept oben) | ![Rezept ME-Upgrade für Traveler's Backpack](docs/screenshots/rezept-tb-me-upgrade.png) |
