@@ -265,7 +265,7 @@ Suche und Sortierung sitzen in der Titelzeile des Fensters, über den Knöpfen d
 
 ## Rezepte
 
-Alle Rezepte stehen auch in [JEI](https://modrinth.com/mod/jei).
+Alle Rezepte stehen auch in [JEI](https://modrinth.com/mod/jei), auch auf Servern ohne JEI: Storage Dimension schickt die Rezepte selbst an die Spieler.
 
 | Item | Zutaten | Rezept |
 | --- | --- | --- |
