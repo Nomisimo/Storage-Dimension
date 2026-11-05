@@ -43,6 +43,11 @@ public class AntennaBlock extends Block {
 	public static final ResourceKey<Block> KEY = ResourceKey.create(Registries.BLOCK, StorageDimensionMod.id("antenna"));
 	public static final ResourceKey<Item> ITEM_KEY = ResourceKey.create(Registries.ITEM, StorageDimensionMod.id("antenna"));
 
+	// before the block: registering it already asks for its shapes
+	private static final VoxelShape VERTICAL = Block.box(6, 0, 6, 10, 16, 10);
+	private static final VoxelShape NORTH_SOUTH = Block.box(6, 6, 0, 10, 10, 16);
+	private static final VoxelShape EAST_WEST = Block.box(0, 6, 6, 16, 10, 10);
+
 	public static final Block BLOCK = Registry.register(BuiltInRegistries.BLOCK, KEY, new AntennaBlock(BlockBehaviour.Properties.of()
 			.setId(KEY)
 			.mapColor(MapColor.COLOR_ORANGE)
@@ -53,10 +58,6 @@ public class AntennaBlock extends Block {
 			.pushReaction(PushReaction.DESTROY)));
 	public static final Item ITEM = Registry.register(BuiltInRegistries.ITEM, ITEM_KEY,
 			new AntennaItem(BLOCK, new Item.Properties().setId(ITEM_KEY)));
-
-	private static final VoxelShape VERTICAL = Block.box(6, 0, 6, 10, 16, 10);
-	private static final VoxelShape NORTH_SOUTH = Block.box(6, 6, 0, 10, 10, 16);
-	private static final VoxelShape EAST_WEST = Block.box(0, 6, 6, 16, 10, 10);
 
 	public AntennaBlock(Properties properties) {
 		super(properties);
