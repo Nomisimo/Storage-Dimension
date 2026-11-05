@@ -26,7 +26,19 @@ jobs:
       - name: build the Traveler's Backpack add-on for the test
         working-directory: storagedim-tb
         run: chmod +x ./gradlew && ./gradlew build
+      - name: start a separate server without JEI, for the recipe test
+        run: |
+          cp -r . /tmp/server-project
+          cd /tmp/server-project
+          mkdir -p run
+          echo "eula=true" > run/eula.txt
+          printf "online-mode=false\nenforce-secure-profile=false\nserver-port=25570\n" > run/server.properties
+          nohup ./gradlew runServer --args="nogui" > /tmp/server.log 2>&1 &
+          for i in $(seq 1 120); do grep -q "Done (" /tmp/server.log && break; sleep 5; done
+          grep -E "Done \(|Rezepte für JEI" /tmp/server.log
       - name: run client game test
+        env:
+          STORAGEDIM_EXTERNAL_SERVER: localhost:25570
         run: timeout 1500 xvfb-run -a -s "-screen 0 1280x720x24" ./gradlew runClientGameTest 2>&1 | tee client.log
       - name: publish screenshots
         if: always()
@@ -37,6 +49,7 @@ jobs:
           tail -300 storage-dimension/client.log > /tmp/shots/client-log-tail.txt || true
           grep -iE "error|exception|mixin|storagedim|STORAGEDIM" storage-dimension/client.log | head -300 > /tmp/shots/client-log-errors.txt || true
           grep "STORAGEDIM" storage-dimension/client.log | grep -v "STORAGEDIM ROBOT" > /tmp/shots/client-log-checks.txt || true
+          grep -iE "jei|rezept|error|exception" /tmp/server.log | head -100 > /tmp/shots/server-log.txt || true
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git checkout --orphan screenshots
@@ -45,3 +58,5 @@ jobs:
           git add -A
           git commit -m "Screenshots for ${GITHUB_SHA}" || true
           git push -f origin screenshots
+      - name: recipes reach JEI on a separate server
+        run: grep -q "STORAGEDIM JEI CHECK external server OK" client.log

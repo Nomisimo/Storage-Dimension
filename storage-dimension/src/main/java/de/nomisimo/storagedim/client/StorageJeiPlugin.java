@@ -34,8 +34,8 @@ import net.minecraft.world.item.crafting.Recipe;
 import net.minecraft.world.item.crafting.RecipeHolder;
 
 /**
- * Since 1.21.2 servers no longer send recipes to clients, so JEI cannot see ours on a server.
- * This plugin reads them from our own jar and hands them to JEI.
+ * Since 1.21.2 servers no longer send recipes to clients. Our server sends them anyway (RecipeSync), and if it
+ * does not (older version), this plugin reads ours from our own jar and hands them to JEI.
  * It also gives the ME terminal access to JEI's search bar, for the search sync.
  */
 public class StorageJeiPlugin implements IModPlugin {
@@ -115,6 +115,14 @@ public class StorageJeiPlugin implements IModPlugin {
 			return;
 		}
 
+		// Normally the server sends all recipes (RecipeSync), then JEI already has ours.
+		if (SyncedRecipes.own() > 0) {
+			StorageDimensionMod.LOGGER.info("JEI: {} Rezepte von Storage Dimension kommen vom Server", SyncedRecipes.own());
+			return;
+		}
+
+		// Fallback for servers that do not send recipes (older versions of the mod): read them from our jars.
+
 		RegistryOps<JsonElement> ops = minecraft.getConnection().registryAccess().createSerializationContext(JsonOps.INSTANCE);
 		List<RecipeHolder<CraftingRecipe>> recipes = new ArrayList<>();
 		// our own recipes and, if installed, those of the Traveler's Backpack add-on
@@ -151,6 +159,7 @@ public class StorageJeiPlugin implements IModPlugin {
 			}
 		}
 
+		StorageDimensionMod.LOGGER.info("JEI: Server schickt keine Rezepte, {} Rezepte von Storage Dimension aus der Mod geladen", recipes.size());
 		registration.addRecipes(RecipeTypes.CRAFTING, recipes);
 	}
 
