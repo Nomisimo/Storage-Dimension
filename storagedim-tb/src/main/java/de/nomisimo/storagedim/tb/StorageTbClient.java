@@ -58,6 +58,8 @@ public class StorageTbClient implements ClientModInitializer {
 	/** JEI's search text as last seen or set, to tell a change made in JEI from one made here. */
 	private static String lastJei;
 	private static MeNetworking.PagePayload pageInfo;
+	/** Mouse wheel turned less than one row so far (touchpads send small steps). */
+	private static double scrollRest;
 	private static final Button SORT = Button.builder(Component.empty(), b -> press(MeNetworking.BUTTON_SORT)).size(51, 12).build();
 	private static final Button SYNC = Button.builder(Component.empty(), b -> toggleJeiSync()).size(13, 12).build();
 	private static final Button PREV = Button.builder(Component.literal("◀"), b -> press(MeNetworking.BUTTON_PREV)).size(16, 16)
@@ -123,6 +125,23 @@ public class StorageTbClient implements ClientModInitializer {
 				});
 				ScreenMouseEvents.allowMouseClick(screen).register((current, event) ->
 						!(searchBox != null && Screens.getWidgets(current).contains(searchBox) && click(current, event)));
+				// while ME storage is shown the mouse wheel scrolls it row by row; nothing else gets it, so no other mod
+				// moves items with it
+				ScreenMouseEvents.allowMouseScroll(screen).register((current, mouseX, mouseY, horizontal, vertical) -> {
+					if (!MeView.isOpen(backpack.getMenu())) {
+						return true;
+					}
+
+					scrollRest -= vertical;
+					int rows = (int) scrollRest;
+
+					if (rows != 0) {
+						scrollRest -= rows;
+						ClientPlayNetworking.send(new MeNetworking.ScrollPayload(rows));
+					}
+
+					return false;
+				});
 
 				// with the search sync on, text typed into JEI's search bar also searches ME storage
 				ScreenEvents.afterTick(screen).register(current -> {
@@ -322,8 +341,8 @@ public class StorageTbClient implements ClientModInitializer {
 		SYNC.setTooltip(Tooltip.create(Component.literal(jeiSync()
 				? "Suche mit JEI gekoppelt: an\nKlicken zum Trennen"
 				: "Suche mit JEI gekoppelt: aus\nKlicken zum Koppeln")));
-		PREV.active = info != null && info.page() > 0;
-		NEXT.active = info != null && info.page() < info.pages() - 1;
+		PREV.active = info != null && info.prev();
+		NEXT.active = info != null && info.next();
 
 		// the title row itself, with the backpack's buttons in its corner, becomes the search bar
 		graphics.fill(cornerX, cornerY, cornerX + cornerWidth, cornerY + cornerHeight, 0xFFC6C6C6);

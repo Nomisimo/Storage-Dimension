@@ -40,8 +40,12 @@ final class MeView {
 	/** The backpack's own slots while the ME slots are in their place, or null. */
 	private List<Slot> originals;
 	private List<ItemStack> shown = List.of();
-	private int page;
-	private boolean hasNext;
+	/** The first shown row: the page buttons move a whole page, the mouse wheel one row. */
+	private int row;
+	private int maxRow;
+	private int rowsPerPage = 1;
+	/** Slots per row of the backpack. */
+	private int columns = 1;
 	private String search = "";
 	/** The last row of ME slots is covered by the buttons and the page info, like the bottom row of the ME terminal. */
 	private int barSlots;
@@ -112,6 +116,8 @@ final class MeView {
 
 		originals = saved;
 		barSlots = bottomRow(saved);
+		int top = saved.stream().mapToInt(slot -> slot.y).min().orElse(0);
+		columns = Math.max(1, (int) saved.stream().filter(slot -> slot.y == top).count());
 
 		if (barSlots > 0) {
 			int bottom = saved.stream().mapToInt(slot -> slot.y).max().orElse(0);
@@ -211,9 +217,12 @@ final class MeView {
 		// the bottom row stays free for the buttons drawn over it
 		int perPage = Math.max(1, size - barSlots);
 		int pages = Math.max(1, (prototypes.size() + perPage - 1) / perPage);
-		page = Math.min(page, pages - 1);
-		hasNext = page < pages - 1;
-		int from = page * perPage;
+		rowsPerPage = Math.max(1, perPage / columns);
+		maxRow = Math.max(0, (prototypes.size() + columns - 1) / columns - rowsPerPage);
+		row = Math.clamp(row, 0, maxRow);
+		// after scrolling to the end it is the last page
+		int page = row >= maxRow ? pages - 1 : row / rowsPerPage;
+		int from = row * columns;
 		int to = Math.min(prototypes.size(), from + perPage);
 		shown = prototypes.subList(from, to);
 
@@ -230,19 +239,15 @@ final class MeView {
 
 		if (ServerPlayNetworking.canSend(player, MeNetworking.PagePayload.TYPE)) {
 			ServerPlayNetworking.send(player, new MeNetworking.PagePayload(menu.containerId, page, pages, prototypes.size(), total,
-					TbSettings.BY_NAME.contains(player.getUUID())));
+					TbSettings.BY_NAME.contains(player.getUUID()), row > 0, row < maxRow));
 		}
 	}
 
 	/** A button of the ME view: previous or next page, deposit the inventory (without hotbar), sort order. Server only. */
 	void press(ServerPlayer player, int button) {
 		switch (button) {
-			case MeNetworking.BUTTON_PREV -> page = Math.max(0, page - 1);
-			case MeNetworking.BUTTON_NEXT -> {
-				if (hasNext) {
-					page++;
-				}
-			}
+			case MeNetworking.BUTTON_PREV -> row = Math.max(0, row - rowsPerPage);
+			case MeNetworking.BUTTON_NEXT -> row = Math.min(maxRow, row + rowsPerPage);
 			case MeNetworking.BUTTON_DEPOSIT -> {
 				Inventory inventory = player.getInventory();
 
@@ -269,13 +274,24 @@ final class MeView {
 		menu.sendAllDataToRemote();
 	}
 
+	/** The mouse wheel over the backpack window: scrolls ME storage by whole rows, positive is down. Server only. */
+	void scroll(ServerPlayer player, int rows) {
+		int before = row;
+		row = Math.clamp((long) row + rows, 0, maxRow);
+
+		if (row != before) {
+			refresh(player);
+			menu.sendAllDataToRemote();
+		}
+	}
+
 	/** Text typed into the search field above the window. Server only. */
 	void setSearch(ServerPlayer player, String text) {
 		String clean = text.length() > MAX_SEARCH ? text.substring(0, MAX_SEARCH) : text;
 
 		if (!clean.equals(search)) {
 			search = clean;
-			page = 0;
+			row = 0;
 			refresh(player);
 			menu.sendAllDataToRemote();
 		}

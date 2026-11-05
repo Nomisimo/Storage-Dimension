@@ -66,7 +66,7 @@ Alle Items liegen ohne Stapel- oder Slot-Grenzen im ME-Speicher. Die genaue Meng
 - Linksklick nimmt einen Stapel, Rechtsklick ein einzelnes Item. Shift-Linksklick füllt das ganze Inventar (ohne Hotbar) mit dem Item, Shift-Rechtsklick das halbe. Ist weniger im Speicher, kommt alles, was da ist.
 - Ein Item auf dem Cursor ins Fenster klicken oder Shift-Klick im eigenen Inventar lagert ein.
 - **Oben:** Suchfeld (sucht beim Tippen, ist beim nächsten Öffnen wieder leer) und Sortier-Knopf *Menge* / *A–Z* (bleibt gespeichert). Mit JEI sitzt dazwischen der Schalter **J**: Ist er grün, sind die Suche und die JEI-Suchleiste gekoppelt.
-- **Unten:** **◀ / ▶** blättern, **Einlagern** lagert das ganze Inventar ohne Hotbar ein, daneben stehen Seite, Sorten und Gesamtmenge.
+- **Unten:** **◀ / ▶** blättern seitenweise, das Mausrad scrollt zeilenweise durch alle Items. **Einlagern** lagert das ganze Inventar ohne Hotbar ein, daneben stehen Seite, Sorten und Gesamtmenge.
 - Ohne die Mod auf dem Client gibt es statt der Knöpfe Item-Symbole (Pfeile, Trichter, Komparator).
 
 ![ME-Speicher mit Suchfeld, Sortierung und Knöpfen zum Blättern und Einlagern](docs/screenshots/terminal-knoepfe.png)
@@ -225,7 +225,7 @@ Das Add-on `storagedim-tb-0.6.0.jar` fügt ein echtes **ME-Upgrade** für den Up
 
 ![Der Rucksack öffnet direkt wieder in der ME-Ansicht](docs/screenshots/rucksack-me-gemerkt.png)
 
-- Die ME-Ansicht ist aufgebaut wie der ME-Speicher: oben eine graue Leiste mit Suchfeld, **J**-Schalter und Sortierung, unten ◀ / ▶, **Einlagern** sowie Seite, Sorten und Gesamtmenge. Die Knöpfe des Rucksacks sind in der ME-Ansicht ausgeblendet.
+- Die ME-Ansicht ist aufgebaut wie der ME-Speicher: oben eine graue Leiste mit Suchfeld, **J**-Schalter und Sortierung, unten ◀ / ▶, **Einlagern** sowie Seite, Sorten und Gesamtmenge. Das Mausrad scrollt zeilenweise durch alle Items. Die Knöpfe des Rucksacks sind in der ME-Ansicht ausgeblendet.
 - Herausnehmen in der ME-Ansicht wie am ME-Terminal: Linksklick nimmt einen Stapel, Rechtsklick ein einzelnes Item, Shift-Linksklick füllt das ganze Inventar (ohne Hotbar) mit dem Item, Shift-Rechtsklick das halbe. Ist weniger im Speicher, kommt alles, was da ist. Ein Item auf dem Cursor ins Fenster klicken lagert es ein.
 
 ![Shift-Rechtsklick füllt das Inventar ohne Hotbar](docs/screenshots/rucksack-me-inventar-fuellen.png)

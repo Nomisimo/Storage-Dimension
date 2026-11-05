@@ -76,8 +76,22 @@ final class MeNetworking {
 		}
 	}
 
+	/** Client to server: the mouse wheel turned over the ME view, by this many rows (positive is down). */
+	record ScrollPayload(int rows) implements CustomPacketPayload {
+		static final Type<ScrollPayload> TYPE = new Type<>(StorageTbMod.id("me_view_scroll"));
+		static final StreamCodec<RegistryFriendlyByteBuf, ScrollPayload> CODEC = StreamCodec.composite(
+				ByteBufCodecs.VAR_INT, ScrollPayload::rows,
+				ScrollPayload::new);
+
+		@Override
+		public Type<? extends CustomPacketPayload> type() {
+			return TYPE;
+		}
+	}
+
 	/** Server to client: page, number of pages, kinds and total amount of the (searched) ME storage, and the sort order. */
-	record PagePayload(int containerId, int page, int pages, int kinds, long total, boolean byName) implements CustomPacketPayload {
+	record PagePayload(int containerId, int page, int pages, int kinds, long total, boolean byName, boolean prev, boolean next)
+			implements CustomPacketPayload {
 		static final Type<PagePayload> TYPE = new Type<>(StorageTbMod.id("me_view_page"));
 		static final StreamCodec<RegistryFriendlyByteBuf, PagePayload> CODEC = StreamCodec.composite(
 				ByteBufCodecs.VAR_INT, PagePayload::containerId,
@@ -86,6 +100,8 @@ final class MeNetworking {
 				ByteBufCodecs.VAR_INT, PagePayload::kinds,
 				ByteBufCodecs.VAR_LONG, PagePayload::total,
 				ByteBufCodecs.BOOL, PagePayload::byName,
+				ByteBufCodecs.BOOL, PagePayload::prev,
+				ByteBufCodecs.BOOL, PagePayload::next,
 				PagePayload::new);
 
 		@Override
@@ -129,6 +145,14 @@ final class MeNetworking {
 		PayloadTypeRegistry.serverboundPlay().register(SearchPayload.TYPE, SearchPayload.CODEC);
 		PayloadTypeRegistry.serverboundPlay().register(ButtonPayload.TYPE, ButtonPayload.CODEC);
 		PayloadTypeRegistry.clientboundPlay().register(PagePayload.TYPE, PagePayload.CODEC);
+		PayloadTypeRegistry.serverboundPlay().register(ScrollPayload.TYPE, ScrollPayload.CODEC);
+		ServerPlayNetworking.registerGlobalReceiver(ScrollPayload.TYPE, (payload, context) -> {
+			MeView view = MeView.of(context.player().containerMenu);
+
+			if (view != null) {
+				view.scroll(context.player(), Math.clamp(payload.rows(), -64, 64));
+			}
+		});
 		ServerPlayNetworking.registerGlobalReceiver(ButtonPayload.TYPE, (payload, context) -> {
 			MeView view = MeView.of(context.player().containerMenu);
 

@@ -13,6 +13,7 @@ import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
 import net.fabricmc.fabric.api.client.rendering.v1.EntityRendererRegistry;
 import net.fabricmc.fabric.api.client.rendering.v1.ModelLayerRegistry;
 import net.fabricmc.fabric.api.client.screen.v1.ScreenEvents;
+import net.fabricmc.fabric.api.client.screen.v1.ScreenMouseEvents;
 import net.fabricmc.fabric.api.client.screen.v1.Screens;
 import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.ChatFormatting;
@@ -55,6 +56,8 @@ public class StorageDimensionClient implements ClientModInitializer {
 	private static boolean project;
 	private static BottomRow bottomRow;
 	private static TerminalNetworking.PagePayload pageInfo;
+	/** Mouse wheel turned less than one row so far (touchpads send small steps). */
+	private static double scrollRest;
 	private static final boolean JEI = FabricLoader.getInstance().isModLoaded("jei");
 
 	@Override
@@ -93,6 +96,24 @@ public class StorageDimensionClient implements ClientModInitializer {
 			if (isTerminal(screen)) {
 				addWidgets(screen);
 			}
+
+			// the mouse wheel scrolls the terminal row by row; nothing else gets it, so no other mod moves items with it
+			// (checked on every scroll: the terminal packet often arrives just after the screen opened)
+			ScreenMouseEvents.allowMouseScroll(screen).register((current, mouseX, mouseY, horizontal, vertical) -> {
+				if (!isTerminal(current)) {
+					return true;
+				}
+
+				scrollRest -= vertical;
+				int rows = (int) scrollRest;
+
+				if (rows != 0) {
+					scrollRest -= rows;
+					ClientPlayNetworking.send(new TerminalNetworking.ScrollPayload(rows));
+				}
+
+				return false;
+			});
 
 			// with the search sync on, text typed into JEI's search bar also searches the terminal
 			ScreenEvents.afterTick(screen).register(current -> {
@@ -205,8 +226,8 @@ public class StorageDimensionClient implements ClientModInitializer {
 
 		TerminalNetworking.PagePayload info = pageInfo;
 		boolean current = info != null && info.containerId() == terminalId;
-		prevButton.active = current && info.page() > 0;
-		nextButton.active = current && info.page() < info.pages() - 1;
+		prevButton.active = current && info.prev();
+		nextButton.active = current && info.next();
 	}
 
 	/** Covers the bottom slot row of the chest picture and shows page and stock info next to the buttons. */
