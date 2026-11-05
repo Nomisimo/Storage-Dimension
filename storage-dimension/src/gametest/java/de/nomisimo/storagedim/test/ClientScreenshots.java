@@ -94,18 +94,21 @@ public class ClientScreenshots implements FabricClientGameTest {
 					.setValue(net.minecraft.world.level.block.HopperBlock.FACING, Direction.DOWN));
 
 			if (level.getBlockEntity(terminal.above()) instanceof net.minecraft.world.level.block.entity.HopperBlockEntity hopper) {
-				hopper.setItem(0, new ItemStack(Items.DIAMOND, 9));
+				// a full hopper: all of it goes in at once, not one item every 8 ticks
+				for (int i = 0; i < hopper.getContainerSize(); i++) {
+					hopper.setItem(i, new ItemStack(Items.DIAMOND, 64));
+				}
 			}
 
 			before[0] = de.nomisimo.storagedim.api.StorageApi.count(player, new ItemStack(Items.DIAMOND));
 		});
-		context.waitTicks(100);
+		context.waitTicks(25);
 		world.getServer().runOnServer(server -> {
 			ServerPlayer player = server.getPlayerList().getPlayers().get(0);
 			BlockPos terminal = player.blockPosition().offset(2, 0, 3);
 			long after = de.nomisimo.storagedim.api.StorageApi.count(player, new ItemStack(Items.DIAMOND));
 			int left = player.level().getBlockEntity(terminal.above()) instanceof net.minecraft.world.level.block.entity.HopperBlockEntity hopper
-					? hopper.getItem(0).getCount() : -1;
+					? java.util.stream.IntStream.range(0, hopper.getContainerSize()).map(i -> hopper.getItem(i).getCount()).sum() : -1;
 			System.out.println("STORAGEDIM hopper into terminal: diamonds before=" + before[0] + " after=" + after + " left in hopper=" + left);
 		});
 	}

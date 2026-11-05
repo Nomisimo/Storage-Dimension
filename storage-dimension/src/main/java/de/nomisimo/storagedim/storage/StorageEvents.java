@@ -7,6 +7,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 
+import de.nomisimo.storagedim.StorageConfig;
 import de.nomisimo.storagedim.StorageDimensionMod;
 import net.fabricmc.fabric.api.entity.event.v1.ServerPlayerEvents;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
@@ -16,6 +17,7 @@ import net.fabricmc.fabric.api.event.player.UseBlockCallback;
 import net.fabricmc.fabric.api.event.player.UseItemCallback;
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.protocol.game.ClientboundSetActionBarTextPacket;
 import net.minecraft.server.MinecraftServer;
@@ -31,6 +33,7 @@ import net.minecraft.world.level.GameType;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.HopperBlock;
 import net.minecraft.world.level.block.ChestBlock;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
@@ -562,6 +565,8 @@ public final class StorageEvents {
 				}
 
 				drain(level, pos, chest.getValue().owner());
+				FilterChests.FilterChest resolved = resolveFilterChest(level, pos, data, chest.getValue());
+				pullHoppers(level, pos, data.networkFor(resolved.owner()), resolved.active());
 
 				if (level.getBlockState(pos.below()).is(Blocks.HOPPER)) {
 					restock(level, pos, resolveFilterChest(level, pos, data, chest.getValue()));
@@ -595,6 +600,7 @@ public final class StorageEvents {
 				}
 
 				drain(level, pos, project.owner);
+				pullHoppers(level, pos, project.network(), null);
 			}
 		}
 
@@ -622,7 +628,65 @@ public final class StorageEvents {
 				}
 
 				drain(level, pos, chest.getValue());
+				pullHoppers(level, pos, data.networkFor(chest.getValue()), null);
 			}
+		}
+
+		for (Map.Entry<String, Set<Long>> dim : data.terminals.entrySet()) {
+			ServerLevel level = Rooms.levelById(server, dim.getKey());
+
+			if (level == null) {
+				continue;
+			}
+
+			for (long packed : List.copyOf(dim.getValue())) {
+				BlockPos pos = BlockPos.of(packed);
+
+				if (!level.hasChunkAt(pos) || !level.getBlockState(pos).is(Blocks.ENDER_CHEST)) {
+					continue;
+				}
+
+				UUID owner = data.terminalOwner(dim.getKey(), pos);
+
+				if (owner != null || StorageConfig.get().sharedStorage) {
+					pullHoppers(level, pos, data.networkFor(owner == null ? new UUID(0, 0) : owner), null);
+				}
+			}
+		}
+	}
+
+	/**
+	 * Hoppers pointing into a storage block hand over everything they hold at once, not one item every few ticks
+	 * like into a normal chest. A locked hopper (redstone) keeps its items. With {@code filters}, only those items.
+	 */
+	private static void pullHoppers(ServerLevel level, BlockPos pos, StorageNetwork network, List<ItemStack> filters) {
+		boolean changed = false;
+
+		for (Direction side : Direction.values()) {
+			BlockPos hopperPos = pos.relative(side);
+			BlockState state = level.getBlockState(hopperPos);
+
+			if (!state.is(Blocks.HOPPER) || state.getValue(HopperBlock.FACING) != side.getOpposite() || !state.getValue(HopperBlock.ENABLED)
+					|| !(level.getBlockEntity(hopperPos) instanceof Container hopper)) {
+				continue;
+			}
+
+			for (int i = 0; i < hopper.getContainerSize(); i++) {
+				ItemStack stack = hopper.getItem(i);
+
+				if (!stack.isEmpty() && (filters == null || FilterChests.matches(filters, stack))) {
+					network.insert(hopper.removeItemNoUpdate(i));
+					changed = true;
+				}
+			}
+
+			if (changed) {
+				hopper.setChanged();
+			}
+		}
+
+		if (changed) {
+			StorageMenu.refreshAll(network);
 		}
 	}
 
