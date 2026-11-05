@@ -1239,7 +1239,7 @@ public class ClientScreenshots implements FabricClientGameTest {
 			recipe(context, world, "robot_station", null, of(Items.LIGHTNING_ROD), null, ironIngot, of(Items.REDSTONE_BLOCK), ironIngot,
 					ironIngot, of(Items.CHEST), ironIngot);
 			ItemStack copper = of(Items.COPPER_INGOT);
-			recipe(context, world, "antenna", of(Items.END_ROD), copper, copper, r);
+			recipe(context, world, "antenna", of(Items.LIGHTNING_ROD), copper, copper, r);
 			recipe(context, world, "remote", null, r, null, copper, of(Items.GLASS_PANE), copper, copper, of(Items.ENDER_PEARL), copper);
 
 			// the Traveler's Backpack add-on, when the test runs with it

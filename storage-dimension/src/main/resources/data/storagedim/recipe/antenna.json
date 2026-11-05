@@ -2,7 +2,7 @@
   "type": "minecraft:crafting_shapeless",
   "category": "redstone",
   "ingredients": [
-    "minecraft:end_rod",
+    "minecraft:lightning_rod",
     "minecraft:copper_ingot",
     "minecraft:copper_ingot",
     "minecraft:redstone"
