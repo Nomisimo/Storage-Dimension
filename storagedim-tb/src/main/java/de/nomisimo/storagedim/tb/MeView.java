@@ -337,28 +337,37 @@ final class MeView {
 		ItemStack prototype = shown.get(k);
 		int max = prototype.getMaxStackSize();
 
-		if (input == ContainerInput.QUICK_MOVE && button == 1) {
-			fillInventory(player, prototype, max);
-		} else if (input == ContainerInput.QUICK_MOVE) {
-			// shift-click: one stack into the inventory
-			ItemStack taken = MeBridge.extract(player, prototype, max);
-			player.getInventory().add(taken);
-
-			if (!taken.isEmpty()) {
-				MeBridge.insert(player, taken);
-			}
+		if (input == ContainerInput.QUICK_MOVE) {
+			// shift-click: fill the inventory (not the hotbar), shift-right-click: half of it
+			fillInventory(player, prototype, max, button == 1);
 		} else if (input == ContainerInput.PICKUP && carried.isEmpty()) {
-			// click: one item, right-click: half a stack
-			menu.setCarried(MeBridge.extract(player, prototype, button == 1 ? Math.max(1, max / 2) : 1));
+			// click: one stack, right-click: one item
+			menu.setCarried(MeBridge.extract(player, prototype, button == 1 ? 1 : max));
 		}
 	}
 
-	/** Shift-right-click: fills the main inventory (not the hotbar) with the item, topping up its stacks first. */
-	private static void fillInventory(ServerPlayer player, ItemStack prototype, int max) {
+	/**
+	 * Shift-click: fills the main inventory (not the hotbar) with the item, topping up its stacks first; with
+	 * {@code half} only half of the free space. When ME holds less, everything there is is taken.
+	 */
+	private static void fillInventory(ServerPlayer player, ItemStack prototype, int max, boolean half) {
 		var inventory = player.getInventory();
+		int space = 0;
+
+		for (int i = 9; i < 36; i++) {
+			ItemStack stack = inventory.getItem(i);
+
+			if (stack.isEmpty()) {
+				space += max;
+			} else if (ItemStack.isSameItemSameComponents(stack, prototype)) {
+				space += Math.max(0, max - stack.getCount());
+			}
+		}
+
+		int left = half ? (space + 1) / 2 : space;
 
 		for (boolean emptySlots : new boolean[] {false, true}) {
-			for (int i = 9; i < 36; i++) {
+			for (int i = 9; i < 36 && left > 0; i++) {
 				ItemStack stack = inventory.getItem(i);
 				boolean fits = emptySlots ? stack.isEmpty() : !stack.isEmpty() && ItemStack.isSameItemSameComponents(stack, prototype);
 
@@ -366,9 +375,10 @@ final class MeView {
 					continue;
 				}
 
-				ItemStack taken = MeBridge.extract(player, prototype, max - stack.getCount());
+				ItemStack taken = MeBridge.extract(player, prototype, Math.min(max - stack.getCount(), left));
 
 				if (taken.isEmpty()) {
+					inventory.setChanged();
 					return;
 				}
 
@@ -377,6 +387,8 @@ final class MeView {
 				} else {
 					stack.grow(taken.getCount());
 				}
+
+				left -= taken.getCount();
 			}
 		}
 

@@ -346,9 +346,10 @@ public class StorageMenu extends ChestMenu {
 		icon.set(DataComponents.CUSTOM_DATA, CustomData.of(tag));
 		icon.set(DataComponents.LORE, new ItemLore(List.of(
 				Component.literal("Gespeichert: " + format(count)).withStyle(ChatFormatting.GOLD),
-				Component.literal("Linksklick: Stapel nehmen").withStyle(ChatFormatting.GRAY),
-				Component.literal("Rechtsklick: halben Stapel nehmen").withStyle(ChatFormatting.GRAY),
-				Component.literal("Shift-Klick: ins Inventar").withStyle(ChatFormatting.GRAY))));
+				Component.literal("Linksklick: 1 Stapel nehmen").withStyle(ChatFormatting.GRAY),
+				Component.literal("Rechtsklick: 1 Item nehmen").withStyle(ChatFormatting.GRAY),
+				Component.literal("Shift-Linksklick: Inventar füllen (ohne Hotbar)").withStyle(ChatFormatting.GRAY),
+				Component.literal("Shift-Rechtsklick: halbes Inventar füllen").withStyle(ChatFormatting.GRAY))));
 		return icon;
 	}
 
@@ -462,17 +463,12 @@ public class StorageMenu extends ChestMenu {
 		ItemStack taken = ItemStack.EMPTY;
 
 		if (input == ContainerInput.QUICK_MOVE) {
-			taken = network.extract(prototype, max, project);
-			boolean got = !taken.isEmpty();
-			player.getInventory().add(taken);
-
-			if (!taken.isEmpty()) {
-				network.insert(taken);
-			}
-
-			taken = got ? prototype : ItemStack.EMPTY;
+			// shift-click fills the inventory without the hotbar, shift-right-click half of it
+			int got = InventoryFill.fill(player.getInventory(), prototype, button == 1, amount -> network.extract(prototype, amount, project));
+			taken = got > 0 ? prototype : ItemStack.EMPTY;
 		} else if (input == ContainerInput.PICKUP && carried.isEmpty()) {
-			taken = network.extract(prototype, button == 1 ? Math.max(1, max / 2) : max, project);
+			// click: one stack, right-click: one item
+			taken = network.extract(prototype, button == 1 ? 1 : max, project);
 			setCarried(taken);
 		}
 

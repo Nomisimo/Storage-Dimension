@@ -63,7 +63,7 @@ Ein Fabric-Mod für **Minecraft 26.1.2**: eine Insel aus Kisten in einer eigenen
 
 Alle Items liegen ohne Stapel- oder Slot-Grenzen im ME-Speicher. Die genaue Menge steht im Namen jedes Items (z. B. „Bruchstein × 1.234“) und in kleiner Schrift auf dem Symbol, ab 1.000 abgekürzt (1k, 1.2k, 45k, 1.2M …).
 
-- Linksklick nimmt einen Stapel, Rechtsklick einen halben, Shift-Klick schiebt ihn ins Inventar.
+- Linksklick nimmt einen Stapel, Rechtsklick ein einzelnes Item. Shift-Linksklick füllt das ganze Inventar (ohne Hotbar) mit dem Item, Shift-Rechtsklick das halbe. Ist weniger im Speicher, kommt alles, was da ist.
 - Ein Item auf dem Cursor ins Fenster klicken oder Shift-Klick im eigenen Inventar lagert ein.
 - **Oben:** Suchfeld (sucht beim Tippen, ist beim nächsten Öffnen wieder leer) und Sortier-Knopf *Menge* / *A–Z* (bleibt gespeichert). Mit JEI sitzt dazwischen der Schalter **J**: Ist er grün, sind die Suche und die JEI-Suchleiste gekoppelt.
 - **Unten:** **◀ / ▶** blättern, **Einlagern** lagert das ganze Inventar ohne Hotbar ein, daneben stehen Seite, Sorten und Gesamtmenge.
@@ -226,7 +226,7 @@ Das Add-on `storagedim-tb-0.6.0.jar` fügt ein echtes **ME-Upgrade** für den Up
 ![Der Rucksack öffnet direkt wieder in der ME-Ansicht](docs/screenshots/rucksack-me-gemerkt.png)
 
 - Die ME-Ansicht ist aufgebaut wie der ME-Speicher: oben eine graue Leiste mit Suchfeld, **J**-Schalter und Sortierung, unten ◀ / ▶, **Einlagern** sowie Seite, Sorten und Gesamtmenge. Die Knöpfe des Rucksacks sind in der ME-Ansicht ausgeblendet.
-- Herausnehmen in der ME-Ansicht: Klick nimmt 1 Item, Rechtsklick einen halben Stapel, Shift-Klick legt einen Stapel ins Inventar, Shift-Rechtsklick füllt das Inventar (ohne Hotbar) mit dem Item. Ein Item auf dem Cursor ins Fenster klicken lagert es ein.
+- Herausnehmen in der ME-Ansicht wie am ME-Terminal: Linksklick nimmt einen Stapel, Rechtsklick ein einzelnes Item, Shift-Linksklick füllt das ganze Inventar (ohne Hotbar) mit dem Item, Shift-Rechtsklick das halbe. Ist weniger im Speicher, kommt alles, was da ist. Ein Item auf dem Cursor ins Fenster klicken lagert es ein.
 
 ![Shift-Rechtsklick füllt das Inventar ohne Hotbar](docs/screenshots/rucksack-me-inventar-fuellen.png)
 
