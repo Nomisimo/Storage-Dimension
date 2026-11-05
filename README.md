@@ -95,7 +95,7 @@ Eine Kiste für ein Bauprojekt: Du legst fest, welche Items in welcher Menge geb
 - **Einstellen:** Schleichen + Rechtsklick mit leerer Hand, oder das Zahnrad ⚙ in der Item-Ansicht.
   - Oben: **Name** und der Knopf **Blocken** (Im ME blocken).
   - Die Liste hat eine Zeile pro Item: links das Item, daneben das Mengenfeld mit **-64** und **-1** links und **+1** und **+64** rechts, ganz rechts **✕** zum Entfernen. Die Liste scrollt, unten ist immer eine leere Zeile.
-  - Neue Items: in die leere Zeile legen, im eigenen Inventar Shift-klicken oben im Feld **Item suchen** über alle Items des Spiels suchen und anklicken, oder ein Item aus der JEI-Liste auf die Liste ziehen. Ein Item mit einem anderen auf dem Cursor anklicken tauscht es aus.
+  - Neue Items: in die leere Zeile legen, im eigenen Inventar Shift-klicken, oben im Feld **Item suchen** über alle Items des Spiels suchen und anklicken, oder ein Item aus der JEI-Liste auf die Liste ziehen. Ein Item mit einem anderen auf dem Cursor anklicken tauscht es aus.
   - Hover über ein Item zeigt, wie viele davon da sind und wie viele fehlen. Ist alles da, wird die Zeile grün.
   - **Rezeptbuch:** Ein Buch mit Feder in den linken Platz legen, rechts kommt es mit dem Projekt beschrieben heraus (Name und eine Zeile pro Item mit Menge).
 
