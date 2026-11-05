@@ -1209,6 +1209,9 @@ public class ClientScreenshots implements FabricClientGameTest {
 			ItemStack ironIngot = of(Items.IRON_INGOT);
 			recipe(context, world, "robot_station", null, of(Items.LIGHTNING_ROD), null, ironIngot, of(Items.REDSTONE_BLOCK), ironIngot,
 					ironIngot, of(Items.CHEST), ironIngot);
+			ItemStack copper = of(Items.COPPER_INGOT);
+			recipe(context, world, "antenna", of(Items.END_ROD), copper, copper, r);
+			recipe(context, world, "remote", null, r, null, copper, of(Items.GLASS_PANE), copper, copper, of(Items.ENDER_PEARL), copper);
 
 			// the Traveler's Backpack add-on, when the test runs with it
 			Item blank = BuiltInRegistries.ITEM.getValue(Identifier.parse("travelersbackpack:blank_upgrade"));
