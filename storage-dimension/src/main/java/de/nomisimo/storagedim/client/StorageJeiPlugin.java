@@ -14,7 +14,10 @@ import com.mojang.serialization.JsonOps;
 import de.nomisimo.storagedim.StorageDimensionMod;
 import mezz.jei.api.IModPlugin;
 import mezz.jei.api.constants.RecipeTypes;
+import mezz.jei.api.constants.VanillaTypes;
+import mezz.jei.api.gui.handlers.IGhostIngredientHandler;
 import mezz.jei.api.gui.handlers.IGuiContainerHandler;
+import mezz.jei.api.ingredients.ITypedIngredient;
 import mezz.jei.api.registration.IGuiHandlerRegistration;
 import mezz.jei.api.registration.IRecipeRegistration;
 import mezz.jei.api.runtime.IJeiRuntime;
@@ -25,6 +28,7 @@ import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.Identifier;
 import net.minecraft.resources.RegistryOps;
 import net.minecraft.resources.ResourceKey;
+import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.CraftingRecipe;
 import net.minecraft.world.item.crafting.Recipe;
 import net.minecraft.world.item.crafting.RecipeHolder;
@@ -45,12 +49,61 @@ public class StorageJeiPlugin implements IModPlugin {
 	/** JEI's item list keeps clear of the robot list beside the robot station window. */
 	@Override
 	public void registerGuiHandlers(IGuiHandlerRegistration registration) {
+		registration.addGhostIngredientHandler(ProjectScreen.class, PROJECT_DROP);
 		registration.addGuiContainerHandler(StationScreen.class, new IGuiContainerHandler<StationScreen>() {
 			@Override
 			public List<Rect2i> getGuiExtraAreas(StationScreen screen) {
 				return List.of(screen.listArea());
 			}
 		});
+	}
+
+	/** Items dragged from JEI's list onto the project settings' list join the project. */
+	private static final IGhostIngredientHandler<ProjectScreen> PROJECT_DROP = new IGhostIngredientHandler<>() {
+		@Override
+		public <I> List<Target<I>> getTargetsTyped(ProjectScreen screen, ITypedIngredient<I> ingredient, boolean doStart) {
+			var stack = ingredient.getIngredient(VanillaTypes.ITEM_STACK);
+
+			if (stack.isEmpty()) {
+				return List.of();
+			}
+
+			Rect2i area = screen.listArea();
+			ItemStack item = stack.get().copyWithCount(1);
+			return List.of(new Target<I>() {
+				@Override
+				public Rect2i getArea() {
+					return area;
+				}
+
+				@Override
+				public void accept(I dropped) {
+					screen.addFromJei(item);
+				}
+			});
+		}
+
+		@Override
+		public void onComplete() {
+		}
+	};
+
+	/** For the client test: drops an item on the project list the way JEI does at the end of a drag. Returns the number of targets. */
+	public static int dropOnProject(ProjectScreen screen, ItemStack stack) {
+		if (runtime == null) {
+			return -1;
+		}
+
+		var typed = runtime.getIngredientManager().createTypedIngredient(VanillaTypes.ITEM_STACK, stack);
+
+		if (typed.isEmpty()) {
+			return -2;
+		}
+
+		var targets = PROJECT_DROP.getTargetsTyped(screen, typed.get(), true);
+		targets.forEach(target -> target.accept(stack));
+		PROJECT_DROP.onComplete();
+		return targets.size();
 	}
 
 	@Override

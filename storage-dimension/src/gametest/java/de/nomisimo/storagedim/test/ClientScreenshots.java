@@ -907,6 +907,18 @@ public class ClientScreenshots implements FabricClientGameTest {
 		context.getInput().setCursorPos(0, 0);
 		context.waitTicks(2);
 		context.takeScreenshot("project-settings");
+		// drag bricks from JEI's list onto the project list
+		context.runOnClient(client -> {
+			if (client.screen instanceof de.nomisimo.storagedim.client.ProjectScreen screen) {
+				System.out.println("STORAGEDIM PROJECT jei targets=" + de.nomisimo.storagedim.client.StorageJeiPlugin.dropOnProject(screen, new ItemStack(Items.BRICKS)));
+			}
+		});
+		context.waitTicks(10);
+		world.getServer().runOnServer(server -> {
+			ServerPlayer player = server.getPlayerList().getPlayers().get(0);
+			var project = ((de.nomisimo.storagedim.storage.ProjectSettingsMenu) player.containerMenu).project();
+			System.out.println("STORAGEDIM PROJECT after jei drop: bricks=" + project.wants(new ItemStack(Items.BRICKS)) + " entries=" + project.entries.size());
+		});
 		context.runOnClient(client -> {
 			if (client.screen instanceof de.nomisimo.storagedim.client.ProjectScreen screen) {
 				screen.setSearch("glass");
