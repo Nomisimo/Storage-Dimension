@@ -117,6 +117,33 @@ public class AntennaBlock extends Block {
 		Areas.antennaRemoved(Rooms.id(level), pos);
 	}
 
+	/** A broken antenna stays paired with its station, so it can be set again right away. */
+	@Override
+	protected java.util.List<net.minecraft.world.item.ItemStack> getDrops(BlockState state, net.minecraft.world.level.storage.loot.LootParams.Builder params) {
+		java.util.List<net.minecraft.world.item.ItemStack> drops = super.getDrops(state, params);
+		ServerLevel level = params.getLevel();
+		net.minecraft.world.phys.Vec3 origin = params.getOptionalParameter(net.minecraft.world.level.storage.loot.parameters.LootContextParams.ORIGIN);
+
+		if (origin == null) {
+			return drops;
+		}
+
+		String dim = Rooms.id(level);
+		BlockPos station = Areas.removedStation(dim, BlockPos.containing(origin));
+
+		if (station != null) {
+			String name = de.nomisimo.storagedim.storage.StorageData.get().station(dim, station).stationName();
+
+			for (net.minecraft.world.item.ItemStack drop : drops) {
+				if (drop.is(ITEM)) {
+					AntennaItem.pair(drop, new AntennaItem.Link(dim, station, name));
+				}
+			}
+		}
+
+		return drops;
+	}
+
 	/** Now and then a small spark at the tip. */
 	@Override
 	public void animateTick(BlockState state, Level level, BlockPos pos, RandomSource random) {

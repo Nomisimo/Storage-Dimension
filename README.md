@@ -216,7 +216,7 @@ Mit zwei Antennen bekommt eine Station statt der Reichweite einen festen Bereich
 - **Setzen:** Eine gepaarte Antenne direkt **auf** die Station setzen, die zweite an die gegenüberliegende Ecke. Antennen werden wie End-Ruten gesetzt (sie zeigen von dem Block weg, an den man sie setzt).
 - **Der Bereich** ist die Box von der Station bis zur zweiten Antenne, beide eingeschlossen, auch in der Höhe. Station auf 0 0 0 und Antenne auf 4 3 4 gibt also eine Box von 5×4×5 Blöcken. Stehen beide auf derselben Höhe, ist die Box nur einen Block hoch. Höchstens 160 Blöcke in jede Richtung.
 - **Für alle Roboter der Station:** Der Bereich gilt sofort für alle ihre Roboter, auch für schon gesetzte, und sie tragen die Area-Farbe. Filter und alles andere bleiben wie eingestellt.
-- **Abbauen:** Fehlt eine der beiden Antennen, arbeiten die Roboter wieder mit ihrer Reichweite. Die Station zeigt „Antenne: 1 von 2 gesetzt“. Abgebaute Antennen müssen neu gepaart werden.
+- **Abbauen:** Fehlt eine der beiden Antennen, arbeiten die Roboter wieder mit ihrer Reichweite. Die Station zeigt „Antenne: 1 von 2 gesetzt“. Eine abgebaute Antenne bleibt gepaart und kann gleich wieder gesetzt werden.
 
 **Fernbedienung**
 

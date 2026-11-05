@@ -173,6 +173,15 @@ public final class Areas {
 		return null;
 	}
 
+	/** Antennas just taken off their station ("dimension@position" to station), so the dropped item stays paired. */
+	private static final Map<String, BlockPos> REMOVED = new HashMap<>();
+
+	/** The station a broken antenna belonged to, while its drops are worked out; null when unknown. */
+	public static BlockPos removedStation(String dim, BlockPos pos) {
+		BlockPos station = stationOf(dim, pos);
+		return station != null ? station : REMOVED.remove(dim + "@" + pos.asLong());
+	}
+
 	/** An antenna was broken (or vanished): its station loses it. */
 	public static void antennaRemoved(String dim, BlockPos pos) {
 		BlockPos station = stationOf(dim, pos);
@@ -180,6 +189,12 @@ public final class Areas {
 		if (station == null) {
 			return;
 		}
+
+		if (REMOVED.size() > 64) {
+			REMOVED.clear();
+		}
+
+		REMOVED.put(dim + "@" + pos.asLong(), station);
 
 		StorageData data = StorageData.get();
 		StationArea area = data.stationArea(dim, station);
