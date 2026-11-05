@@ -36,7 +36,7 @@ public final class StationNetworking {
 
 	/** Server to client: the station's settings and its robots (names and what each is doing). */
 	public record SyncPayload(int containerId, String stationName, String robotName, int range, int color, boolean exclude,
-			List<Component> names, List<Component> states) implements CustomPacketPayload {
+			int antennas, String areaName, String areaSize, String areaState, List<Component> names, List<Component> states) implements CustomPacketPayload {
 		public static final Type<SyncPayload> TYPE = new Type<>(StorageDimensionMod.id("station_sync"));
 		public static final StreamCodec<RegistryFriendlyByteBuf, SyncPayload> CODEC = StreamCodec.of((buf, payload) -> {
 			buf.writeVarInt(payload.containerId);
@@ -45,6 +45,10 @@ public final class StationNetworking {
 			buf.writeVarInt(payload.range);
 			buf.writeInt(payload.color);
 			buf.writeBoolean(payload.exclude);
+			buf.writeVarInt(payload.antennas);
+			buf.writeUtf(payload.areaName);
+			buf.writeUtf(payload.areaSize);
+			buf.writeUtf(payload.areaState);
 			buf.writeVarInt(payload.names.size());
 
 			for (int i = 0; i < payload.names.size(); i++) {
@@ -58,6 +62,10 @@ public final class StationNetworking {
 			int range = buf.readVarInt();
 			int color = buf.readInt();
 			boolean exclude = buf.readBoolean();
+			int antennas = buf.readVarInt();
+			String areaName = buf.readUtf();
+			String areaSize = buf.readUtf();
+			String areaState = buf.readUtf();
 			int size = buf.readVarInt();
 			List<Component> names = new ArrayList<>();
 			List<Component> states = new ArrayList<>();
@@ -67,7 +75,7 @@ public final class StationNetworking {
 				states.add(ComponentSerialization.STREAM_CODEC.decode(buf));
 			}
 
-			return new SyncPayload(containerId, stationName, robotName, range, color, exclude, names, states);
+			return new SyncPayload(containerId, stationName, robotName, range, color, exclude, antennas, areaName, areaSize, areaState, names, states);
 		});
 
 		@Override
@@ -78,6 +86,7 @@ public final class StationNetworking {
 
 	public static void register() {
 		StationMenu.register();
+		Areas.register();
 		PayloadTypeRegistry.serverboundPlay().register(ActionPayload.TYPE, ActionPayload.CODEC);
 		PayloadTypeRegistry.clientboundPlay().register(SyncPayload.TYPE, SyncPayload.CODEC);
 		ServerPlayNetworking.registerGlobalReceiver(ActionPayload.TYPE, (payload, context) -> {

@@ -6,5 +6,8 @@
 	"block.storagedim.robot_station": "Robot Station",
 	"item.storagedim.robot_station": "Robot Station",
 	"config.jade.plugin_storagedim.robot": "Robot",
-	"config.jade.plugin_storagedim.robot_station": "Robot station"
+	"config.jade.plugin_storagedim.robot_station": "Robot station",
+	"block.storagedim.antenna": "Antenna",
+	"item.storagedim.antenna": "Antenna",
+	"item.storagedim.remote": "Remote"
 }

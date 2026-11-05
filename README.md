@@ -10,7 +10,7 @@ Ein Fabric-Mod für **Minecraft 26.1.2**: eine Insel aus Kisten in einer eigenen
 
 - [Installation](#installation)
 - [Speicher](#speicher): Dimensionskiste, ME-Speicher, ME-Terminal, Filterkiste, Projektkiste, Trichter und Maschinen
-- [Sammelroboter](#sammelroboter): Roboter, Roboter-Station, Rückruf, Roboter-Barriere
+- [Sammelroboter](#sammelroboter): Roboter, Roboter-Station, Rückruf, Roboter-Barriere, Antennen und Fernbedienung
 - [ME-Rucksack und Traveler's Backpack](#me-rucksack-und-travelers-backpack)
 - [Rezepte](#rezepte)
 - [Befehle](#befehle)
@@ -136,11 +136,11 @@ Rechtsklick auf die Station öffnet ihr Fenster:
 
 - **Name der Station** ganz oben. Er erscheint auch in Jade und im Tooltip der Roboter.
 - **Filter:** bis zu 9 Items (Item draufklicken setzt, leere Hand entfernt). Der Knopf darunter schaltet zwischen *Sammelt nur den Filter* und *Sammelt alles außer Filter*. Leer heißt: alles.
-- **Reichweite** mit − und +: 1 bis 10 Chunks, gemessen ab der Station.
-- **Farbe:** Klick schaltet weiter.
+- **Reichweite** mit − und +: 1 bis 10 Chunks, gemessen ab der Station. Mit [Antennen](#antennen-und-fernbedienung) steht hier stattdessen „Antenne verbunden“ und die Größe des Bereichs.
+- **Area-Name und Farbe:** Name der Antennen-Area (so steht sie in der Fernbedienung) und ihre Farbe. Klick auf die Farbe schaltet weiter. Ohne Antennen ist es die Farbe der nächsten eingestellten Roboter, mit Antennen tragen alle Roboter der Station sofort die Area-Farbe.
 - **Zurückrufen:** siehe unten.
 - **Robotername:** für die nächsten Roboter, die eingestellt werden. Bekommen mehrere Roboter einer Station denselben Namen, werden sie durchnummeriert (Quak1, Quak2 …). Das Benennen kostet keine Level.
-- **Roboter einstellen:** Roboter links in den Eingang legen, er kommt rechts eingestellt wieder heraus. Die Einstellungen stehen im Tooltip des Roboter-Items.
+- **Roboter einstellen:** Roboter links in den Eingang legen, er kommt rechts eingestellt wieder heraus. Genauso werden Antennen mit der Station gepaart. Die Einstellungen stehen im Tooltip des Roboter-Items.
 - **Roboterliste** rechts daneben: alle Roboter der Station (höchstens 32) mit Entfernung und dem, was jeder gerade tut. Das Mausrad blättert.
 
 ![Fenster der Roboter-Station mit Roboterliste](docs/screenshots/roboter-station-menu.png)
@@ -208,6 +208,23 @@ Ein durchsichtiger Plasma-Schild. Spieler, Tiere und Items gehen einfach hindurc
 
 ![Roboter-Barriere als Wand hinter den Kisten](docs/screenshots/roboter-barriere.png)
 
+### Antennen und Fernbedienung
+
+Mit zwei Antennen bekommt eine Station statt der Reichweite einen festen Bereich, eine Box, in der ihre Roboter arbeiten.
+
+- **Paaren:** Antenne in den Eingang der Station legen, sie kommt rechts gepaart heraus (wie ein Roboter). Im Tooltip steht, zu welcher Station sie gehört. Ungepaarte Antennen lassen sich nicht setzen.
+- **Setzen:** Eine gepaarte Antenne direkt **auf** die Station setzen, die zweite an die gegenüberliegende Ecke. Antennen werden wie End-Ruten gesetzt (sie zeigen von dem Block weg, an den man sie setzt).
+- **Der Bereich** ist die Box von der Station bis zur zweiten Antenne, beide eingeschlossen, auch in der Höhe. Station auf 0 0 0 und Antenne auf 4 3 4 gibt also eine Box von 5×4×5 Blöcken. Stehen beide auf derselben Höhe, ist die Box nur einen Block hoch. Höchstens 160 Blöcke in jede Richtung.
+- **Für alle Roboter der Station:** Der Bereich gilt sofort für alle ihre Roboter, auch für schon gesetzte, und sie tragen die Area-Farbe. Filter und alles andere bleiben wie eingestellt.
+- **Abbauen:** Fehlt eine der beiden Antennen, arbeiten die Roboter wieder mit ihrer Reichweite. Die Station zeigt „Antenne: 1 von 2 gesetzt“. Abgebaute Antennen müssen neu gepaart werden.
+
+**Fernbedienung**
+
+- **In der Hand** (auch in der zweiten Hand) zeigt sie die Areas in der Nähe: dicke Kanten und leicht schimmernde Flächen in der Area-Farbe, darüber der Name. Ausgeschaltete oder pausierte Areas sind grau.
+- **Rechtsklick** öffnet ihr Fenster mit allen Areas in der Nähe (bis 256 Blöcke). Mit „An“/„Aus“ wird eine Area geschaltet. Ist sie aus, laufen ihre Roboter zur Station (ein Item im Schnabel bringen sie noch weg), setzen sich hin und warten, bis die Area wieder an ist.
+- **Auto-Modus:** Oben im Fenster. Ist er an und trägt ein Spieler die Fernbedienung irgendwo im Inventar, pausieren die Areas, in denen er gerade steht. So laufen einem die Roboter nicht zwischen den Füßen herum. Sobald er draußen ist, arbeiten sie weiter. Eine Fernbedienung im Auto-Modus glitzert.
+- **Mehrspieler:** Jeder Spieler mit einer Fernbedienung darf jede Area schalten.
+
 ## ME-Rucksack und Traveler's Backpack
 
 Ein Rucksack, der mit dem Speicher verbunden ist und ihn von überall öffnet.
@@ -256,6 +273,8 @@ Alle Rezepte stehen auch in [JEI](https://modrinth.com/mod/jei).
 | Sammelroboter | Eisenbarren, Kürbis, Redstone, Trichter, Eisennuggets | ![Rezept Sammelroboter](docs/screenshots/rezept-robot.png) |
 | Roboter-Station | Blitzableiter, Eisenbarren, Redstoneblock, Kiste | ![Rezept Roboter-Station](docs/screenshots/rezept-robot-station.png) |
 | Roboter-Barriere (8 Stück) | 8 Glas um eine Amethystscherbe | ![Rezept Roboter-Barriere](docs/screenshots/rezept-robot-barrier.png) |
+| Antenne | formlos: End-Rute, 2× Kupferbarren, Redstone | – |
+| Fernbedienung | Redstone oben, Kupferbarren links und rechts, Glasscheibe in der Mitte, Enderperle unten mittig | – |
 | ME-Upgrade | formlos: Enderauge, 2× Amethystscherbe, Redstoneblock, Papier | ![Rezept ME-Upgrade](docs/screenshots/rezept-me-upgrade.png) |
 | ME-Rucksack | formlos: beliebiges Bündel + ME-Upgrade | ![Rezept ME-Rucksack](docs/screenshots/rezept-me-backpack.png) |
 | ME-Upgrade (Add-on) | formlos: Leeres Upgrade, Enderauge, 2× Amethystscherbe, Redstoneblock | ![Rezept ME-Upgrade für Traveler's Backpack](docs/screenshots/rezept-tb-me-upgrade.png) |
@@ -279,6 +298,8 @@ Alle Rezepte stehen auch in [JEI](https://modrinth.com/mod/jei).
 | `/storage give robot` | (OP) Gibt einen Sammelroboter |
 | `/storage give station` | (OP) Gibt eine Roboter-Station |
 | `/storage give barrier` | (OP) Gibt 16 Roboter-Barrieren |
+| `/storage give antenne` | (OP) Gibt 2 Antennen |
+| `/storage give fernbedienung` | (OP) Gibt eine Fernbedienung |
 
 ## Einstellungen
 

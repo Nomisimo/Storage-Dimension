@@ -73,6 +73,14 @@ public class StorageJadePlugin implements IWailaPlugin {
 				String dim = Rooms.id(accessor.getLevel());
 				tag.putString("StationName", data.station(dim, accessor.getPosition()).stationName());
 				tag.putInt("Robots", data.stationRobots(dim, accessor.getPosition()).size());
+				de.nomisimo.storagedim.robot.StationArea area = data.stationArea(dim, accessor.getPosition());
+
+				if (area.connected()) {
+					String state = !area.enabled() ? "aus" : de.nomisimo.storagedim.robot.Areas.autoPaused(dim, accessor.getPosition()) ? "Pause" : "an";
+					tag.putString("Area", (area.name().isEmpty() ? "" : area.name() + " · ") + area.sizeText(accessor.getPosition()) + " · " + state);
+				} else if (area.hasAntenna()) {
+					tag.putString("Area", "1 von 2 Antennen");
+				}
 			}
 		}
 
@@ -96,6 +104,12 @@ public class StorageJadePlugin implements IWailaPlugin {
 
 			if (data.contains("Robots")) {
 				tooltip.add(Component.literal("Roboter: " + data.getIntOr("Robots", 0) + "/" + StationMenu.MAX_ROBOTS).withStyle(ChatFormatting.GRAY));
+			}
+
+			String area = data.getStringOr("Area", "");
+
+			if (!area.isEmpty()) {
+				tooltip.add(Component.literal("Area: " + area).withStyle(ChatFormatting.GRAY));
 			}
 		}
 

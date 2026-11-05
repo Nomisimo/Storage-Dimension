@@ -60,6 +60,8 @@ public final class StorageData {
 	public final Map<String, Map<Long, RobotConfig>> stations = new HashMap<>();
 	/** Robots placed for each station per dimension: robot id to its name, in the order they were placed. */
 	public final Map<String, Map<Long, Map<UUID, String>>> stationRobots = new HashMap<>();
+	/** The antenna area of each robot station per dimension (antennas, area name, switched on or off). */
+	public final Map<String, Map<Long, de.nomisimo.storagedim.robot.StationArea>> stationAreas = new HashMap<>();
 	/** Where to send a player back to when they leave the chest island. */
 	public final Map<UUID, SavedPos> returns = new HashMap<>();
 	/**
@@ -246,6 +248,16 @@ public final class StorageData {
 		markDirty();
 	}
 
+	/** The antenna area of the station at {@code pos}, empty for a station without antennas. */
+	public de.nomisimo.storagedim.robot.StationArea stationArea(String dimension, BlockPos pos) {
+		return stationAreas.getOrDefault(dimension, Map.of()).getOrDefault(pos.asLong(), de.nomisimo.storagedim.robot.StationArea.EMPTY);
+	}
+
+	public void setStationArea(String dimension, BlockPos pos, de.nomisimo.storagedim.robot.StationArea area) {
+		stationAreas.computeIfAbsent(dimension, d -> new HashMap<>()).put(pos.asLong(), area);
+		markDirty();
+	}
+
 	/** The robots placed for the station at {@code pos} (id to name); changes must be followed by {@link #markDirty()}. */
 	public Map<UUID, String> stationRobots(String dimension, BlockPos pos) {
 		return stationRobots.computeIfAbsent(dimension, d -> new HashMap<>()).computeIfAbsent(pos.asLong(), p -> new LinkedHashMap<>());
@@ -406,6 +418,15 @@ public final class StorageData {
 		});
 		root.add("stations", stationObj);
 
+		JsonObject areaObj = new JsonObject();
+		stationAreas.forEach((dim, map) -> {
+			JsonObject d = new JsonObject();
+			map.forEach((pos, area) -> de.nomisimo.storagedim.robot.StationArea.CODEC.encodeStart(ops, area).result()
+					.ifPresent(json -> d.add(Long.toString(pos), json)));
+			areaObj.add(dim, d);
+		});
+		root.add("stationAreas", areaObj);
+
 		JsonObject stationRobotObj = new JsonObject();
 		stationRobots.forEach((dim, map) -> {
 			JsonObject d = new JsonObject();
@@ -557,6 +578,15 @@ public final class StorageData {
 				dim.getValue().getAsJsonObject().entrySet().forEach(e -> RobotConfig.CODEC.parse(ops, e.getValue())
 						.resultOrPartial(StorageDimensionMod.LOGGER::warn).ifPresent(config -> map.put(Long.parseLong(e.getKey()), config)));
 				stations.put(dim.getKey(), map);
+			});
+		}
+
+		if (root.has("stationAreas")) {
+			root.getAsJsonObject("stationAreas").entrySet().forEach(dim -> {
+				Map<Long, de.nomisimo.storagedim.robot.StationArea> map = new HashMap<>();
+				dim.getValue().getAsJsonObject().entrySet().forEach(e -> de.nomisimo.storagedim.robot.StationArea.CODEC.parse(ops, e.getValue())
+						.resultOrPartial(StorageDimensionMod.LOGGER::warn).ifPresent(area -> map.put(Long.parseLong(e.getKey()), area)));
+				stationAreas.put(dim.getKey(), map);
 			});
 		}
 

@@ -25,6 +25,8 @@ public class StorageDimensionMod implements ModInitializer {
 		Robots.register();
 		de.nomisimo.storagedim.robot.RobotBarrierBlock.register();
 		de.nomisimo.storagedim.robot.RobotStationBlock.register();
+		de.nomisimo.storagedim.robot.AntennaBlock.register();
+		de.nomisimo.storagedim.robot.RemoteItem.register();
 		StorageEvents.register();
 		StorageCommands.register();
 		TerminalNetworking.register();
