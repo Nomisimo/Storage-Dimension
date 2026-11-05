@@ -1,5 +1,7 @@
 package de.nomisimo.storagedim.test;
 
+import de.nomisimo.storagedim.robot.AntennaBlock;
+import de.nomisimo.storagedim.robot.AntennaItem;
 import de.nomisimo.storagedim.robot.RobotBarrierBlock;
 import de.nomisimo.storagedim.robot.RobotConfig;
 import de.nomisimo.storagedim.robot.RobotStationBlock;
@@ -1027,6 +1029,101 @@ public class ClientScreenshots implements FabricClientGameTest {
 		context.waitTicks(5);
 	}
 
+	private static BlockPos antennaStation;
+
+	/** Antennas on a station and at the opposite corner, the outlines with the remote in hand, the remote's screen. */
+	private static void antennaTest(ClientGameTestContext context, TestSingleplayerContext world) {
+		world.getServer().runOnServer(server -> {
+			ServerPlayer player = server.getPlayerList().getPlayers().get(0);
+			ServerLevel level = player.level();
+			BlockPos station = player.blockPosition().offset(40, 0, 0);
+			antennaStation = station;
+			String dim = Rooms.id(level);
+
+			// clear ground for the scene
+			for (BlockPos pos : BlockPos.betweenClosed(station.offset(-3, 0, -3), station.offset(10, 8, 10))) {
+				level.setBlockAndUpdate(pos, Blocks.AIR.defaultBlockState());
+			}
+
+			level.setBlockAndUpdate(station, RobotStationBlock.BLOCK.defaultBlockState());
+			level.setBlockAndUpdate(station.west(), Blocks.CHEST.defaultBlockState());
+
+			for (int y = 0; y < 3; y++) {
+				level.setBlockAndUpdate(station.offset(6, y, 5), Blocks.STONE.defaultBlockState());
+			}
+
+			StationMenu.open(player, station);
+			StationMenu menu = (StationMenu) player.containerMenu;
+			menu.action(StationMenu.ACTION_STATION_NAME, 0, "Südlager");
+			menu.action(StationMenu.ACTION_AREA_NAME, 0, "Garten");
+			menu.action(StationMenu.ACTION_COLOR, 6, "");
+			menu.setCarried(new ItemStack(Robots.ROBOT_ITEM, 2));
+			menu.clicked(StationMenu.SLOT_INPUT, 0, ContainerInput.PICKUP, player);
+			ItemStack robots = menu.getSlot(StationMenu.SLOT_OUTPUT).getItem().copy();
+			menu.getSlot(StationMenu.SLOT_OUTPUT).set(ItemStack.EMPTY);
+			menu.setCarried(new ItemStack(AntennaBlock.ITEM, 2));
+			menu.clicked(StationMenu.SLOT_INPUT, 0, ContainerInput.PICKUP, player);
+			ItemStack antennas = menu.getSlot(StationMenu.SLOT_OUTPUT).getItem().copy();
+			menu.getSlot(StationMenu.SLOT_OUTPUT).set(ItemStack.EMPTY);
+			player.closeContainer();
+
+			// an unpaired antenna cannot be placed
+			player.setItemInHand(InteractionHand.MAIN_HAND, new ItemStack(AntennaBlock.ITEM));
+			BlockPos ground = station.offset(3, -1, 3);
+			System.out.println("STORAGEDIM ANTENNA unpaired=" + player.getMainHandItem().useOn(new UseOnContext(player, InteractionHand.MAIN_HAND,
+					new BlockHitResult(Vec3.atCenterOf(ground), Direction.UP, ground, false))));
+
+			player.setItemInHand(InteractionHand.MAIN_HAND, antennas);
+			System.out.println("STORAGEDIM ANTENNA paired=" + AntennaItem.link(antennas));
+			System.out.println("STORAGEDIM ANTENNA base=" + antennas.useOn(new UseOnContext(player, InteractionHand.MAIN_HAND,
+					new BlockHitResult(Vec3.atCenterOf(station), Direction.UP, station, false))));
+			BlockPos pillar = station.offset(6, 2, 5);
+			System.out.println("STORAGEDIM ANTENNA corner=" + antennas.useOn(new UseOnContext(player, InteractionHand.MAIN_HAND,
+					new BlockHitResult(Vec3.atCenterOf(pillar), Direction.UP, pillar, false))));
+			System.out.println("STORAGEDIM ANTENNA area=" + StorageData.get().stationArea(dim, station));
+
+			player.setItemInHand(InteractionHand.MAIN_HAND, robots);
+			BlockPos spot = station.offset(4, -1, 2);
+			robots.useOn(new UseOnContext(player, InteractionHand.MAIN_HAND, new BlockHitResult(Vec3.atCenterOf(spot), Direction.UP, spot, false)));
+			drop(level, station.getX() + 3.5, station.getY() + 0.2, station.getZ() + 4.5, new ItemStack(Items.WHEAT, 5));
+			drop(level, station.getX() - 2.5, station.getY() + 0.2, station.getZ() - 2.5, new ItemStack(Items.CARROT, 5));
+			player.setItemInHand(InteractionHand.MAIN_HAND, ItemStack.EMPTY);
+			StationMenu.open(player, station);
+		});
+		context.waitTicks(15);
+		context.takeScreenshot("antenna-station-menu");
+		world.getServer().runOnServer(server -> {
+			ServerPlayer player = server.getPlayerList().getPlayers().get(0);
+			player.closeContainer();
+			player.setItemInHand(InteractionHand.MAIN_HAND, new ItemStack(de.nomisimo.storagedim.robot.RemoteItem.ITEM));
+			lookAt(player, Vec3.atCenterOf(antennaStation.offset(3, 1, 3)), 13);
+		});
+		context.waitTicks(80);
+		context.takeScreenshot("antenna-outlines");
+		world.getServer().runOnServer(server -> {
+			ServerPlayer player = server.getPlayerList().getPlayers().get(0);
+			System.out.println("STORAGEDIM ANTENNA list=" + de.nomisimo.storagedim.robot.Areas.list(player));
+			de.nomisimo.storagedim.robot.Areas.open(player, InteractionHand.MAIN_HAND);
+		});
+		context.waitTicks(15);
+		context.takeScreenshot("antenna-remote-screen");
+		context.runOnClient(client -> client.setScreen(null));
+		world.getServer().runOnServer(server -> {
+			ServerPlayer player = server.getPlayerList().getPlayers().get(0);
+			String dim = Rooms.id(player.level());
+			StorageData data = StorageData.get();
+			data.setStationArea(dim, antennaStation, data.stationArea(dim, antennaStation).withEnabled(false));
+		});
+		context.waitTicks(100);
+		context.takeScreenshot("antenna-area-off");
+		world.getServer().runOnServer(server -> {
+			ServerPlayer player = server.getPlayerList().getPlayers().get(0);
+			System.out.println("STORAGEDIM ANTENNA robots off=" + player.level().getEntitiesOfClass(RobotEntity.class,
+					new net.minecraft.world.phys.AABB(antennaStation).inflate(12)).stream().map(r -> r.status().getString()).toList());
+			player.setItemInHand(InteractionHand.MAIN_HAND, ItemStack.EMPTY);
+		});
+	}
+
 	@Override
 	public void runTest(ClientGameTestContext context) {
 		try (TestSingleplayerContext world = context.worldBuilder().create()) {
@@ -1208,6 +1305,7 @@ public class ClientScreenshots implements FabricClientGameTest {
 			logBarrel(world);
 			slabChestTest(context, world);
 			projectTest(context, world);
+			antennaTest(context, world);
 			islandTest(context, world);
 		}
 	}
