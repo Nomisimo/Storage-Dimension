@@ -14,7 +14,6 @@ import java.util.function.Predicate;
 
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.component.DataComponents;
-import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
@@ -241,9 +240,7 @@ public class StorageMenu extends ChestMenu {
 			return true;
 		}
 
-		String query = search.trim().toLowerCase(Locale.ROOT);
-		return stack.getHoverName().getString().toLowerCase(Locale.ROOT).contains(query)
-				|| BuiltInRegistries.ITEM.getKey(stack.getItem()).getPath().contains(query);
+		return ItemSearch.matches(stack, ItemSearch.query(search));
 	}
 
 	private List<StorageNetwork.StoredItem> visible() {

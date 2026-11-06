@@ -7,7 +7,10 @@ import java.util.Locale;
 import java.util.UUID;
 
 import net.minecraft.ChatFormatting;
+import net.minecraft.core.Holder;
+import net.minecraft.core.HolderLookup;
 import net.minecraft.core.component.DataComponents;
+import net.minecraft.core.registries.Registries;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
@@ -15,6 +18,9 @@ import net.minecraft.world.flag.FeatureFlagSet;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
+import net.minecraft.world.item.alchemy.Potion;
+import net.minecraft.world.item.alchemy.PotionContents;
+import net.minecraft.world.item.enchantment.ItemEnchantments;
 import net.minecraft.world.item.component.CustomData;
 
 /**
@@ -213,8 +219,11 @@ public final class Projects {
 
 	// ---- items ----
 
-	/** Every item of the game, for the search in the project settings (what JEI lists, without the variants). */
-	public static List<ItemStack> allItems(FeatureFlagSet features) {
+	/**
+	 * Every item of the game, for the search in the project settings, plus one of each potion (also splash, lingering
+	 * and tipped arrows) and one enchanted book per enchantment and level, so a project can ask for exactly those.
+	 */
+	public static List<ItemStack> allItems(FeatureFlagSet features, HolderLookup.Provider registries) {
 		List<ItemStack> list = new ArrayList<>();
 
 		for (Item item : BuiltInRegistries.ITEM) {
@@ -223,16 +232,31 @@ public final class Projects {
 			}
 		}
 
+		for (Holder.Reference<Potion> potion : BuiltInRegistries.POTION.listElements().toList()) {
+			for (Item item : List.of(Items.POTION, Items.SPLASH_POTION, Items.LINGERING_POTION, Items.TIPPED_ARROW)) {
+				list.add(PotionContents.createItemStack(item, potion));
+			}
+		}
+
+		registries.lookup(Registries.ENCHANTMENT).ifPresent(enchantments -> enchantments.listElements().forEach(enchantment -> {
+			for (int level = 1; level <= enchantment.value().getMaxLevel(); level++) {
+				ItemEnchantments.Mutable stored = new ItemEnchantments.Mutable(ItemEnchantments.EMPTY);
+				stored.set(enchantment, level);
+				ItemStack book = new ItemStack(Items.ENCHANTED_BOOK);
+				book.set(DataComponents.STORED_ENCHANTMENTS, stored.toImmutable());
+				list.add(book);
+			}
+		}));
+
 		return list;
 	}
 
-	public static List<ItemStack> search(FeatureFlagSet features, String text) {
-		String query = text.trim().toLowerCase(Locale.ROOT);
+	public static List<ItemStack> search(FeatureFlagSet features, HolderLookup.Provider registries, String text) {
+		String query = ItemSearch.query(text);
 		List<ItemStack> list = new ArrayList<>();
 
-		for (ItemStack stack : allItems(features)) {
-			if (query.isEmpty() || stack.getHoverName().getString().toLowerCase(Locale.ROOT).contains(query)
-					|| BuiltInRegistries.ITEM.getKey(stack.getItem()).toString().contains(query)) {
+		for (ItemStack stack : allItems(features, registries)) {
+			if (ItemSearch.matches(stack, query)) {
 				list.add(stack);
 			}
 		}

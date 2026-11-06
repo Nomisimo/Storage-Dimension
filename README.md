@@ -65,7 +65,7 @@ Alle Items liegen ohne Stapel- oder Slot-Grenzen im ME-Speicher. Die genaue Meng
 
 - Linksklick nimmt einen Stapel, Rechtsklick ein einzelnes Item. Shift-Linksklick füllt das ganze Inventar (ohne Hotbar) mit dem Item, Shift-Rechtsklick das halbe. Ist weniger im Speicher, kommt alles, was da ist.
 - Ein Item auf dem Cursor ins Fenster klicken oder Shift-Klick im eigenen Inventar lagert ein.
-- **Oben:** Suchfeld (sucht beim Tippen, ist beim nächsten Öffnen wieder leer) und Sortier-Knopf *Menge* / *A–Z* (bleibt gespeichert). Mit JEI sitzt dazwischen der Schalter **J**: Ist er grün, sind die Suche und die JEI-Suchleiste gekoppelt.
+- **Oben:** Suchfeld (sucht beim Tippen, ist beim nächsten Öffnen wieder leer; findet auch Tränke nach Wirkung und verzauberte Items und Bücher nach Verzauberung, z. B. „healing“ oder „sharpness“) und Sortier-Knopf *Menge* / *A–Z* (bleibt gespeichert). Mit JEI sitzt dazwischen der Schalter **J**: Ist er grün, sind die Suche und die JEI-Suchleiste gekoppelt.
 - **Unten:** **◀ / ▶** blättern seitenweise, das Mausrad scrollt zeilenweise durch alle Items. **Einlagern** lagert das ganze Inventar ohne Hotbar ein, daneben stehen Seite, Sorten und Gesamtmenge.
 - Ohne die Mod auf dem Client gibt es statt der Knöpfe Item-Symbole (Pfeile, Trichter, Komparator).
 
@@ -80,7 +80,7 @@ Eine uralte Kiste aus Tiefenschiefer mit Sculk-Rune. Hingestellt öffnet sie per
 Eine Kiste, die nur ausgewählte Items aus dem ME-Speicher zeigt.
 
 - **Filter einstellen:** Schleichen + Rechtsklick mit leerer Hand öffnet die Filter. Ein Item auf einen Platz legen setzt den Filter, Klick mit leerer Hand entfernt ihn. Eine Kiste hat 7 Filter-Plätze.
-- **Verzauberte Filter:** Ist ein Filter-Item verzaubert (auch ein Verzauberungsbuch), zählen nur Items mit genau denselben Verzauberungen.
+- **Genaue Filter:** Ist ein Filter-Item verzaubert (auch ein Verzauberungsbuch) oder ein Trank (auch Wurf- und Verweiltrank und Pfeile mit Trank), zählen nur Items mit genau denselben Verzauberungen bzw. demselben Trank. Ein Heiltrank als Filter lässt also nur Heiltränke durch, nicht alle Wurftränke. Das gilt auch für die Filter der Roboter-Station und die Items einer Projektkiste.
 - **Benutzen:** Normaler Rechtsklick öffnet die Kiste. Dort lassen sich die gefilterten Items herausnehmen und passende einlagern.
 - **Doppelkiste:** Zwei Filterkisten nebeneinander werden eine Doppelkiste mit 14 Filter-Plätzen. Eine normale Kiste verbindet sich nie mit einer Filterkiste. Wird eine Hälfte abgebaut, behält die andere die ersten 7 Filter.
 - **Trichter darunter** ziehen die Filter-Items aus dem ME-Speicher heraus. Bis zu ein Stapel pro Filter liegt dafür bereit und geht zurück in den Speicher, wenn ihn keiner abholt.
@@ -95,7 +95,7 @@ Eine Kiste für ein Bauprojekt: Du legst fest, welche Items in welcher Menge geb
 - **Einstellen:** Schleichen + Rechtsklick mit leerer Hand, oder das Zahnrad ⚙ in der Item-Ansicht.
   - Oben: **Name** und der Knopf **Blocken** (Im ME blocken).
   - Die Liste hat eine Zeile pro Item: links das Item, daneben das Mengenfeld mit **-64** und **-1** links und **+1** und **+64** rechts, ganz rechts **✕** zum Entfernen. Die Liste scrollt, unten ist immer eine leere Zeile.
-  - Neue Items: in die leere Zeile legen, im eigenen Inventar Shift-klicken, oben im Feld **Item suchen** über alle Items des Spiels suchen und anklicken, oder ein Item aus der JEI-Liste auf die Liste ziehen. Ein Item mit einem anderen auf dem Cursor anklicken tauscht es aus.
+  - Neue Items: in die leere Zeile legen, im eigenen Inventar Shift-klicken, oben im Feld **Item suchen** über alle Items des Spiels suchen und anklicken (auch jeder Trank, Wurftrank, Verweiltrank, Trankpfeil und jedes Verzauberungsbuch in jeder Stufe einzeln), oder ein Item aus der JEI-Liste auf die Liste ziehen. Ein Item mit einem anderen auf dem Cursor anklicken tauscht es aus.
   - Hover über ein Item zeigt, wie viele davon da sind und wie viele fehlen. Ist alles da, wird die Zeile grün.
   - **Rezeptbuch:** Ein Buch mit Feder in den linken Platz legen, rechts kommt es mit dem Projekt beschrieben heraus (Name und eine Zeile pro Item mit Menge).
 
