@@ -14,7 +14,6 @@ import java.util.function.Predicate;
 
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.component.DataComponents;
-import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
@@ -35,7 +34,7 @@ import net.minecraft.world.item.component.ItemLore;
  * The ME terminal: a 6-row chest screen showing the network contents page by page; with the client mod the mouse
  * wheel also scrolls through them row by row.
  * The top inventory is display-only; every click is handled here and then resynced.
- * A filter chest, and every chest of the chest island, opens the same screen limited to its items.
+ * A filter chest opens the same screen limited to its items.
  */
 public class StorageMenu extends ChestMenu {
 	private static final int ITEM_SLOTS = 45;
@@ -65,13 +64,13 @@ public class StorageMenu extends ChestMenu {
 	/** Items this screen shows and accepts, or null for the full terminal. */
 	private final Predicate<ItemStack> filter;
 	private final String title;
-	/** Runs when the screen closes, e.g. to shut the lid of an island chest. */
+	/** Runs when the screen closes, e.g. to shut the lid of a chest. */
 	private final Runnable onClose;
 	/** The player has the mod on the client, which draws a search field and sort button instead of the bottom buttons. */
 	private final boolean clientUi;
 	/** The project of a project chest, whose own blocked items may be taken here; null otherwise. */
 	private final Projects.Project project;
-	/** An island chest: shows only what is not blocked for a project, as those items lie in the project chests. */
+	/** Shows only what is not blocked for a project, as those items lie in the project chests. */
 	private final boolean freeOnly;
 	private String search;
 	private int pages = 1;
@@ -118,17 +117,12 @@ public class StorageMenu extends ChestMenu {
 		open(player, project.network(), project::wants, project.name, null, "", project, false);
 	}
 
-	/** A chest of the chest island: only what is not blocked for a project. */
-	public static void openIsland(ServerPlayer player, StorageNetwork network, Predicate<ItemStack> filter, String title, Runnable onClose) {
-		open(player, network, filter, title, onClose, "", null, true);
-	}
-
 	/** Opens the terminal; with a filter list only those items are shown and accepted. */
 	public static void open(ServerPlayer player, StorageNetwork network, List<ItemStack> filter) {
 		open(player, network, stack -> FilterChests.matches(filter, stack), "Filterkiste", null, "", null, false);
 	}
 
-	/** Opens the terminal limited to the items {@code filter} accepts, e.g. for one chest of the chest island. */
+	/** Opens the terminal limited to the items {@code filter} accepts */
 	public static void open(ServerPlayer player, StorageNetwork network, Predicate<ItemStack> filter, String title, Runnable onClose) {
 		open(player, network, filter, title, onClose, "", null, false);
 	}
@@ -182,6 +176,7 @@ public class StorageMenu extends ChestMenu {
 		}
 
 		ProjectMenu.refreshAll(network);
+		ShelfMenu.refreshAll(network);
 	}
 
 	/** The amount this screen shows of a stored item, see {@link #project} and {@link #freeOnly}. */
@@ -241,9 +236,7 @@ public class StorageMenu extends ChestMenu {
 			return true;
 		}
 
-		String query = search.trim().toLowerCase(Locale.ROOT);
-		return stack.getHoverName().getString().toLowerCase(Locale.ROOT).contains(query)
-				|| BuiltInRegistries.ITEM.getKey(stack.getItem()).getPath().contains(query);
+		return ItemSearch.matches(stack, ItemSearch.query(search));
 	}
 
 	private List<StorageNetwork.StoredItem> visible() {

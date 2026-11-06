@@ -412,7 +412,7 @@ public class ProjectMenu extends ChestMenu {
 	private void openSearch(ServerPlayer player, String current) {
 		Projects.Entry keep = selected;
 		SearchMenu.open(player, current, "Item suchen: Text eingeben, dann rechts klicken", "Suchbegriff",
-				text -> open(player, project, keep, Projects.search(player.level().enabledFeatures(), text), text));
+				text -> open(player, project, keep, Projects.search(player.level().enabledFeatures(), player.level().registryAccess(), text), text));
 	}
 
 	private void adjust(long delta) {

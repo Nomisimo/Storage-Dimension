@@ -224,7 +224,7 @@ public final class StorageEvents {
 		StorageData data = StorageData.get();
 
 		if (Rooms.isStorage(level)) {
-			// The chest island cannot be taken apart.
+			// The library cannot be taken apart.
 			return false;
 		}
 
@@ -334,7 +334,7 @@ public final class StorageEvents {
 
 		if (Rooms.isStorage(level)) {
 			// Chests and the exit work; nothing can be placed and the barrels stay shut.
-			return Islands.use(player, level, pos);
+			return Library.use(player, level, pos);
 		}
 
 		Projects.Project projectChest = data.projectChest(Rooms.id(level), pos);
@@ -395,7 +395,7 @@ public final class StorageEvents {
 		return InteractionResult.SUCCESS;
 	}
 
-	/** Right click on a project chest, in the world or on the chest island. */
+	/** Right click on a project chest, in the world or in the library. */
 	static InteractionResult useProject(ServerPlayer player, Projects.Project project) {
 		if (player.isSecondaryUseActive() && !player.getMainHandItem().isEmpty()) {
 			// Sneaking with an item in hand places it (e.g. a hopper) instead.
@@ -459,8 +459,8 @@ public final class StorageEvents {
 			StorageData.markDirty();
 		}
 
-		Islands.teleportToSpawn(player, network);
-		player.sendSystemMessage(Component.literal("Willkommen auf deiner Kisten-Insel! Jede Kiste hält eine Item-Sorte, der Leuchtstein ist der Ausgang.")
+		Library.teleportToSpawn(player, network);
+		player.sendSystemMessage(Component.literal("Willkommen in deiner Bibliothek! Jeder Gang ist eine Abteilung, das Lesepult ist der Katalog, der Leuchtstein der Ausgang.")
 				.withStyle(ChatFormatting.DARK_PURPLE));
 	}
 
@@ -506,15 +506,15 @@ public final class StorageEvents {
 		}
 
 		if (tickCounter % 20 == 0) {
-			keepOnIslands(server, data);
+			keepInLibraries(server, data);
 		}
 	}
 
 	/**
-	 * Players in the storage dimension who are not on an island they may use (or fell off) go back to their own.
-	 * Islands with players on them grow with newly stored kinds.
+	 * Players in the storage dimension who are not in a library they may use go back to their own.
+	 * Libraries with players in them grow with newly stored kinds.
 	 */
-	private static void keepOnIslands(MinecraftServer server, StorageData data) {
+	private static void keepInLibraries(MinecraftServer server, StorageData data) {
 		ServerLevel level = Rooms.level(server);
 
 		if (level == null) {
@@ -524,18 +524,18 @@ public final class StorageEvents {
 		Set<StorageNetwork> visited = new java.util.HashSet<>();
 
 		for (ServerPlayer player : level.players()) {
-			StorageNetwork here = data.networkByRoom(Islands.roomAt(player.blockPosition()));
+			StorageNetwork here = data.networkByRoom(Library.roomAt(player.blockPosition()));
 
-			if (here != null && here.canAccess(player.getUUID()) && Islands.isOnIsland(player, here)) {
+			if (here != null && here.canAccess(player.getUUID()) && Library.isInside(player, here)) {
 				visited.add(here);
 				continue;
 			}
 
-			Islands.teleportToSpawn(player, data.networkFor(player.getUUID()));
+			Library.teleportToSpawn(player, data.networkFor(player.getUUID()));
 		}
 
 		for (StorageNetwork network : visited) {
-			Islands.tickIsland(level, network);
+			Library.tick(level, network);
 		}
 	}
 

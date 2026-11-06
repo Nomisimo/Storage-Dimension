@@ -13,7 +13,7 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
 
-/** Helpers for the storage dimension, which holds the chest islands (see {@link Islands}). */
+/** Helpers for the storage dimension, which holds the libraries (see {@link Library}). */
 public final class Rooms {
 	// The small rooms of older versions: room n had its corner at (n * 64, 100, 0) and was 12 x 7 x 12 blocks.
 	private static final int OLD_SPACING = 64;
@@ -41,7 +41,7 @@ public final class Rooms {
 
 	/** Removes a room of an older version. What players left in its furnace or chests goes into the network. */
 	static void clearOldRoom(ServerLevel level, int room, StorageNetwork network) {
-		BlockPos origin = new BlockPos(room * OLD_SPACING, Islands.FLOOR_Y, 0);
+		BlockPos origin = new BlockPos(room * OLD_SPACING, Library.FLOOR_Y, 0);
 
 		for (int x = 0; x <= OLD_SIZE; x++) {
 			for (int z = 0; z <= OLD_SIZE; z++) {

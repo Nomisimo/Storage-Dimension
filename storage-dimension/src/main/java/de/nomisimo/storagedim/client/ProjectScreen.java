@@ -2,9 +2,10 @@ package de.nomisimo.storagedim.client;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Locale;
 
+import de.nomisimo.storagedim.storage.ItemSearch;
 import de.nomisimo.storagedim.storage.ProjectNetworking;
+import de.nomisimo.storagedim.storage.Projects;
 import de.nomisimo.storagedim.storage.ProjectSettingsMenu;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
@@ -20,12 +21,9 @@ import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.client.input.KeyEvent;
 import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.client.renderer.Rect2i;
-import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.player.Inventory;
-import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.item.Items;
 import org.lwjgl.glfw.GLFW;
 
 /**
@@ -168,24 +166,17 @@ public class ProjectScreen extends AbstractContainerScreen<ProjectSettingsMenu> 
 	}
 
 	private void searchChanged(String text) {
-		String query = text.strip().toLowerCase(Locale.ROOT);
+		String query = ItemSearch.query(text);
+		var level = Minecraft.getInstance().level;
 		scroll = 0;
 
-		if (query.isEmpty()) {
+		if (query.isEmpty() || level == null) {
 			hits = List.of();
 		} else {
 			List<ItemStack> found = new ArrayList<>();
-			var features = Minecraft.getInstance().level == null ? null : Minecraft.getInstance().level.enabledFeatures();
 
-			for (Item item : BuiltInRegistries.ITEM) {
-				if (item == Items.AIR || features != null && !item.isEnabled(features)) {
-					continue;
-				}
-
-				ItemStack stack = new ItemStack(item);
-
-				if (stack.getHoverName().getString().toLowerCase(Locale.ROOT).contains(query)
-						|| BuiltInRegistries.ITEM.getKey(item).toString().contains(query)) {
+			for (ItemStack stack : Projects.allItems(level.enabledFeatures(), level.registryAccess())) {
+				if (ItemSearch.matches(stack, query)) {
 					found.add(stack);
 				}
 			}

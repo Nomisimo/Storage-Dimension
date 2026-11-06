@@ -701,8 +701,9 @@ public class ClientScreenshots implements FabricClientGameTest {
 	}
 
 	/**
-	 * The chest island: many kinds stored, the player enters, looks over the island and up into the sky, opens the
-	 * cobblestone chest (dirt must not go in), and a kind stored while standing there gets a new chest.
+	 * The library: many kinds stored, the player enters the hall, looks down an aisle, uses the catalogue to get to the
+	 * cobblestone chests, opens one (dirt must not go in, cobblestone must), and a kind stored while standing there gets
+	 * a new chest.
 	 */
 	private static void islandTest(ClientGameTestContext context, TestSingleplayerContext world) {
 		world.getServer().runOnServer(server -> {
@@ -723,99 +724,74 @@ public class ClientScreenshots implements FabricClientGameTest {
 			network.insert(new ItemStack(Items.DIAMOND_PICKAXE));
 			player.setGameMode(net.minecraft.world.level.GameType.CREATIVE);
 			de.nomisimo.storagedim.storage.StorageEvents.enterRoom(player, network);
-			System.out.println("STORAGEDIM ISLAND chests=" + network.island.size() + " radius=" + network.islandRadius + " projects="
-					+ network.island.stream().filter(c -> de.nomisimo.storagedim.storage.Islands.isProject(c.key()))
-							.map(c -> c.dx() + "/" + c.dz()).toList()
-					+ " planksChest=" + network.island.stream().anyMatch(c -> c.key().is(Items.OAK_PLANKS)));
+			System.out.println("STORAGEDIM LIBRARY chests=" + network.library.size() + " aisles="
+					+ network.aisles.stream().map(a -> a.category.title + "@" + a.x + "/" + a.length()).toList()
+					+ " cobbleChests=" + network.library.stream().filter(c -> c.key().is(Items.COBBLESTONE)).count());
 		});
 		context.waitTicks(60);
 		world.getClientLevel().waitForChunksDownload();
 		context.waitTicks(20);
-		context.takeScreenshot("island-arrive");
+		context.takeScreenshot("library-hall");
 		world.getServer().runOnServer(server -> {
 			ServerPlayer player = server.getPlayerList().getPlayers().get(0);
 			var network = StorageData.get().networkFor(player.getUUID());
-			BlockPos centre = de.nomisimo.storagedim.storage.Islands.centre(network.room);
-			var project = network.island.stream().filter(c -> de.nomisimo.storagedim.storage.Islands.isProject(c.key())).findFirst().orElse(null);
-
-			if (project != null) {
-				lookAt(player, Vec3.atCenterOf(centre.offset(project.dx(), 1, project.dz())), 4);
-			}
-		});
-		context.waitTicks(20);
-		context.takeScreenshot("island-project");
-		world.getServer().runOnServer(server -> {
-			ServerPlayer player = server.getPlayerList().getPlayers().get(0);
-			var network = StorageData.get().networkFor(player.getUUID());
-			BlockPos centre = de.nomisimo.storagedim.storage.Islands.centre(network.room);
-			player.teleportTo(player.level(), centre.getX() + 0.5, centre.getY() + 1, centre.getZ() + 0.5, java.util.Set.of(), 180, 0, true);
-		});
-		context.waitTicks(10);
-		world.getServer().runOnServer(server -> {
-			ServerPlayer player = server.getPlayerList().getPlayers().get(0);
-			var network = StorageData.get().networkFor(player.getUUID());
-			BlockPos centre = de.nomisimo.storagedim.storage.Islands.centre(network.room);
-			player.getAbilities().flying = true;
-			player.onUpdateAbilities();
-			player.teleportTo(player.level(), centre.getX() + 0.5, centre.getY() + 16, centre.getZ() + network.islandRadius + 4.5,
-					java.util.Set.of(), 180, 35, true);
-		});
-		context.waitTicks(40);
-		context.takeScreenshot("island-overview");
-		world.getServer().runOnServer(server -> {
-			ServerPlayer player = server.getPlayerList().getPlayers().get(0);
-			var network = StorageData.get().networkFor(player.getUUID());
-			BlockPos centre = de.nomisimo.storagedim.storage.Islands.centre(network.room);
-			player.teleportTo(player.level(), centre.getX() + network.islandRadius + 5.5, centre.getY() - 2, centre.getZ() + 0.5,
-					java.util.Set.of(), 90, 5, true);
+			de.nomisimo.storagedim.storage.Library.teleportToAisle(player, network, network.aisles.get(0));
 		});
 		context.waitTicks(30);
-		context.takeScreenshot("island-side");
+		context.takeScreenshot("library-aisle");
 		world.getServer().runOnServer(server -> {
 			ServerPlayer player = server.getPlayerList().getPlayers().get(0);
 			var network = StorageData.get().networkFor(player.getUUID());
-			BlockPos centre = de.nomisimo.storagedim.storage.Islands.centre(network.room);
-			player.teleportTo(player.level(), centre.getX() + 0.5, centre.getY() + 1, centre.getZ() + 0.5, java.util.Set.of(), 180, -40, true);
-		});
-		context.waitTicks(30);
-		context.takeScreenshot("island-sky");
-		world.getServer().runOnServer(server -> {
-			ServerPlayer player = server.getPlayerList().getPlayers().get(0);
-			var network = StorageData.get().networkFor(player.getUUID());
-			BlockPos centre = de.nomisimo.storagedim.storage.Islands.centre(network.room);
-			var cobble = network.island.stream().filter(c -> c.key().is(Items.COBBLESTONE)).findFirst().orElseThrow();
-			BlockPos chest = centre.offset(cobble.dx(), 1, cobble.dz());
-			// stand in the aisle in front of the chest and look at it
-			int front = Math.floorMod(cobble.dz(), 3) == 0 ? -1 : 1;
-			player.teleportTo(player.level(), chest.getX() + 0.5, chest.getY(), chest.getZ() + 0.5 + front * 2.2, java.util.Set.of(),
-					front < 0 ? 0 : 180, 25, true);
-			player.getInventory().setItem(9, new ItemStack(Items.DIRT, 32));
-			player.getInventory().setItem(10, new ItemStack(Items.COBBLESTONE, 16));
-			de.nomisimo.storagedim.storage.Islands.use(player, (ServerLevel) player.level(), chest);
-			net.minecraft.world.inventory.AbstractContainerMenu menu = player.containerMenu;
-			menu.clicked(54, 0, ContainerInput.QUICK_MOVE, player);
-			menu.clicked(55, 0, ContainerInput.QUICK_MOVE, player);
-			System.out.println("STORAGEDIM ISLAND chest " + menu.getClass().getSimpleName() + " dirtLeft=" + player.getInventory().getItem(9).getCount()
-					+ " cobbleLeft=" + player.getInventory().getItem(10).getCount() + " stored=" + network.find(new ItemStack(Items.COBBLESTONE)).count);
+			de.nomisimo.storagedim.storage.CatalogMenu.open(player, network);
 		});
 		context.waitTicks(15);
-		context.takeScreenshot("island-chest");
+		context.takeScreenshot("library-catalog");
 		world.getServer().runOnServer(server -> {
 			ServerPlayer player = server.getPlayerList().getPlayers().get(0);
 			player.closeContainer();
 			var network = StorageData.get().networkFor(player.getUUID());
-			int before = network.island.size();
+			var cobble = network.library.stream().filter(c -> c.key().is(Items.COBBLESTONE)).findFirst().orElseThrow();
+			de.nomisimo.storagedim.storage.Library.teleportToShelf(player, network, cobble);
+		});
+		context.waitTicks(30);
+		context.takeScreenshot("library-shelf");
+		world.getServer().runOnServer(server -> {
+			ServerPlayer player = server.getPlayerList().getPlayers().get(0);
+			var network = StorageData.get().networkFor(player.getUUID());
+			var cobble = network.library.stream().filter(c -> c.key().is(Items.COBBLESTONE)).findFirst().orElseThrow();
+			BlockPos chest = de.nomisimo.storagedim.storage.Library.centre(network.room).offset(cobble.dx(), cobble.dy(), cobble.dz());
+			player.getInventory().setItem(9, new ItemStack(Items.DIRT, 32));
+			player.getInventory().setItem(10, new ItemStack(Items.COBBLESTONE, 16));
+			de.nomisimo.storagedim.storage.Library.use(player, (ServerLevel) player.level(), chest);
+			net.minecraft.world.inventory.AbstractContainerMenu menu = player.containerMenu;
+			// 27 chest slots, then the inventory from slot 9 on
+			menu.clicked(27, 0, ContainerInput.QUICK_MOVE, player);
+			menu.clicked(28, 0, ContainerInput.QUICK_MOVE, player);
+			long afterIn = network.find(new ItemStack(Items.COBBLESTONE)).count;
+			// take the first stack out
+			menu.clicked(0, 0, ContainerInput.QUICK_MOVE, player);
+			System.out.println("STORAGEDIM LIBRARY chest " + menu.getClass().getSimpleName() + " dirtLeft=" + player.getInventory().getItem(9).getCount()
+					+ " cobbleLeft=" + player.getInventory().getItem(10).getCount() + " storedAfterIn=" + afterIn
+					+ " storedAfterOut=" + network.find(new ItemStack(Items.COBBLESTONE)).count + " slot0=" + menu.getSlot(0).getItem().getCount());
+		});
+		context.waitTicks(15);
+		context.takeScreenshot("library-chest");
+		world.getServer().runOnServer(server -> {
+			ServerPlayer player = server.getPlayerList().getPlayers().get(0);
+			player.closeContainer();
+			var network = StorageData.get().networkFor(player.getUUID());
+			int before = network.library.size();
 			network.insert(new ItemStack(Items.DRAGON_EGG));
-			System.out.println("STORAGEDIM ISLAND grow before=" + before);
+			System.out.println("STORAGEDIM LIBRARY grow before=" + before);
 		});
 		context.waitTicks(50);
 		world.getServer().runOnServer(server -> {
 			ServerPlayer player = server.getPlayerList().getPlayers().get(0);
 			var network = StorageData.get().networkFor(player.getUUID());
-			System.out.println("STORAGEDIM ISLAND grow after=" + network.island.size() + " egg="
-					+ network.island.stream().anyMatch(c -> c.key().is(Items.DRAGON_EGG)));
+			System.out.println("STORAGEDIM LIBRARY grow after=" + network.library.size() + " egg="
+					+ network.library.stream().anyMatch(c -> c.key().is(Items.DRAGON_EGG)));
 		});
-		context.takeScreenshot("island-chest-closed");
+		context.takeScreenshot("library-chest-closed");
 	}
 
 	private static void logMenu(ServerPlayer player, String what) {

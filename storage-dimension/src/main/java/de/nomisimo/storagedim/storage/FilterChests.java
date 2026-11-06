@@ -2,12 +2,12 @@ package de.nomisimo.storagedim.storage;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import java.util.UUID;
 
 import net.minecraft.core.component.DataComponentType;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.item.enchantment.ItemEnchantments;
 
 /**
  * Filter chests: placed chests that open the ME terminal limited to up to {@link #SLOTS} chosen items,
@@ -57,8 +57,20 @@ public final class FilterChests {
 	}
 
 	/**
-	 * Matches by item type, so e.g. damaged tools of one kind all count. An enchanted filter item (or enchanted book)
-	 * only matches items with exactly the same enchantments.
+	 * The components that make one kind of an item: a filter item that has one of them set (other than the item's default)
+	 * only matches items with exactly the same value, e.g. a potion of healing only potions of healing, an enchanted book
+	 * only books with the same enchantments.
+	 */
+	private static final List<DataComponentType<?>> VARIANTS = List.of(
+			DataComponents.ENCHANTMENTS,
+			DataComponents.STORED_ENCHANTMENTS,
+			DataComponents.POTION_CONTENTS,
+			DataComponents.OMINOUS_BOTTLE_AMPLIFIER,
+			DataComponents.INSTRUMENT);
+
+	/**
+	 * Matches by item type, so e.g. damaged tools of one kind all count. A filter item of a certain kind (potion effect,
+	 * enchantments, see {@link #VARIANTS}) only matches items of exactly that kind.
 	 */
 	public static boolean matches(List<ItemStack> filters, ItemStack stack) {
 		if (stack.isEmpty()) {
@@ -66,9 +78,7 @@ public final class FilterChests {
 		}
 
 		for (ItemStack filter : filters) {
-			if (!filter.isEmpty() && ItemStack.isSameItem(filter, stack)
-					&& sameEnchantments(filter, stack, DataComponents.ENCHANTMENTS)
-					&& sameEnchantments(filter, stack, DataComponents.STORED_ENCHANTMENTS)) {
+			if (!filter.isEmpty() && ItemStack.isSameItem(filter, stack) && sameVariant(filter, stack)) {
 				return true;
 			}
 		}
@@ -81,8 +91,17 @@ public final class FilterChests {
 		return stack.isDamageableItem() ? new ItemStack(stack.getItem()) : stack.copyWithCount(1);
 	}
 
-	private static boolean sameEnchantments(ItemStack filter, ItemStack stack, DataComponentType<ItemEnchantments> type) {
-		ItemEnchantments wanted = filter.getOrDefault(type, ItemEnchantments.EMPTY);
-		return wanted.isEmpty() || wanted.equals(stack.getOrDefault(type, ItemEnchantments.EMPTY));
+	private static boolean sameVariant(ItemStack filter, ItemStack stack) {
+		ItemStack plain = filter.getItem().getDefaultInstance();
+
+		for (DataComponentType<?> type : VARIANTS) {
+			Object wanted = filter.get(type);
+
+			if (!Objects.equals(wanted, plain.get(type)) && !Objects.equals(wanted, stack.get(type))) {
+				return false;
+			}
+		}
+
+		return true;
 	}
 }

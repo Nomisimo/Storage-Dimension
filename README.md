@@ -1,15 +1,15 @@
 # Storage Dimension
 
-Ein Fabric-Mod für **Minecraft 26.1.2**: eine Insel aus Kisten in einer eigenen Dimension, ein ME-Speicher ohne Stapelgrenzen und kleine Sammelroboter, die herumliegende Items einsammeln und einlagern.
+Ein Fabric-Mod für **Minecraft 26.1.2**: eine Bibliothek voller Kisten in einer eigenen Dimension, ein ME-Speicher ohne Stapelgrenzen und kleine Sammelroboter, die herumliegende Items einsammeln und einlagern.
 
-**Aktuelle Version: 0.7.1.** Die fertigen Dateien gibt es unter [Releases](https://github.com/Nomisimo/Storage-Dimension/releases), dort steht auch, welche Datei wohin gehört.
+**Aktuelle Version: 0.7.2.** Die fertigen Dateien gibt es unter [Releases](https://github.com/Nomisimo/Storage-Dimension/releases), dort steht auch, welche Datei wohin gehört.
 
 ![Dimensionskiste, Filterkiste, doppelte Filterkiste und ME-Terminal, davor der Sammelroboter](docs/screenshots/kisten-und-roboter.png)
 
 ## Inhalt
 
 - [Installation](#installation)
-- [Speicher](#speicher): Dimensionskiste, ME-Speicher, ME-Terminal, Filterkiste, Projektkiste, Trichter und Maschinen
+- [Speicher](#speicher): Dimensionskiste und Bibliothek, ME-Speicher, ME-Terminal, Filterkiste, Projektkiste, Trichter und Maschinen
 - [Sammelroboter](#sammelroboter): Roboter, Roboter-Station, Rückruf, Roboter-Barriere, Antennen und Fernbedienung
 - [ME-Rucksack und Traveler's Backpack](#me-rucksack-und-travelers-backpack)
 - [Rezepte](#rezepte)
@@ -19,11 +19,11 @@ Ein Fabric-Mod für **Minecraft 26.1.2**: eine Insel aus Kisten in einer eigenen
 
 ## Installation
 
-`storage-dimension-0.7.1.jar` muss **auf dem Server und bei allen Spielern** im Ordner `mods` liegen.
+`storage-dimension-0.7.2.jar` muss **auf dem Server und bei allen Spielern** im Ordner `mods` liegen.
 
 1. Fabric Loader 0.19.5 oder neuer und [Fabric API](https://modrinth.com/mod/fabric-api) für 26.1.2 auf Server und Clients installieren.
-2. `storage-dimension-0.7.1.jar` (nicht die `-sources.jar`) in den `mods`-Ordner legen.
-3. Optional das [Traveler's-Backpack-Add-on](#me-rucksack-und-travelers-backpack) `storagedim-tb-0.7.1.jar` dazulegen, ebenfalls auf Server und Clients.
+2. `storage-dimension-0.7.2.jar` (nicht die `-sources.jar`) in den `mods`-Ordner legen.
+3. Optional das [Traveler's-Backpack-Add-on](#me-rucksack-und-travelers-backpack) `storagedim-tb-0.7.2.jar` dazulegen, ebenfalls auf Server und Clients.
 4. Server starten. Die Dimension `storagedim:storage` wird automatisch angelegt, die Daten liegen in `world/storagedim.json`.
 
 **Passt gut dazu (optional):** [JEI](https://modrinth.com/mod/jei) (Rezepte, Suche koppeln, „+“ im Rucksack), [Jade](https://modrinth.com/mod/jade) (Infos zu Robotern und Stationen), [Xaero's Minimap](https://modrinth.com/mod/xaeros-minimap) (Roboter auf der Karte). Getestet mit JEI 29.47.0.111, Jade 26.1.11 und Xaero's Minimap 26.6.2.
@@ -39,25 +39,19 @@ Ein Fabric-Mod für **Minecraft 26.1.2**: eine Insel aus Kisten in einer eigenen
 
 ![Dimensionskiste, Filterkiste, ME-Terminal und Sammelroboter im Inventar](docs/screenshots/items.png)
 
-### Dimensionskiste und Kisten-Insel
+### Dimensionskiste und Bibliothek
 
-![Die Kisten-Insel von oben](docs/screenshots/kisten-insel.png)
-
-- Eine violette Kiste mit Endsternen. Wer sie öffnet und Zugriff auf den Speicher hat, landet auf der Kisten-Insel in der Storage Dimension. Beliebig viele Spieler können gleichzeitig dort sein.
+- Eine violette Kiste mit Endsternen. Wer sie öffnet und Zugriff auf den Speicher hat, landet in der Eingangshalle der Bibliothek in der Storage Dimension. Beliebig viele Spieler können gleichzeitig dort sein.
 - Wer keinen Zugriff hat, sieht nur ein leeres Kisten-Inventar, in dem nichts gelagert werden kann.
-- Die Insel hat die Form der End-Insel und besteht nur aus Kisten: Der Boden sind Fässer (lassen sich nicht öffnen), darauf steht für jede gespeicherte Item-Sorte eine eigene Kiste, sortiert nach Mod und Name. Über jeder Kiste schwebt ihr Item.
-- Eine Kiste hält beliebig viele Items ihrer Sorte (keine 64er-Grenze) und nimmt nur diese Sorte an. Was man herausnimmt, ist auch aus dem ME-Speicher weg. Werkzeuge und andere Items mit Haltbarkeit teilen sich eine Kiste pro Item, verzauberte Bücher, Tränke usw. bekommen je Variante eine eigene.
-- Die Insel wächst mit: Neue Sorten bekommen sofort eine Kiste am Rand. Leere Kisten verschwinden erst, wenn gerade niemand auf der Insel ist; beim nächsten Betreten wird neu sortiert.
-- Darüber liegt der End-Himmel. Die Sterne sind kleine weiße und graue Kisten, der Mond eine große Kiste.
-- Auf der Insel lässt sich nichts abbauen oder hinstellen. Wer herunterfällt, landet wieder in der Mitte.
-- Raus geht es per Rechtsklick auf den Leuchtstein in der Mitte oder mit `/storage raus`.
-- Standardmäßig teilen sich alle Spieler einen Speicher und eine Insel. Mit `sharedStorage = false` bekommt jeder Speicher seine eigene Insel (siehe [Einstellungen](#einstellungen)).
-
-| Ankunft in der Mitte | Von der Seite | Himmel |
-|---|---|---|
-| ![Ankunft auf der Insel](docs/screenshots/kisten-insel-ankunft.png) | ![Die Insel von der Seite](docs/screenshots/kisten-insel-seite.png) | ![Kisten-Sterne und Kisten-Mond](docs/screenshots/kisten-insel-himmel.png) |
-
-![Die Bruchstein-Kiste auf der Insel](docs/screenshots/kisten-insel-kiste.png)
+- **Aufbau:** Von der Halle gehen lange Gänge im Stil einer alten Bibliothek ab: Bücherregale als Wände, dunkles Eichenholz, ein roter Läufer und Laternen an Säulen. Jeder Gang ist eine Abteilung, über dem Eingang steht ihr Name und wie viele Sorten sie hat: Stein, Holz, Natur, Erze & Metalle, Essen, Mob-Drops, Redstone, Werkzeuge & Waffen, Rüstung, Tränke & Magie, Farben & Deko und Sonstiges. Items anderer Mods werden nach ihrem Namen einsortiert.
+- **Kisten mit echten Stapeln:** In den Regalen stehen normale Kisten, drei übereinander. Jede Kiste hat 27 Plätze mit normalen Stapeln (64, oder so viel, wie das Item stapelt), eine Sorte bekommt also so viele Kisten, wie sie braucht (höchstens 64 pro Sorte; was darüber hinausgeht, ist weiter im ME-Speicher und im ME-Terminal). Innerhalb eines Gangs sind die Sorten nach Mod und Name sortiert, vor jeder Kiste schwebt ihr Item.
+- Was man herausnimmt, ist auch aus dem ME-Speicher weg; Shift-Klick aus dem eigenen Inventar lagert ein (auch wenn die Kiste voll ist). Eine Kiste nimmt nur ihre Sorte an. Die Kisten einer Sorte sind immer von vorne gefüllt, die letzte Kiste einer Sorte leert sich zuerst. Werkzeuge und andere Items mit Haltbarkeit teilen sich die Kisten pro Item, verzauberte Bücher, Tränke usw. bekommen je Variante eigene.
+- **Katalog und Teleport:** Rechtsklick auf das Lesepult in der Halle oder am Ende jedes Gangs öffnet den Katalog. Ein Klick auf eine Abteilung teleportiert an den Anfang ihres Gangs. **Item suchen** teleportiert direkt vor die erste Kiste eines Items (sucht auch nach Trank-Wirkung und Verzauberung). Außerdem gibt es dort Knöpfe zurück in die Halle und zum Verlassen.
+- Die Bibliothek wächst mit: Neue Sorten bekommen sofort Kisten am Ende ihres Gangs. Leere Kisten verschwinden und die Kistenzahl wird angepasst, wenn gerade niemand in der Bibliothek ist; beim nächsten Betreten wird neu sortiert.
+- In der Bibliothek lässt sich nichts abbauen oder hinstellen.
+- Raus geht es per Rechtsklick auf den Leuchtstein in der Halle, über den Katalog oder mit `/storage raus`.
+- Standardmäßig teilen sich alle Spieler einen Speicher und eine Bibliothek. Mit `sharedStorage = false` bekommt jeder Speicher seine eigene (siehe [Einstellungen](#einstellungen)).
+- Welten aus Version 0.7 und älter: Die alte Kisten-Insel wird beim ersten Betreten abgebaut und durch die Bibliothek ersetzt. Die Items selbst liegen im ME-Speicher und bleiben, wie sie sind.
 
 ### ME-Speicher
 
@@ -65,7 +59,7 @@ Alle Items liegen ohne Stapel- oder Slot-Grenzen im ME-Speicher. Die genaue Meng
 
 - Linksklick nimmt einen Stapel, Rechtsklick ein einzelnes Item. Shift-Linksklick füllt das ganze Inventar (ohne Hotbar) mit dem Item, Shift-Rechtsklick das halbe. Ist weniger im Speicher, kommt alles, was da ist.
 - Ein Item auf dem Cursor ins Fenster klicken oder Shift-Klick im eigenen Inventar lagert ein.
-- **Oben:** Suchfeld (sucht beim Tippen, ist beim nächsten Öffnen wieder leer) und Sortier-Knopf *Menge* / *A–Z* (bleibt gespeichert). Mit JEI sitzt dazwischen der Schalter **J**: Ist er grün, sind die Suche und die JEI-Suchleiste gekoppelt.
+- **Oben:** Suchfeld (sucht beim Tippen, ist beim nächsten Öffnen wieder leer; findet auch Tränke nach Wirkung und verzauberte Items und Bücher nach Verzauberung, z. B. „healing“ oder „sharpness“) und Sortier-Knopf *Menge* / *A–Z* (bleibt gespeichert). Mit JEI sitzt dazwischen der Schalter **J**: Ist er grün, sind die Suche und die JEI-Suchleiste gekoppelt.
 - **Unten:** **◀ / ▶** blättern seitenweise, das Mausrad scrollt zeilenweise durch alle Items. **Einlagern** lagert das ganze Inventar ohne Hotbar ein, daneben stehen Seite, Sorten und Gesamtmenge.
 - Ohne die Mod auf dem Client gibt es statt der Knöpfe Item-Symbole (Pfeile, Trichter, Komparator).
 
@@ -80,7 +74,7 @@ Eine uralte Kiste aus Tiefenschiefer mit Sculk-Rune. Hingestellt öffnet sie per
 Eine Kiste, die nur ausgewählte Items aus dem ME-Speicher zeigt.
 
 - **Filter einstellen:** Schleichen + Rechtsklick mit leerer Hand öffnet die Filter. Ein Item auf einen Platz legen setzt den Filter, Klick mit leerer Hand entfernt ihn. Eine Kiste hat 7 Filter-Plätze.
-- **Verzauberte Filter:** Ist ein Filter-Item verzaubert (auch ein Verzauberungsbuch), zählen nur Items mit genau denselben Verzauberungen.
+- **Genaue Filter:** Ist ein Filter-Item verzaubert (auch ein Verzauberungsbuch) oder ein Trank (auch Wurf- und Verweiltrank und Pfeile mit Trank), zählen nur Items mit genau denselben Verzauberungen bzw. demselben Trank. Ein Heiltrank als Filter lässt also nur Heiltränke durch, nicht alle Wurftränke. Das gilt auch für die Filter der Roboter-Station und die Items einer Projektkiste.
 - **Benutzen:** Normaler Rechtsklick öffnet die Kiste. Dort lassen sich die gefilterten Items herausnehmen und passende einlagern.
 - **Doppelkiste:** Zwei Filterkisten nebeneinander werden eine Doppelkiste mit 14 Filter-Plätzen. Eine normale Kiste verbindet sich nie mit einer Filterkiste. Wird eine Hälfte abgebaut, behält die andere die ersten 7 Filter.
 - **Trichter darunter** ziehen die Filter-Items aus dem ME-Speicher heraus. Bis zu ein Stapel pro Filter liegt dafür bereit und geht zurück in den Speicher, wenn ihn keiner abholt.
@@ -95,7 +89,7 @@ Eine Kiste für ein Bauprojekt: Du legst fest, welche Items in welcher Menge geb
 - **Einstellen:** Schleichen + Rechtsklick mit leerer Hand, oder das Zahnrad ⚙ in der Item-Ansicht.
   - Oben: **Name** und der Knopf **Blocken** (Im ME blocken).
   - Die Liste hat eine Zeile pro Item: links das Item, daneben das Mengenfeld mit **-64** und **-1** links und **+1** und **+64** rechts, ganz rechts **✕** zum Entfernen. Die Liste scrollt, unten ist immer eine leere Zeile.
-  - Neue Items: in die leere Zeile legen, im eigenen Inventar Shift-klicken, oben im Feld **Item suchen** über alle Items des Spiels suchen und anklicken, oder ein Item aus der JEI-Liste auf die Liste ziehen. Ein Item mit einem anderen auf dem Cursor anklicken tauscht es aus.
+  - Neue Items: in die leere Zeile legen, im eigenen Inventar Shift-klicken, oben im Feld **Item suchen** über alle Items des Spiels suchen und anklicken (auch jeder Trank, Wurftrank, Verweiltrank, Trankpfeil und jedes Verzauberungsbuch in jeder Stufe einzeln), oder ein Item aus der JEI-Liste auf die Liste ziehen. Ein Item mit einem anderen auf dem Cursor anklicken tauscht es aus.
   - Hover über ein Item zeigt, wie viele davon da sind und wie viele fehlen. Ist alles da, wird die Zeile grün.
   - **Rezeptbuch:** Ein Buch mit Feder in den linken Platz legen, rechts kommt es mit dem Projekt beschrieben heraus (Name und eine Zeile pro Item mit Menge).
 
@@ -111,9 +105,8 @@ Eine Kiste für ein Bauprojekt: Du legst fest, welche Items in welcher Menge geb
 
 ![Im ME-Terminal: 200 von 300 Brettern für „Burg“ geblockt](docs/screenshots/projekt-geblockt.png)
 
-- **Auf der Kisten-Insel** stehen die Projektkisten an einem eigenen Platz: als Fallenkisten mit dem Projektnamen im Ring direkt um den Ankunftsplatz. Geblockte Items liegen dort nur in der Projektkiste, nicht in den normalen Item-Kisten.
+- **In der Bibliothek** stehen die Projektkisten in der Eingangshalle an der Südwand: als Fallenkisten mit dem Projektnamen darüber. Geblockte Items liegen dort nur in der Projektkiste, nicht in den normalen Item-Kisten.
 
-![Projektkiste „Burg“ auf der Kisten-Insel](docs/screenshots/projekt-insel.png)
 
 - **Abbauen:** Die Kiste behält ihr Projekt und lässt sich woanders wieder hinstellen.
 
@@ -234,7 +227,7 @@ Ein Rucksack, der mit dem Speicher verbunden ist und ihn von überall öffnet.
 
 ### Traveler's-Backpack-Add-on
 
-Das Add-on `storagedim-tb-0.7.1.jar` fügt ein echtes **ME-Upgrade** für den Upgrade-Slot von Traveler's Backpack hinzu. Es hat immer dieselbe Versionsnummer wie Storage Dimension.
+Das Add-on `storagedim-tb-0.7.2.jar` fügt ein echtes **ME-Upgrade** für den Upgrade-Slot von Traveler's Backpack hinzu. Es hat immer dieselbe Versionsnummer wie Storage Dimension.
 
 - **Rezept** (formlos): Leeres Upgrade (Traveler's Backpack), Enderauge, 2× Amethystscherbe, Redstoneblock. Mit dem Add-on ergibt auch das normale ME-Upgrade-Rezept (mit Papier) dieses Upgrade. Es passt in den Upgrade-Slot und macht mit einem Bündel auch einen ME-Rucksack.
 - **ME-Ansicht:** Upgrade in einen Upgrade-Slot legen. Linksklick auf das ME-Symbol zeigt den ME-Speicher direkt im Rucksack-Fenster an Stelle des Rucksack-Inhalts. Crafting und die anderen Upgrades bleiben daneben. Ein zweiter Linksklick zeigt wieder den Rucksack, Rechtsklick nimmt das Upgrade heraus.
@@ -253,7 +246,7 @@ Das Add-on `storagedim-tb-0.7.1.jar` fügt ein echtes **ME-Upgrade** für den Up
 - Der Rucksack muss nicht in der Hand sein: auf dem Rücken tragen und mit der Rucksack-Taste (Standard **B**) öffnen reicht.
 - **Crafting aus dem ME-Speicher:** Hat der Rucksack zusätzlich das Crafting-Upgrade, holt der „+“-Knopf von JEI fehlende Zutaten auch aus dem ME-Speicher, genauso wie aus Inventar und Rucksack. „+“ ist nur grün, wenn alle Zutaten zusammen vorhanden sind, sonst markiert JEI die fehlenden rot. Shift + „+“ füllt das Raster für so viele Durchgänge wie möglich (bis zu einem Stapel). Was vorher im Raster lag, kommt zurück ins Inventar oder, wenn das voll ist, in den Speicher.
 - Der kleine Schalter neben dem ME-Symbol stellt zwischen *ME als Quelle* (Standard) und *nur Inventar* um.
-- **Installation:** `storagedim-tb-0.7.1.jar` und `storage-dimension-0.7.1.jar` auf Server und Clients, dazu Traveler's Backpack, [Forge Config API Port](https://modrinth.com/mod/forge-config-api-port) und Fabric API. JEI wird nur für „+“ und die Rezeptanzeige gebraucht, Mod Menu (optional, nur im Client) für die Einstellungen.
+- **Installation:** `storagedim-tb-0.7.2.jar` und `storage-dimension-0.7.2.jar` auf Server und Clients, dazu Traveler's Backpack, [Forge Config API Port](https://modrinth.com/mod/forge-config-api-port) und Fabric API. JEI wird nur für „+“ und die Rezeptanzeige gebraucht, Mod Menu (optional, nur im Client) für die Einstellungen.
 
 ![ME-Ansicht im Rucksack mit Suchleiste, Sortierung und Knöpfen wie im ME-Speicher](docs/screenshots/rucksack-me-suche.png)
 
@@ -287,7 +280,7 @@ Alle Rezepte stehen auch in [JEI](https://modrinth.com/mod/jei), auch auf Server
 | Befehl | Wirkung |
 | --- | --- |
 | `/storage` | Infos zum eigenen Speicher |
-| `/storage raus` | Verlässt die Kisten-Insel |
+| `/storage raus` | Verlässt die Bibliothek |
 | `/storage me` | Öffnet den ME-Speicher, wenn du einen ME-Rucksack trägst oder dabeihast |
 | `/storage teilen <spieler>` | Lädt jemanden in deinen Speicher ein (nur ohne gemeinsamen Speicher) |
 | `/storage annehmen` | Nimmt eine Einladung an. Dein eigener Speicher bleibt erhalten. |
@@ -310,7 +303,7 @@ In `config/storagedim.json`:
 
 | Einstellung | Standard | Wirkung |
 | --- | --- | --- |
-| `sharedStorage` | `true` | Alle Spieler teilen sich einen Speicher und eine Insel. Mit `false` bekommt jeder seinen eigenen, der sich per `/storage teilen` freigeben lässt (auf dem Server). |
+| `sharedStorage` | `true` | Alle Spieler teilen sich einen Speicher und eine Bibliothek. Mit `false` bekommt jeder seinen eigenen, der sich per `/storage teilen` freigeben lässt (auf dem Server). |
 | `robotChestSound` | `false` | Geht eine Kiste beim Einlagern durch einen Roboter auf, ist sie standardmäßig still (nur der Deckel bewegt sich). Mit `true` macht sie dabei das Öffnen- und Schließen-Geräusch (auf dem Server). |
 | `jeiSearchSync` | `false` | Schalter **J**: Suche im ME-Speicher mit der JEI-Suchleiste koppeln (beim Spieler, lässt sich im Fenster umschalten). |
 
