@@ -765,7 +765,7 @@ public final class Library {
 		AABB box = new AABB(centre.getX() - reach, centre.getY() - 30, centre.getZ() - depth, centre.getX() + reach + 1, centre.getY() + 100,
 				centre.getZ() + 100);
 
-		for (Entity entity : level.getEntities((Entity) null, box, e -> e instanceof Display.ItemDisplay && e.getTags().contains(TAG))) {
+		for (Entity entity : level.getEntities((Entity) null, box, e -> e instanceof Display.ItemDisplay)) {
 			if (!keep.contains(entity.getUUID())) {
 				entity.discard();
 			}
