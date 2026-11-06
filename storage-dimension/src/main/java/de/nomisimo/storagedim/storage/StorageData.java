@@ -26,6 +26,7 @@ import de.nomisimo.storagedim.StorageConfig;
 import de.nomisimo.storagedim.StorageDimensionMod;
 import de.nomisimo.storagedim.robot.RobotConfig;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.storage.LevelResource;
@@ -64,7 +65,7 @@ public final class StorageData {
 	public final Map<String, Map<Long, Map<UUID, String>>> stationRobots = new HashMap<>();
 	/** The antenna area of each robot station per dimension (antennas, area name, switched on or off). */
 	public final Map<String, Map<Long, de.nomisimo.storagedim.robot.StationArea>> stationAreas = new HashMap<>();
-	/** Where to send a player back to when they leave the chest island. */
+	/** Where to send a player back to when they leave the library. */
 	public final Map<UUID, SavedPos> returns = new HashMap<>();
 	/**
 	 * Players who were watching through a chest in an older version; they get their position and
@@ -330,21 +331,35 @@ public final class StorageData {
 			}
 
 			n.add("items", items);
-			JsonArray island = new JsonArray();
+			JsonArray library = new JsonArray();
 
-			for (Islands.IslandChest chest : network.island) {
-				ItemStack.CODEC.encodeStart(ops, chest.key()).result().ifPresent(json -> {
+			for (Library.Shelf shelf : network.library) {
+				ItemStack.CODEC.encodeStart(ops, shelf.key()).result().ifPresent(json -> {
 					JsonObject c = new JsonObject();
-					c.addProperty("x", chest.dx());
-					c.addProperty("z", chest.dz());
+					c.addProperty("x", shelf.dx());
+					c.addProperty("y", shelf.dy());
+					c.addProperty("z", shelf.dz());
+					c.addProperty("part", shelf.part());
+					c.addProperty("facing", shelf.facing().name());
 					c.add("key", json);
-					island.add(c);
+					library.add(c);
 				});
 			}
 
-			n.add("island", island);
-			n.addProperty("islandRadius", network.islandRadius);
-			n.addProperty("islandBuild", network.islandBuild);
+			n.add("library", library);
+			JsonArray aisles = new JsonArray();
+
+			for (Library.Aisle aisle : network.aisles) {
+				JsonObject a = new JsonObject();
+				a.addProperty("category", aisle.category.name());
+				a.addProperty("x", aisle.x);
+				a.addProperty("used", aisle.used);
+				aisles.add(a);
+			}
+
+			n.add("aisles", aisles);
+			n.addProperty("libraryBuild", network.libraryBuild);
+			n.addProperty("islandRadius", network.oldIslandRadius);
 			nets.add(n);
 		}
 
@@ -508,18 +523,35 @@ public final class StorageData {
 							.ifPresent(stack -> network.items.add(new StorageNetwork.StoredItem(stack.copyWithCount(1), count)));
 				}
 
-				if (n.has("island")) {
-					for (JsonElement c : n.getAsJsonArray("island")) {
-						JsonObject chest = c.getAsJsonObject();
-						int dx = chest.get("x").getAsInt();
-						int dz = chest.get("z").getAsInt();
-						ItemStack.CODEC.parse(ops, chest.get("key")).resultOrPartial(StorageDimensionMod.LOGGER::warn)
-								.ifPresent(stack -> network.island.add(new Islands.IslandChest(dx, dz, stack.copyWithCount(1))));
+				if (n.has("library") && n.has("aisles")) {
+					for (JsonElement c : n.getAsJsonArray("library")) {
+						JsonObject shelf = c.getAsJsonObject();
+						int dx = shelf.get("x").getAsInt();
+						int dy = shelf.get("y").getAsInt();
+						int dz = shelf.get("z").getAsInt();
+						int part = shelf.get("part").getAsInt();
+						Direction facing = java.util.Arrays.stream(Direction.values())
+								.filter(d -> d.name().equals(shelf.get("facing").getAsString())).findFirst().orElse(Direction.NORTH);
+						ItemStack.CODEC.parse(ops, shelf.get("key")).resultOrPartial(StorageDimensionMod.LOGGER::warn).ifPresent(stack -> network.library
+								.add(new Library.Shelf(dx, dy, dz, stack.copyWithCount(1), part, facing)));
 					}
+
+					for (JsonElement a : n.getAsJsonArray("aisles")) {
+						JsonObject aisle = a.getAsJsonObject();
+
+						try {
+							network.aisles.add(new Library.Aisle(Library.Category.valueOf(aisle.get("category").getAsString()), aisle.get("x").getAsInt(),
+									aisle.get("used").getAsInt()));
+						} catch (IllegalArgumentException e) {
+							StorageDimensionMod.LOGGER.warn("Unbekannte Abteilung {}", aisle.get("category"));
+						}
+					}
+
+					network.libraryBuild = n.has("libraryBuild") ? n.get("libraryBuild").getAsInt() : 0;
 				}
 
-				network.islandRadius = n.has("islandRadius") ? n.get("islandRadius").getAsInt() : 0;
-				network.islandBuild = n.has("islandBuild") ? n.get("islandBuild").getAsInt() : 0;
+				// versions up to 0.7: the chest island, which is taken down when the library is built
+				network.oldIslandRadius = n.has("islandRadius") ? n.get("islandRadius").getAsInt() : 0;
 				networks.put(network.owner, network);
 				nextRoom = Math.max(nextRoom, network.room + 1);
 			}

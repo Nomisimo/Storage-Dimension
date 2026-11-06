@@ -28,8 +28,8 @@ import net.minecraft.world.item.component.CustomData;
  * amount the project needs. The chest shows those items from ME storage, and with "im ME blocken" on, the needed
  * amounts are kept for the project: everywhere else only what goes beyond them can be taken out.
  * <p>
- * Projects belong to the network of the player who placed the chest and also stand on the chest island, in the
- * ring closest to the middle. Their blocked items lie only there, not in the island's normal chests.
+ * Projects belong to the network of the player who placed the chest and also stand in the entrance hall of the
+ * library. Their blocked items lie only there, not in the library's normal chests.
  */
 public final class Projects {
 	/** Custom data key of a project chest item, and of the island chest key, with the project id. */

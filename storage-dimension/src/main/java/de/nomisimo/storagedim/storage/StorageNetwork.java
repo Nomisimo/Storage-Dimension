@@ -18,12 +18,14 @@ public class StorageNetwork {
 	public final Set<UUID> members = new LinkedHashSet<>();
 	public int room;
 	final List<StoredItem> items = new ArrayList<>();
-	/** The chests of this network's island in the storage dimension, see {@link Islands}. */
-	public final List<Islands.IslandChest> island = new ArrayList<>();
-	/** Radius of the built island floor; 0 while nothing is built. */
-	public int islandRadius;
-	/** Counts the rebuilds, so the labels of an older build can be told apart. */
-	public int islandBuild;
+	/** The chests of this network's library in the storage dimension, see {@link Library}. */
+	public final List<Library.Shelf> library = new ArrayList<>();
+	/** The aisles of the library, west to east. */
+	public final List<Library.Aisle> aisles = new ArrayList<>();
+	/** Counts the rebuilds, so the labels of an older build can be told apart; 0 while nothing is built. */
+	public int libraryBuild;
+	/** Radius of the chest island of versions up to 0.7, still to be taken down; 0 when there is none. */
+	public int oldIslandRadius;
 
 	public StorageNetwork(UUID owner, int room) {
 		this.owner = owner;

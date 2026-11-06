@@ -1,6 +1,6 @@
 # Storage Dimension
 
-Ein Fabric-Mod für **Minecraft 26.1.2**: eine Insel aus Kisten in einer eigenen Dimension, ein ME-Speicher ohne Stapelgrenzen und kleine Sammelroboter, die herumliegende Items einsammeln und einlagern.
+Ein Fabric-Mod für **Minecraft 26.1.2**: eine Bibliothek voller Kisten in einer eigenen Dimension, ein ME-Speicher ohne Stapelgrenzen und kleine Sammelroboter, die herumliegende Items einsammeln und einlagern.
 
 **Aktuelle Version: 0.7.1.** Die fertigen Dateien gibt es unter [Releases](https://github.com/Nomisimo/Storage-Dimension/releases), dort steht auch, welche Datei wohin gehört.
 
@@ -9,7 +9,7 @@ Ein Fabric-Mod für **Minecraft 26.1.2**: eine Insel aus Kisten in einer eigenen
 ## Inhalt
 
 - [Installation](#installation)
-- [Speicher](#speicher): Dimensionskiste, ME-Speicher, ME-Terminal, Filterkiste, Projektkiste, Trichter und Maschinen
+- [Speicher](#speicher): Dimensionskiste und Bibliothek, ME-Speicher, ME-Terminal, Filterkiste, Projektkiste, Trichter und Maschinen
 - [Sammelroboter](#sammelroboter): Roboter, Roboter-Station, Rückruf, Roboter-Barriere, Antennen und Fernbedienung
 - [ME-Rucksack und Traveler's Backpack](#me-rucksack-und-travelers-backpack)
 - [Rezepte](#rezepte)
@@ -39,25 +39,19 @@ Ein Fabric-Mod für **Minecraft 26.1.2**: eine Insel aus Kisten in einer eigenen
 
 ![Dimensionskiste, Filterkiste, ME-Terminal und Sammelroboter im Inventar](docs/screenshots/items.png)
 
-### Dimensionskiste und Kisten-Insel
+### Dimensionskiste und Bibliothek
 
-![Die Kisten-Insel von oben](docs/screenshots/kisten-insel.png)
-
-- Eine violette Kiste mit Endsternen. Wer sie öffnet und Zugriff auf den Speicher hat, landet auf der Kisten-Insel in der Storage Dimension. Beliebig viele Spieler können gleichzeitig dort sein.
+- Eine violette Kiste mit Endsternen. Wer sie öffnet und Zugriff auf den Speicher hat, landet in der Eingangshalle der Bibliothek in der Storage Dimension. Beliebig viele Spieler können gleichzeitig dort sein.
 - Wer keinen Zugriff hat, sieht nur ein leeres Kisten-Inventar, in dem nichts gelagert werden kann.
-- Die Insel hat die Form der End-Insel und besteht nur aus Kisten: Der Boden sind Fässer (lassen sich nicht öffnen), darauf steht für jede gespeicherte Item-Sorte eine eigene Kiste, sortiert nach Mod und Name. Über jeder Kiste schwebt ihr Item.
-- Eine Kiste hält beliebig viele Items ihrer Sorte (keine 64er-Grenze) und nimmt nur diese Sorte an. Was man herausnimmt, ist auch aus dem ME-Speicher weg. Werkzeuge und andere Items mit Haltbarkeit teilen sich eine Kiste pro Item, verzauberte Bücher, Tränke usw. bekommen je Variante eine eigene.
-- Die Insel wächst mit: Neue Sorten bekommen sofort eine Kiste am Rand. Leere Kisten verschwinden erst, wenn gerade niemand auf der Insel ist; beim nächsten Betreten wird neu sortiert.
-- Darüber liegt der End-Himmel. Die Sterne sind kleine weiße und graue Kisten, der Mond eine große Kiste.
-- Auf der Insel lässt sich nichts abbauen oder hinstellen. Wer herunterfällt, landet wieder in der Mitte.
-- Raus geht es per Rechtsklick auf den Leuchtstein in der Mitte oder mit `/storage raus`.
-- Standardmäßig teilen sich alle Spieler einen Speicher und eine Insel. Mit `sharedStorage = false` bekommt jeder Speicher seine eigene Insel (siehe [Einstellungen](#einstellungen)).
-
-| Ankunft in der Mitte | Von der Seite | Himmel |
-|---|---|---|
-| ![Ankunft auf der Insel](docs/screenshots/kisten-insel-ankunft.png) | ![Die Insel von der Seite](docs/screenshots/kisten-insel-seite.png) | ![Kisten-Sterne und Kisten-Mond](docs/screenshots/kisten-insel-himmel.png) |
-
-![Die Bruchstein-Kiste auf der Insel](docs/screenshots/kisten-insel-kiste.png)
+- **Aufbau:** Von der Halle gehen lange Gänge im Stil einer alten Bibliothek ab: Bücherregale als Wände, dunkles Eichenholz, ein roter Läufer und Laternen an Säulen. Jeder Gang ist eine Abteilung, über dem Eingang steht ihr Name und wie viele Sorten sie hat: Stein, Holz, Natur, Erze & Metalle, Essen, Mob-Drops, Redstone, Werkzeuge & Waffen, Rüstung, Tränke & Magie, Farben & Deko und Sonstiges. Items anderer Mods werden nach ihrem Namen einsortiert.
+- **Kisten mit echten Stapeln:** In den Regalen stehen normale Kisten, drei übereinander. Jede Kiste hat 27 Plätze mit normalen Stapeln (64, oder so viel, wie das Item stapelt), eine Sorte bekommt also so viele Kisten, wie sie braucht (höchstens 64 pro Sorte; was darüber hinausgeht, ist weiter im ME-Speicher und im ME-Terminal). Innerhalb eines Gangs sind die Sorten nach Mod und Name sortiert, vor jeder Kiste schwebt ihr Item.
+- Was man herausnimmt, ist auch aus dem ME-Speicher weg; Shift-Klick aus dem eigenen Inventar lagert ein (auch wenn die Kiste voll ist). Eine Kiste nimmt nur ihre Sorte an. Die Kisten einer Sorte sind immer von vorne gefüllt, die letzte Kiste einer Sorte leert sich zuerst. Werkzeuge und andere Items mit Haltbarkeit teilen sich die Kisten pro Item, verzauberte Bücher, Tränke usw. bekommen je Variante eigene.
+- **Katalog und Teleport:** Rechtsklick auf das Lesepult in der Halle oder am Ende jedes Gangs öffnet den Katalog. Ein Klick auf eine Abteilung teleportiert an den Anfang ihres Gangs. **Item suchen** teleportiert direkt vor die erste Kiste eines Items (sucht auch nach Trank-Wirkung und Verzauberung). Außerdem gibt es dort Knöpfe zurück in die Halle und zum Verlassen.
+- Die Bibliothek wächst mit: Neue Sorten bekommen sofort Kisten am Ende ihres Gangs. Leere Kisten verschwinden und die Kistenzahl wird angepasst, wenn gerade niemand in der Bibliothek ist; beim nächsten Betreten wird neu sortiert.
+- In der Bibliothek lässt sich nichts abbauen oder hinstellen.
+- Raus geht es per Rechtsklick auf den Leuchtstein in der Halle, über den Katalog oder mit `/storage raus`.
+- Standardmäßig teilen sich alle Spieler einen Speicher und eine Bibliothek. Mit `sharedStorage = false` bekommt jeder Speicher seine eigene (siehe [Einstellungen](#einstellungen)).
+- Welten aus Version 0.7 und älter: Die alte Kisten-Insel wird beim ersten Betreten abgebaut und durch die Bibliothek ersetzt. Die Items selbst liegen im ME-Speicher und bleiben, wie sie sind.
 
 ### ME-Speicher
 
@@ -111,9 +105,8 @@ Eine Kiste für ein Bauprojekt: Du legst fest, welche Items in welcher Menge geb
 
 ![Im ME-Terminal: 200 von 300 Brettern für „Burg“ geblockt](docs/screenshots/projekt-geblockt.png)
 
-- **Auf der Kisten-Insel** stehen die Projektkisten an einem eigenen Platz: als Fallenkisten mit dem Projektnamen im Ring direkt um den Ankunftsplatz. Geblockte Items liegen dort nur in der Projektkiste, nicht in den normalen Item-Kisten.
+- **In der Bibliothek** stehen die Projektkisten in der Eingangshalle an der Südwand: als Fallenkisten mit dem Projektnamen darüber. Geblockte Items liegen dort nur in der Projektkiste, nicht in den normalen Item-Kisten.
 
-![Projektkiste „Burg“ auf der Kisten-Insel](docs/screenshots/projekt-insel.png)
 
 - **Abbauen:** Die Kiste behält ihr Projekt und lässt sich woanders wieder hinstellen.
 
@@ -287,7 +280,7 @@ Alle Rezepte stehen auch in [JEI](https://modrinth.com/mod/jei), auch auf Server
 | Befehl | Wirkung |
 | --- | --- |
 | `/storage` | Infos zum eigenen Speicher |
-| `/storage raus` | Verlässt die Kisten-Insel |
+| `/storage raus` | Verlässt die Bibliothek |
 | `/storage me` | Öffnet den ME-Speicher, wenn du einen ME-Rucksack trägst oder dabeihast |
 | `/storage teilen <spieler>` | Lädt jemanden in deinen Speicher ein (nur ohne gemeinsamen Speicher) |
 | `/storage annehmen` | Nimmt eine Einladung an. Dein eigener Speicher bleibt erhalten. |
@@ -310,7 +303,7 @@ In `config/storagedim.json`:
 
 | Einstellung | Standard | Wirkung |
 | --- | --- | --- |
-| `sharedStorage` | `true` | Alle Spieler teilen sich einen Speicher und eine Insel. Mit `false` bekommt jeder seinen eigenen, der sich per `/storage teilen` freigeben lässt (auf dem Server). |
+| `sharedStorage` | `true` | Alle Spieler teilen sich einen Speicher und eine Bibliothek. Mit `false` bekommt jeder seinen eigenen, der sich per `/storage teilen` freigeben lässt (auf dem Server). |
 | `robotChestSound` | `false` | Geht eine Kiste beim Einlagern durch einen Roboter auf, ist sie standardmäßig still (nur der Deckel bewegt sich). Mit `true` macht sie dabei das Öffnen- und Schließen-Geräusch (auf dem Server). |
 | `jeiSearchSync` | `false` | Schalter **J**: Suche im ME-Speicher mit der JEI-Suchleiste koppeln (beim Spieler, lässt sich im Fenster umschalten). |
 

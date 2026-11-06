@@ -3,7 +3,7 @@ package de.nomisimo.storagedim;
 import java.util.ArrayList;
 import java.util.List;
 
-import de.nomisimo.storagedim.storage.Islands;
+import de.nomisimo.storagedim.storage.Library;
 import de.nomisimo.storagedim.storage.Rooms;
 import de.nomisimo.storagedim.storage.StorageNetwork;
 import net.minecraft.core.BlockPos;
@@ -45,21 +45,29 @@ final class SmokeTest {
 				StorageNetwork network = new StorageNetwork(java.util.UUID.randomUUID(), 250);
 				network.insert(new ItemStack(Items.COBBLESTONE, 500));
 				network.insert(new ItemStack(Items.DIAMOND_SWORD));
-				Islands.prepare(level, network);
-				BlockPos centre = Islands.centre(network.room);
+				Library.prepare(level, network);
+				BlockPos centre = Library.centre(network.room);
 
-				if (!level.getBlockState(centre).is(Blocks.BARREL)) {
-					errors.add("Insel wurde nicht gebaut");
+				if (!level.getBlockState(centre).is(Blocks.SPRUCE_PLANKS)) {
+					errors.add("Bibliothek wurde nicht gebaut");
 				}
 
-				if (network.island.size() != 2) {
-					errors.add("Insel hat " + network.island.size() + " statt 2 Kisten");
+				// 500 cobblestone are 8 stacks, one chest; the sword gets its own
+				if (network.library.size() != 2 || network.aisles.size() != 2) {
+					errors.add("Bibliothek hat " + network.library.size() + " statt 2 Kisten und " + network.aisles.size() + " statt 2 Gänge");
 				} else {
-					Islands.IslandChest first = network.island.get(0);
+					Library.Shelf first = network.library.get(0);
 
-					if (!level.getBlockState(centre.offset(first.dx(), 1, first.dz())).is(Blocks.CHEST)) {
-						errors.add("Kiste fehlt auf der Insel");
+					if (!level.getBlockState(centre.offset(first.dx(), first.dy(), first.dz())).is(Blocks.CHEST)) {
+						errors.add("Kiste fehlt in der Bibliothek");
 					}
+				}
+
+				network.insert(new ItemStack(Items.COBBLESTONE, 64 * 27 * 3));
+				Library.prepare(level, network);
+
+				if (network.library.stream().filter(s -> s.key().is(Items.COBBLESTONE)).count() != 4) {
+					errors.add("Bruchstein sollte jetzt 4 Kisten haben");
 				}
 			}
 
