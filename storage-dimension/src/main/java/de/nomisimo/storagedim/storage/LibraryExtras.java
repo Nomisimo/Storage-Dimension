@@ -571,17 +571,16 @@ public final class LibraryExtras {
 	}
 
 	/**
-	 * The most valuable trade: of what the villager sells, the most expensive; enchanted items win a tie. A villager
-	 * who only buys shows what pays the most emeralds.
+	 * The most valuable trade, by what it is worth to a player, not by its price: the best enchanted books first
+	 * (Mending, Silk Touch, Unbreaking …), then the well-known cheap emerald trades (sticks, paper, rotten flesh …),
+	 * diamond gear and other sought-after items. Among equal ones the cheaper offer wins.
 	 */
 	static MerchantOffer bestOffer(List<MerchantOffer> offers) {
 		MerchantOffer best = null;
 		long bestScore = Long.MIN_VALUE;
 
 		for (MerchantOffer offer : offers) {
-			ItemStack result = offer.getResult();
-			boolean sells = !result.is(Items.EMERALD) && !result.is(Items.EMERALD_BLOCK);
-			long score = sells ? 1_000_000L + emeralds(offer) * 100L + (enchanted(result) ? 50 : 0) : value(result) * 100L;
+			long score = score(offer);
 
 			if (score > bestScore) {
 				best = offer;
@@ -590,6 +589,82 @@ public final class LibraryExtras {
 		}
 
 		return best;
+	}
+
+	/** How good a trade is, see {@link #bestOffer}. */
+	static long score(MerchantOffer offer) {
+		ItemStack result = offer.getResult();
+
+		if (result.is(Items.EMERALD) || result.is(Items.EMERALD_BLOCK)) {
+			// the villager buys: worth it when cheap items give emeralds
+			ItemStack cost = offer.getCostA();
+			String path = BuiltInRegistries.ITEM.getKey(cost.getItem()).getPath();
+			int worth = switch (path) {
+				case "stick" -> 780;
+				case "paper" -> 770;
+				case "rotten_flesh" -> 760;
+				case "string" -> 750;
+				case "pumpkin", "melon" -> 740;
+				case "wheat", "carrot", "potato", "beetroot" -> 730;
+				case "coal" -> 720;
+				case "clay_ball", "glass_pane" -> 710;
+				case "chicken", "porkchop", "rabbit", "mutton", "beef", "kelp", "dried_kelp_block", "cod", "salmon", "tropical_fish",
+						"pufferfish", "flint", "feather", "leather", "white_wool", "gold_ingot", "iron_ingot", "diamond" -> 650;
+				default -> 500;
+			};
+			// fewer items per emerald is better
+			return worth * 1000L + value(result) * 50L - cost.getCount();
+		}
+
+		long worth;
+		ItemEnchantments stored = result.get(DataComponents.STORED_ENCHANTMENTS);
+
+		if (stored != null && !stored.isEmpty()) {
+			worth = 0;
+
+			for (var entry : stored.entrySet()) {
+				worth = Math.max(worth, bookWorth(entry.getKey().getRegisteredName(), entry.getIntValue(), entry.getKey().value().getMaxLevel()));
+			}
+		} else {
+			String path = BuiltInRegistries.ITEM.getKey(result.getItem()).getPath();
+			worth = path.startsWith("diamond_") ? 720 : switch (path) {
+				case "experience_bottle" -> 700;
+				case "ender_pearl" -> 690;
+				case "golden_carrot" -> 680;
+				case "name_tag" -> 670;
+				case "saddle" -> 660;
+				case "glistering_melon_slice", "redstone", "lapis_lazuli", "glowstone", "quartz_block" -> 600;
+				case "bell", "lantern", "map" -> 450;
+				default -> 400;
+			};
+
+			if (enchanted(result)) {
+				worth += 30;
+			}
+		}
+
+		// the cheaper the better
+		return worth * 1000L - emeralds(offer);
+	}
+
+	/** Mending first, then the other enchantments players hunt for; a book at its highest level counts more. */
+	private static long bookWorth(String id, int level, int maxLevel) {
+		String name = id.substring(id.indexOf(':') + 1);
+		long worth = switch (name) {
+			case "mending" -> 1000;
+			case "silk_touch" -> 990;
+			case "unbreaking" -> 960;
+			case "fortune" -> 950;
+			case "efficiency" -> 940;
+			case "looting" -> 930;
+			case "protection" -> 920;
+			case "sharpness" -> 910;
+			case "feather_falling" -> 900;
+			case "infinity", "power", "depth_strider", "respiration", "aqua_affinity" -> 880;
+			case "binding_curse", "vanishing_curse" -> 100;
+			default -> 700;
+		};
+		return worth - (maxLevel - level) * 15L;
 	}
 
 	private static int emeralds(MerchantOffer offer) {
