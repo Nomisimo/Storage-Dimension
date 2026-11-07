@@ -12,14 +12,17 @@ import com.google.gson.JsonParser;
 import com.mojang.serialization.JsonOps;
 
 import de.nomisimo.storagedim.StorageDimensionMod;
+import de.nomisimo.storagedim.storage.StorageItems;
 import mezz.jei.api.IModPlugin;
 import mezz.jei.api.constants.RecipeTypes;
 import mezz.jei.api.constants.VanillaTypes;
 import mezz.jei.api.gui.handlers.IGhostIngredientHandler;
 import mezz.jei.api.gui.handlers.IGuiContainerHandler;
 import mezz.jei.api.ingredients.ITypedIngredient;
+import mezz.jei.api.ingredients.subtypes.ISubtypeInterpreter;
 import mezz.jei.api.registration.IGuiHandlerRegistration;
 import mezz.jei.api.registration.IRecipeRegistration;
+import mezz.jei.api.registration.ISubtypeRegistration;
 import mezz.jei.api.runtime.IJeiRuntime;
 import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.client.Minecraft;
@@ -28,7 +31,9 @@ import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.Identifier;
 import net.minecraft.resources.RegistryOps;
 import net.minecraft.resources.ResourceKey;
+import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
 import net.minecraft.world.item.crafting.CraftingRecipe;
 import net.minecraft.world.item.crafting.Recipe;
 import net.minecraft.world.item.crafting.RecipeHolder;
@@ -44,6 +49,20 @@ public class StorageJeiPlugin implements IModPlugin {
 	@Override
 	public Identifier getPluginUid() {
 		return Identifier.fromNamespaceAndPath("storagedim", "jei");
+	}
+
+	/**
+	 * Our chests, terminal, backpack and upgrade are vanilla items with extra data. Without this JEI would count them
+	 * as plain chests, ender chests, bundles and paper: they would vanish from its list and their recipes would only
+	 * show up among those of the plain item.
+	 */
+	@Override
+	public void registerItemSubtypes(ISubtypeRegistration registration) {
+		ISubtypeInterpreter<ItemStack> variant = (stack, context) -> StorageItems.variant(stack);
+
+		for (Item item : List.of(Items.CHEST, Items.ENDER_CHEST, Items.BUNDLE, Items.PAPER)) {
+			registration.registerSubtypeInterpreter(item, variant);
+		}
 	}
 
 	/** JEI's item list keeps clear of the robot list beside the robot station window. */
