@@ -53,6 +53,10 @@ public final class StorageCommands {
 					StorageMenu.open(player, StorageData.get().networkFor(player.getUUID()));
 					return 1;
 				}))
+				.then(Commands.literal("web")
+						.executes(ctx -> de.nomisimo.storagedim.web.WebView.command(ctx.getSource().getPlayerOrException(), false))
+						.then(Commands.literal("neu")
+								.executes(ctx -> de.nomisimo.storagedim.web.WebView.command(ctx.getSource().getPlayerOrException(), true))))
 				.then(Commands.literal("teilen")
 						.then(Commands.argument("spieler", EntityArgument.player()).executes(StorageCommands::invite)))
 				.then(Commands.literal("annehmen").executes(StorageCommands::accept))
@@ -98,7 +102,7 @@ public final class StorageCommands {
 		String owner = network.owner.equals(StorageData.SHARED) ? "allen" : network.owner.equals(player.getUUID()) ? "dir" : playerName(player, network.owner);
 		send(player, "Speicher von " + owner + ": " + network.typeCount() + " Sorten, " + network.totalCount() + " Items, "
 				+ network.members.size() + " Mitglieder.", ChatFormatting.AQUA);
-		send(player, "/storage teilen <spieler> · annehmen · verlassen · entfernen <spieler> · raus · kiste besitzer <spieler>", ChatFormatting.GRAY);
+		send(player, "/storage web · teilen <spieler> · annehmen · verlassen · entfernen <spieler> · raus · kiste besitzer <spieler>", ChatFormatting.GRAY);
 		return 1;
 	}
 

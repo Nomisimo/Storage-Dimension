@@ -735,6 +735,18 @@ public class ClientScreenshots implements FabricClientGameTest {
 		world.getServer().runOnServer(server -> {
 			ServerPlayer player = server.getPlayerList().getPlayers().get(0);
 			var network = StorageData.get().networkFor(player.getUUID());
+			BlockPos centre = de.nomisimo.storagedim.storage.Library.centre(network.room);
+			// under the skylight, looking up north at the chest moon
+			player.teleportTo((ServerLevel) player.level(), centre.getX() + 0.5, centre.getY() + 1, centre.getZ() + 6.5, java.util.Set.of(), 180f, -62f, true);
+			net.minecraft.world.entity.Entity moon = ((ServerLevel) player.level()).getEntity(de.nomisimo.storagedim.storage.Library.moonId(network));
+			System.out.println("STORAGEDIM LIBRARY moon=" + (moon == null ? "missing" : moon.position()) + " skylight="
+					+ player.level().getBlockState(centre.offset(0, 6, 4)).getBlock());
+		});
+		context.waitTicks(20);
+		context.takeScreenshot("library-moon");
+		world.getServer().runOnServer(server -> {
+			ServerPlayer player = server.getPlayerList().getPlayers().get(0);
+			var network = StorageData.get().networkFor(player.getUUID());
 			de.nomisimo.storagedim.storage.Library.teleportToAisle(player, network, network.aisles.get(0));
 		});
 		context.waitTicks(30);

@@ -9,6 +9,7 @@ import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
+import net.minecraft.world.item.Rarity;
 import net.minecraft.world.item.component.CustomData;
 import net.minecraft.world.item.component.ItemLore;
 
@@ -78,6 +79,66 @@ public final class StorageItems {
 				Component.literal("Ein Bauprojekt: Items und Mengen festlegen").withStyle(ChatFormatting.GRAY),
 				Component.literal("Schleichen + Rechtsklick: Projekt einstellen").withStyle(ChatFormatting.GRAY))));
 		return stack;
+	}
+
+	/** Same result as data/storagedim/recipe/me_upgrade.json (the paper version, without the Traveler's Backpack add-on). */
+	public static ItemStack upgrade() {
+		ItemStack stack = new ItemStack(Items.PAPER);
+		CompoundTag tag = new CompoundTag();
+		tag.putBoolean(UPGRADE_TAG, true);
+		stack.set(DataComponents.CUSTOM_DATA, CustomData.of(tag));
+		stack.set(DataComponents.ITEM_NAME, Component.literal("ME-Upgrade"));
+		stack.set(DataComponents.ENCHANTMENT_GLINT_OVERRIDE, true);
+		stack.set(DataComponents.RARITY, Rarity.RARE);
+		stack.set(DataComponents.MAX_STACK_SIZE, 16);
+		stack.set(DataComponents.ITEM_MODEL, StorageDimensionMod.id("me_upgrade"));
+		stack.set(DataComponents.LORE, new ItemLore(List.of(
+				Component.literal("Mit einem Bündel kombinieren: ME-Rucksack").withStyle(ChatFormatting.GRAY))));
+		return stack;
+	}
+
+	/** Same result as data/storagedim/recipe/me_backpack.json. */
+	public static ItemStack backpack() {
+		ItemStack stack = new ItemStack(Items.BUNDLE);
+		CompoundTag tag = new CompoundTag();
+		tag.putBoolean(BACKPACK_TAG, true);
+		stack.set(DataComponents.CUSTOM_DATA, CustomData.of(tag));
+		stack.set(DataComponents.ITEM_NAME, Component.literal("ME-Rucksack"));
+		stack.set(DataComponents.ENCHANTMENT_GLINT_OVERRIDE, true);
+		stack.set(DataComponents.ITEM_MODEL, StorageDimensionMod.id("me_backpack"));
+		stack.set(DataComponents.LORE, new ItemLore(List.of(
+				Component.literal("Rechtsklick öffnet den ME-Speicher, überall").withStyle(ChatFormatting.GRAY))));
+		return stack;
+	}
+
+	/**
+	 * Which of our items a vanilla stack is ("storage", "filter", ...), or null for a plain vanilla item.
+	 * All project chests count as one, whatever project they hold. JEI uses it to tell them from plain chests, bundles and paper.
+	 */
+	public static String variant(ItemStack stack) {
+		CustomData data = stack.get(DataComponents.CUSTOM_DATA);
+
+		if (data == null) {
+			return null;
+		}
+
+		CompoundTag tag = data.copyTag();
+
+		if (tag.contains(CHEST_TAG)) {
+			return "storage";
+		} else if (tag.contains(FILTER_TAG)) {
+			return "filter";
+		} else if (tag.contains(Projects.ID_KEY)) {
+			return "project";
+		} else if (tag.contains(TERMINAL_TAG)) {
+			return "terminal";
+		} else if (tag.contains(BACKPACK_TAG)) {
+			return "backpack";
+		} else if (tag.contains(UPGRADE_TAG)) {
+			return "upgrade";
+		}
+
+		return null;
 	}
 
 	public static boolean isProjectChest(ItemStack stack) {

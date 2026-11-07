@@ -27,12 +27,14 @@ public class StorageDimensionMod implements ModInitializer {
 		de.nomisimo.storagedim.robot.RobotStationBlock.register();
 		de.nomisimo.storagedim.robot.AntennaBlock.register();
 		de.nomisimo.storagedim.robot.RemoteItem.register();
+		StorageTab.register();
 		StorageEvents.register();
 		StorageCommands.register();
 		TerminalNetworking.register();
 		de.nomisimo.storagedim.robot.StationNetworking.register();
 		de.nomisimo.storagedim.storage.ProjectNetworking.register();
 		RecipeSync.register();
+		de.nomisimo.storagedim.web.WebView.register();
 		SmokeTest.registerIfEnabled();
 		LOGGER.info("Storage Dimension geladen");
 	}

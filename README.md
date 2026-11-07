@@ -2,14 +2,14 @@
 
 Ein Fabric-Mod für **Minecraft 26.1.2**: eine Bibliothek voller Kisten in einer eigenen Dimension, ein ME-Speicher ohne Stapelgrenzen und kleine Sammelroboter, die herumliegende Items einsammeln und einlagern.
 
-**Aktuelle Version: 0.7.2.** Die fertigen Dateien gibt es unter [Releases](https://github.com/Nomisimo/Storage-Dimension/releases), dort steht auch, welche Datei wohin gehört.
+**Aktuelle Version: 0.7.3.** Die fertigen Dateien gibt es unter [Releases](https://github.com/Nomisimo/Storage-Dimension/releases), dort steht auch, welche Datei wohin gehört.
 
 ![Dimensionskiste, Filterkiste, doppelte Filterkiste und ME-Terminal, davor der Sammelroboter](docs/screenshots/kisten-und-roboter.png)
 
 ## Inhalt
 
 - [Installation](#installation)
-- [Speicher](#speicher): Dimensionskiste und Bibliothek, ME-Speicher, ME-Terminal, Filterkiste, Projektkiste, Trichter und Maschinen
+- [Speicher](#speicher): Dimensionskiste und Bibliothek, ME-Speicher, ME-Terminal, ME-Speicher im Browser, Filterkiste, Projektkiste, Trichter und Maschinen
 - [Sammelroboter](#sammelroboter): Roboter, Roboter-Station, Rückruf, Roboter-Barriere, Antennen und Fernbedienung
 - [ME-Rucksack und Traveler's Backpack](#me-rucksack-und-travelers-backpack)
 - [Rezepte](#rezepte)
@@ -19,11 +19,11 @@ Ein Fabric-Mod für **Minecraft 26.1.2**: eine Bibliothek voller Kisten in einer
 
 ## Installation
 
-`storage-dimension-0.7.2.jar` muss **auf dem Server und bei allen Spielern** im Ordner `mods` liegen.
+`storage-dimension-0.7.3.jar` muss **auf dem Server und bei allen Spielern** im Ordner `mods` liegen.
 
 1. Fabric Loader 0.19.5 oder neuer und [Fabric API](https://modrinth.com/mod/fabric-api) für 26.1.2 auf Server und Clients installieren.
-2. `storage-dimension-0.7.2.jar` (nicht die `-sources.jar`) in den `mods`-Ordner legen.
-3. Optional das [Traveler's-Backpack-Add-on](#me-rucksack-und-travelers-backpack) `storagedim-tb-0.7.2.jar` dazulegen, ebenfalls auf Server und Clients.
+2. `storage-dimension-0.7.3.jar` (nicht die `-sources.jar`) in den `mods`-Ordner legen.
+3. Optional das [Traveler's-Backpack-Add-on](#me-rucksack-und-travelers-backpack) `storagedim-tb-0.7.3.jar` dazulegen, ebenfalls auf Server und Clients.
 4. Server starten. Die Dimension `storagedim:storage` wird automatisch angelegt, die Daten liegen in `world/storagedim.json`.
 
 **Passt gut dazu (optional):** [JEI](https://modrinth.com/mod/jei) (Rezepte, Suche koppeln, „+“ im Rucksack), [Jade](https://modrinth.com/mod/jade) (Infos zu Robotern und Stationen), [Xaero's Minimap](https://modrinth.com/mod/xaeros-minimap) (Roboter auf der Karte). Getestet mit JEI 29.47.0.111, Jade 26.1.11 und Xaero's Minimap 26.6.2.
@@ -43,7 +43,7 @@ Ein Fabric-Mod für **Minecraft 26.1.2**: eine Bibliothek voller Kisten in einer
 
 - Eine violette Kiste mit Endsternen. Wer sie öffnet und Zugriff auf den Speicher hat, landet in der Eingangshalle der Bibliothek in der Storage Dimension. Beliebig viele Spieler können gleichzeitig dort sein.
 - Wer keinen Zugriff hat, sieht nur ein leeres Kisten-Inventar, in dem nichts gelagert werden kann.
-- **Aufbau:** Von der Halle gehen lange Gänge im Stil einer alten Bibliothek ab: Bücherregale als Wände, dunkles Eichenholz, ein roter Läufer und Laternen an Säulen. Jeder Gang ist eine Abteilung, über dem Eingang steht ihr Name und wie viele Sorten sie hat: Stein, Holz, Natur, Erze & Metalle, Essen, Mob-Drops, Redstone, Werkzeuge & Waffen, Rüstung, Tränke & Magie, Farben & Deko und Sonstiges. Items anderer Mods werden nach ihrem Namen einsortiert.
+- **Aufbau:** Von der Halle gehen lange Gänge im Stil einer alten Bibliothek ab: Bücherregale als Wände, dunkles Eichenholz, ein roter Läufer und Laternen an Säulen. Jeder Gang ist eine Abteilung, über dem Eingang steht ihr Name und wie viele Sorten sie hat: Stein, Holz, Natur, Erze & Metalle, Essen, Mob-Drops, Redstone, Werkzeuge & Waffen, Rüstung, Tränke & Magie, Farben & Deko und Sonstiges. Items anderer Mods werden nach ihrem Namen einsortiert. Durch ein Glasfenster in der Decke der Halle sieht man am End-Himmel den Kisten-Mond: flach wie die Sonne in der Oberwelt, mit der Kistenfront immer zum Spieler.
 - **Kisten mit echten Stapeln:** In den Regalen stehen normale Kisten, drei übereinander. Jede Kiste hat 27 Plätze mit normalen Stapeln (64, oder so viel, wie das Item stapelt), eine Sorte bekommt also so viele Kisten, wie sie braucht (höchstens 64 pro Sorte; was darüber hinausgeht, ist weiter im ME-Speicher und im ME-Terminal). Innerhalb eines Gangs sind die Sorten nach Mod und Name sortiert, vor jeder Kiste schwebt ihr Item.
 - Was man herausnimmt, ist auch aus dem ME-Speicher weg; Shift-Klick aus dem eigenen Inventar lagert ein (auch wenn die Kiste voll ist). Eine Kiste nimmt nur ihre Sorte an. Die Kisten einer Sorte sind immer von vorne gefüllt, die letzte Kiste einer Sorte leert sich zuerst. Werkzeuge und andere Items mit Haltbarkeit teilen sich die Kisten pro Item, verzauberte Bücher, Tränke usw. bekommen je Variante eigene.
 - **Katalog und Teleport:** Rechtsklick auf das Lesepult in der Halle oder am Ende jedes Gangs öffnet den Katalog. Ein Klick auf eine Abteilung teleportiert an den Anfang ihres Gangs. **Item suchen** teleportiert direkt vor die erste Kiste eines Items (sucht auch nach Trank-Wirkung und Verzauberung). Außerdem gibt es dort Knöpfe zurück in die Halle und zum Verlassen.
@@ -70,6 +70,20 @@ Alle Items liegen ohne Stapel- oder Slot-Grenzen im ME-Speicher. Die genaue Meng
 ### ME-Terminal
 
 Eine uralte Kiste aus Tiefenschiefer mit Sculk-Rune. Hingestellt öffnet sie per Rechtsklick direkt den ME-Speicher, ohne Dimensionswechsel.
+
+### ME-Speicher im Browser
+
+Der Server zeigt den ME-Speicher und die Projekte auch als Webseite, z. B. auf dem Handy neben dem Spiel.
+
+- `/storage web` schickt dir einen anklickbaren Link (`http://<adresse>:8765/#…`). Die Seite aktualisiert sich alle 10 Sekunden.
+- **ME-Speicher:** alle Items mit Bild, Menge, Abteilung, Verzauberungen und Trank-Wirkung, mit Suche, Sortierung nach Menge oder A–Z und Filter nach Abteilung. Herausnehmen oder einlagern geht dort nicht.
+- **Projekte:** zeigt alle Projekte deines Speichers mit Fortschritt, was da ist und was fehlt. Du kannst dort neue Projekte anlegen, umbenennen, „Im ME blocken“ umschalten, Items über die Suche hinzufügen (Items im Speicher zuerst, dann alle Items des Spiels samt jedem Trank und Verzauberungsbuch), Mengen ändern und Items entfernen. Ein neues Projekt steht auch gleich in der Eingangshalle der Bibliothek.
+- Jeder Spieler sieht den Speicher, den er auch im Spiel benutzt. Der Link ist geheim: Wer ihn hat, sieht deinen Speicher und kann deine Projekte ändern. `/storage web neu` macht einen neuen Link, der alte geht dann nicht mehr. Die Links liegen in `world/storagedim-web.json`.
+- **Für den Server:** Der Port (`webPort`, Standard 8765) muss von außen erreichbar sein, bei einem Hoster also als zusätzlicher Port freigegeben. In `webAddress` gehört die Adresse, unter der die Spieler den Server erreichen (ohne Port), sonst steht im Link `localhost`. Mit `webPort = 0` ist die Webseite aus.
+- Bilder von Minecraft-Items kommen aus einer öffentlichen Kopie der Spieltexturen (jsDelivr bzw. GitHub), die der Mod liefert der Server selbst. Ohne Internet oder bei Items anderer Mods steht statt des Bilds der Anfangsbuchstabe. Item-Namen sind auf Englisch, weil der Server nur die englischen Namen kennt.
+
+![ME-Speicher im Browser](docs/screenshots/web-me.png)
+![Projekte im Browser](docs/screenshots/web-projekte.png)
 
 ### Filterkiste
 
@@ -229,7 +243,7 @@ Ein Rucksack, der mit dem Speicher verbunden ist und ihn von überall öffnet.
 
 ### Traveler's-Backpack-Add-on
 
-Das Add-on `storagedim-tb-0.7.2.jar` fügt ein echtes **ME-Upgrade** für den Upgrade-Slot von Traveler's Backpack hinzu. Es hat immer dieselbe Versionsnummer wie Storage Dimension.
+Das Add-on `storagedim-tb-0.7.3.jar` fügt ein echtes **ME-Upgrade** für den Upgrade-Slot von Traveler's Backpack hinzu. Es hat immer dieselbe Versionsnummer wie Storage Dimension.
 
 - **Rezept** (formlos): Leeres Upgrade (Traveler's Backpack), Enderauge, 2× Amethystscherbe, Redstoneblock. Mit dem Add-on ergibt auch das normale ME-Upgrade-Rezept (mit Papier) dieses Upgrade. Es passt in den Upgrade-Slot und macht mit einem Bündel auch einen ME-Rucksack.
 - **ME-Ansicht:** Upgrade in einen Upgrade-Slot legen. Linksklick auf das ME-Symbol zeigt den ME-Speicher direkt im Rucksack-Fenster an Stelle des Rucksack-Inhalts. Crafting und die anderen Upgrades bleiben daneben. Ein zweiter Linksklick zeigt wieder den Rucksack, Rechtsklick nimmt das Upgrade heraus.
@@ -248,7 +262,7 @@ Das Add-on `storagedim-tb-0.7.2.jar` fügt ein echtes **ME-Upgrade** für den Up
 - Der Rucksack muss nicht in der Hand sein: auf dem Rücken tragen und mit der Rucksack-Taste (Standard **B**) öffnen reicht.
 - **Crafting aus dem ME-Speicher:** Hat der Rucksack zusätzlich das Crafting-Upgrade, holt der „+“-Knopf von JEI fehlende Zutaten auch aus dem ME-Speicher, genauso wie aus Inventar und Rucksack. „+“ ist nur grün, wenn alle Zutaten zusammen vorhanden sind, sonst markiert JEI die fehlenden rot. Shift + „+“ füllt das Raster für so viele Durchgänge wie möglich (bis zu einem Stapel). Was vorher im Raster lag, kommt zurück ins Inventar oder, wenn das voll ist, in den Speicher.
 - Der kleine Schalter neben dem ME-Symbol stellt zwischen *ME als Quelle* (Standard) und *nur Inventar* um.
-- **Installation:** `storagedim-tb-0.7.2.jar` und `storage-dimension-0.7.2.jar` auf Server und Clients, dazu Traveler's Backpack, [Forge Config API Port](https://modrinth.com/mod/forge-config-api-port) und Fabric API. JEI wird nur für „+“ und die Rezeptanzeige gebraucht, Mod Menu (optional, nur im Client) für die Einstellungen.
+- **Installation:** `storagedim-tb-0.7.3.jar` und `storage-dimension-0.7.3.jar` auf Server und Clients, dazu Traveler's Backpack, [Forge Config API Port](https://modrinth.com/mod/forge-config-api-port) und Fabric API. JEI wird nur für „+“ und die Rezeptanzeige gebraucht, Mod Menu (optional, nur im Client) für die Einstellungen.
 
 ![ME-Ansicht im Rucksack mit Suchleiste, Sortierung und Knöpfen wie im ME-Speicher](docs/screenshots/rucksack-me-suche.png)
 
@@ -260,7 +274,7 @@ Suche und Sortierung sitzen in der Titelzeile des Fensters, über den Knöpfen d
 
 ## Rezepte
 
-Alle Rezepte stehen auch in [JEI](https://modrinth.com/mod/jei), auch auf Servern ohne JEI: Storage Dimension schickt die Rezepte selbst an die Spieler.
+Alle Rezepte stehen auch in [JEI](https://modrinth.com/mod/jei), auch auf Servern ohne JEI: Storage Dimension schickt die Rezepte selbst an die Spieler. Alle Items der Mod (auch Dimensionskiste, Filterkiste, ME-Terminal & Co.) stehen im eigenen Kreativ-Tab **Storage Dimension** und damit auch in der JEI-Liste: Item suchen, **R** zeigt das Rezept, **U** wofür es gebraucht wird.
 
 | Item | Zutaten | Rezept |
 | --- | --- | --- |
@@ -283,6 +297,8 @@ Alle Rezepte stehen auch in [JEI](https://modrinth.com/mod/jei), auch auf Server
 | --- | --- |
 | `/storage` | Infos zum eigenen Speicher |
 | `/storage raus` | Verlässt die Bibliothek |
+| `/storage web` | Link zum ME-Speicher im Browser ([mehr](#me-speicher-im-browser)) |
+| `/storage web neu` | Neuer Link, der alte geht dann nicht mehr |
 | `/storage me` | Öffnet den ME-Speicher, wenn du einen ME-Rucksack trägst oder dabeihast |
 | `/storage teilen <spieler>` | Lädt jemanden in deinen Speicher ein (nur ohne gemeinsamen Speicher) |
 | `/storage annehmen` | Nimmt eine Einladung an. Dein eigener Speicher bleibt erhalten. |
@@ -307,6 +323,8 @@ In `config/storagedim.json`:
 | --- | --- | --- |
 | `sharedStorage` | `true` | Alle Spieler teilen sich einen Speicher und eine Bibliothek. Mit `false` bekommt jeder seinen eigenen, der sich per `/storage teilen` freigeben lässt (auf dem Server). |
 | `robotChestSound` | `false` | Geht eine Kiste beim Einlagern durch einen Roboter auf, ist sie standardmäßig still (nur der Deckel bewegt sich). Mit `true` macht sie dabei das Öffnen- und Schließen-Geräusch (auf dem Server). |
+| `webPort` | `8765` | Port der [Webansicht](#me-speicher-im-browser) (auf dem Server). `0` schaltet sie aus. |
+| `webAddress` | `""` | Adresse des Servers für den Link von `/storage web`, z. B. `mc.example.de` (ohne Port). Leer: `localhost`. |
 | `jeiSearchSync` | `false` | Schalter **J**: Suche im ME-Speicher mit der JEI-Suchleiste koppeln (beim Spieler, lässt sich im Fenster umschalten). |
 
 ## Selbst bauen
