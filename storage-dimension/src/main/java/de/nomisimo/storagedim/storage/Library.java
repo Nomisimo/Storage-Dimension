@@ -87,10 +87,10 @@ public final class Library {
 	private static final int SKYLIGHT_HALF_WIDTH = 3;
 	private static final int SKYLIGHT_MIN_Z = 3;
 	private static final int SKYLIGHT_MAX_Z = 5;
-	/** The chest moon: this far from the hall, this high over the horizon (north), this big. */
-	private static final double MOON_DISTANCE = 92;
+	/** The chest moon: this far from the hall (close enough not to vanish in the fog), this high over the horizon (north), this big. */
+	private static final double MOON_DISTANCE = 40;
 	private static final double MOON_PITCH = 70;
-	private static final float MOON_SCALE = 26f;
+	private static final float MOON_SCALE = 11f;
 	/** Item model of the moon: a flat chest front, drawn like the sun instead of as a block. */
 	private static final Identifier MOON_MODEL = StorageDimensionMod.id("sky_moon");
 
@@ -616,7 +616,7 @@ public final class Library {
 		Entity display = spawnDisplay(level, moonId(network), moon, centre.getX() + 0.5, centre.getY() + Math.sin(pitch) * MOON_DISTANCE,
 				centre.getZ() + (SKYLIGHT_MIN_Z + SKYLIGHT_MAX_Z) / 2.0 - Math.cos(pitch) * MOON_DISTANCE, MOON_SCALE,
 				Display.BillboardConstraints.CENTER);
-		// displays are only drawn up to 64 blocks times their view range, the moon is about 92 blocks away
+		// draw it even with a small entity distance setting
 		((DisplayAccessor) display).storagedim$setViewRange(4f);
 	}
 
