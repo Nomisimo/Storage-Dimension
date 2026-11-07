@@ -97,7 +97,7 @@ public final class LibraryExtras {
 		Identifier early = StorageDimensionMod.id("trading_hall");
 		UseEntityCallback.EVENT.addPhaseOrdering(early, Event.DEFAULT_PHASE);
 		UseEntityCallback.EVENT.register(early, (player, level, hand, entity, hit) -> {
-			if (!entity.getTags().contains(TRADER_TAG)) {
+			if (!entity.entityTags().contains(TRADER_TAG)) {
 				return InteractionResult.PASS;
 			}
 
@@ -106,7 +106,7 @@ public final class LibraryExtras {
 			return held.isEmpty() || held.is(Items.EMERALD) || !path.contains("bucket") && !held.is(Items.NAME_TAG) && !held.is(Items.LEAD)
 					&& !path.contains("spawn_egg") ? InteractionResult.PASS : InteractionResult.FAIL;
 		});
-		AttackEntityCallback.EVENT.register((player, level, hand, entity, hit) -> entity.getTags().contains(TRADER_TAG) ? InteractionResult.FAIL
+		AttackEntityCallback.EVENT.register((player, level, hand, entity, hit) -> entity.entityTags().contains(TRADER_TAG) ? InteractionResult.FAIL
 				: InteractionResult.PASS);
 	}
 
@@ -451,7 +451,7 @@ public final class LibraryExtras {
 		BlockPos max = centre.offset(TRADE_X + HALF_WIDTH + 2, CEILING + 4, tradeEnd(MAX_TRADERS / 2) + 4);
 
 		for (Entity entity : level.getEntities((Entity) null, new AABB(min.getX(), min.getY(), min.getZ(), max.getX() + 1, max.getY() + 1, max.getZ() + 1),
-				e -> e.getTags().contains(TRADER_TAG))) {
+				e -> e.entityTags().contains(TRADER_TAG))) {
 			if (!wanted.contains(entity.getUUID())) {
 				entity.discard();
 			}

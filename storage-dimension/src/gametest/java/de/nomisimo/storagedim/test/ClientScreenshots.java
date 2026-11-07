@@ -821,7 +821,7 @@ public class ClientScreenshots implements FabricClientGameTest {
 			ServerLevel level = (ServerLevel) player.level();
 			System.out.println("STORAGEDIM EXTRAS altar=" + level.getBlockState(centre.offset(0, 1, 2)).is(net.minecraft.world.level.block.Blocks.CRYING_OBSIDIAN)
 					+ " rows=" + network.tradeHallRows + " traders=" + level.getEntities((net.minecraft.world.entity.Entity) null,
-							new net.minecraft.world.phys.AABB(centre).inflate(60), e -> e.getTags().contains(de.nomisimo.storagedim.storage.LibraryExtras.TRADER_TAG)).size());
+							new net.minecraft.world.phys.AABB(centre).inflate(60), e -> e.entityTags().contains(de.nomisimo.storagedim.storage.LibraryExtras.TRADER_TAG)).size());
 
 			for (int stall = 0; stall < 6; stall++) {
 				BlockPos sign = centre.offset(1 + (stall % 2 == 0 ? -1 : 1), 1, 11 + 2 * (stall / 2));

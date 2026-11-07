@@ -51,7 +51,7 @@ final class SmokeTest {
 		}
 
 		long traders = level.getEntities((net.minecraft.world.entity.Entity) null, new net.minecraft.world.phys.AABB(centre).inflate(40),
-				e -> e.getTags().contains(LibraryExtras.TRADER_TAG)).size();
+				e -> e.entityTags().contains(LibraryExtras.TRADER_TAG)).size();
 
 		if (traders != 2) {
 			errors.add("Handelshalle hat " + traders + " statt 2 Dorfbewohner");
@@ -88,7 +88,7 @@ final class SmokeTest {
 		}
 
 		traders = level.getEntities((net.minecraft.world.entity.Entity) null, new net.minecraft.world.phys.AABB(centre).inflate(40),
-				e -> e.getTags().contains(LibraryExtras.TRADER_TAG) && e.isAlive()).size();
+				e -> e.entityTags().contains(LibraryExtras.TRADER_TAG) && e.isAlive()).size();
 
 		if (traders != 0) {
 			errors.add(traders + " Dorfbewohner stehen noch in der Handelshalle");
