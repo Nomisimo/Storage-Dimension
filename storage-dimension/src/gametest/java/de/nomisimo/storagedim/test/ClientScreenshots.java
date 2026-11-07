@@ -794,6 +794,81 @@ public class ClientScreenshots implements FabricClientGameTest {
 		context.takeScreenshot("library-chest-closed");
 	}
 
+	/**
+	 * The dragon egg altar (the egg went into ME storage at the end of the library test) and the trading hall with
+	 * villagers from buckets, their stalls and the signs with their best trade.
+	 */
+	private static void extrasTest(ClientGameTestContext context, TestSingleplayerContext world) {
+		world.getServer().runOnServer(server -> {
+			ServerPlayer player = server.getPlayerList().getPlayers().get(0);
+			var network = StorageData.get().networkFor(player.getUUID());
+
+			for (String profession : java.util.List.of("librarian", "armorer", "farmer", "cleric", "toolsmith")) {
+				network.insert(villagerBucket("minecraft:" + profession));
+			}
+
+			BlockPos centre = de.nomisimo.storagedim.storage.Library.centre(network.room);
+			player.teleportTo((ServerLevel) player.level(), centre.getX() + 0.5, centre.getY() + 1, centre.getZ() + 6.5, java.util.Set.of(), 180, 12, true);
+		});
+		context.waitTicks(60);
+		world.getClientLevel().waitForChunksDownload();
+		context.waitTicks(10);
+		context.takeScreenshot("library-altar");
+		world.getServer().runOnServer(server -> {
+			ServerPlayer player = server.getPlayerList().getPlayers().get(0);
+			var network = StorageData.get().networkFor(player.getUUID());
+			BlockPos centre = de.nomisimo.storagedim.storage.Library.centre(network.room);
+			ServerLevel level = (ServerLevel) player.level();
+			System.out.println("STORAGEDIM EXTRAS altar=" + level.getBlockState(centre.offset(0, 1, 2)).is(net.minecraft.world.level.block.Blocks.CRYING_OBSIDIAN)
+					+ " rows=" + network.tradeHallRows + " traders=" + level.getEntities((net.minecraft.world.entity.Entity) null,
+							new net.minecraft.world.phys.AABB(centre).inflate(60), e -> e.getTags().contains(de.nomisimo.storagedim.storage.LibraryExtras.TRADER_TAG)).size());
+
+			for (int stall = 0; stall < 6; stall++) {
+				BlockPos sign = centre.offset(1 + (stall % 2 == 0 ? -1 : 1), 1, 11 + 2 * (stall / 2));
+
+				if (level.getBlockEntity(sign) instanceof net.minecraft.world.level.block.entity.SignBlockEntity entity) {
+					StringBuilder text = new StringBuilder();
+
+					for (int i = 0; i < 4; i++) {
+						text.append(entity.getFrontText().getMessage(i, false).getString()).append(" | ");
+					}
+
+					System.out.println("STORAGEDIM EXTRAS sign " + stall + ": " + text);
+				}
+			}
+
+			// in the door of the trading hall, looking down the corridor
+			player.teleportTo(level, centre.getX() + 1.5, centre.getY() + 1, centre.getZ() + 9.5, java.util.Set.of(), 0, 12, true);
+		});
+		context.waitTicks(40);
+		context.takeScreenshot("trading-hall");
+		world.getServer().runOnServer(server -> {
+			ServerPlayer player = server.getPlayerList().getPlayers().get(0);
+			var network = StorageData.get().networkFor(player.getUUID());
+			BlockPos centre = de.nomisimo.storagedim.storage.Library.centre(network.room);
+			// in front of the first stall, looking at the sign and the villager behind it
+			player.teleportTo((ServerLevel) player.level(), centre.getX() + 2.2, centre.getY() + 1, centre.getZ() + 11.5, java.util.Set.of(), 90, 28, true);
+		});
+		context.waitTicks(30);
+		context.takeScreenshot("trading-hall-sign");
+	}
+
+	/** A bucket with a villager in it, the way bucket mods keep it: the saved villager in the item's data. */
+	private static ItemStack villagerBucket(String profession) {
+		net.minecraft.nbt.CompoundTag villagerData = new net.minecraft.nbt.CompoundTag();
+		villagerData.putString("profession", profession);
+		villagerData.putString("type", "minecraft:plains");
+		villagerData.putInt("level", 3);
+		net.minecraft.nbt.CompoundTag entity = new net.minecraft.nbt.CompoundTag();
+		entity.putString("id", "minecraft:villager");
+		entity.put("VillagerData", villagerData);
+		net.minecraft.nbt.CompoundTag root = new net.minecraft.nbt.CompoundTag();
+		root.put("EntityTag", entity);
+		ItemStack stack = new ItemStack(Items.BUCKET);
+		stack.set(net.minecraft.core.component.DataComponents.CUSTOM_DATA, net.minecraft.world.item.component.CustomData.of(root));
+		return stack;
+	}
+
 	private static void logMenu(ServerPlayer player, String what) {
 		var menu = player.containerMenu;
 		StringBuilder line = new StringBuilder("STORAGEDIM PROJECT " + what + ": " + menu.getClass().getSimpleName() + " [");
@@ -1324,6 +1399,7 @@ public class ClientScreenshots implements FabricClientGameTest {
 			projectTest(context, world);
 			antennaTest(context, world);
 			islandTest(context, world);
+			extrasTest(context, world);
 		}
 	}
 }

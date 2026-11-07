@@ -360,6 +360,7 @@ public final class StorageData {
 			n.add("aisles", aisles);
 			n.addProperty("libraryBuild", network.libraryBuild);
 			n.addProperty("islandRadius", network.oldIslandRadius);
+			n.addProperty("tradeHallRows", network.tradeHallRows);
 			nets.add(n);
 		}
 
@@ -552,6 +553,7 @@ public final class StorageData {
 
 				// versions up to 0.7: the chest island, which is taken down when the library is built
 				network.oldIslandRadius = n.has("islandRadius") ? n.get("islandRadius").getAsInt() : 0;
+				network.tradeHallRows = n.has("tradeHallRows") ? n.get("tradeHallRows").getAsInt() : 0;
 				networks.put(network.owner, network);
 				nextRoom = Math.max(nextRoom, network.room + 1);
 			}

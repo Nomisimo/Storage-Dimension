@@ -543,7 +543,8 @@ public final class Library {
 	 */
 	private static void build(ServerLevel level, StorageNetwork network, Box old) {
 		BlockPos centre = centre(network.room);
-		Map<BlockPos, BlockState> plan = plan(network);
+		LibraryExtras.State extras = LibraryExtras.state(level, network);
+		Map<BlockPos, BlockState> plan = plan(network, extras);
 
 		if (old != null) {
 			for (int dx = old.minX(); dx <= old.maxX(); dx++) {
@@ -589,10 +590,17 @@ public final class Library {
 					centre.getY() + 4.3, centre.getZ() - 0.5, 0.7f);
 			aisleLabel(network, aisle, sign);
 		}
+
+		if (network.tradeHallRows != extras.rows()) {
+			network.tradeHallRows = extras.rows();
+			StorageData.markDirty();
+		}
+
+		LibraryExtras.sync(level, network, extras);
 	}
 
 	/** Every block of the library relative to its centre. */
-	private static Map<BlockPos, BlockState> plan(StorageNetwork network) {
+	private static Map<BlockPos, BlockState> plan(StorageNetwork network, LibraryExtras.State extras) {
 		Map<BlockPos, BlockState> plan = new LinkedHashMap<>();
 		BlockState floor = Blocks.DARK_OAK_PLANKS.defaultBlockState();
 		BlockState hallFloor = Blocks.SPRUCE_PLANKS.defaultBlockState();
@@ -680,10 +688,12 @@ public final class Library {
 			plan.put(new BlockPos(s.dx(), s.dy(), s.dz()), block.defaultBlockState().setValue(ChestBlock.FACING, s.facing()));
 		}
 
+		// the dragon egg altar and the trading hall, while their items are stored
+		LibraryExtras.plan(plan, network, extras);
 		return plan;
 	}
 
-	private static Entity spawnDisplay(ServerLevel level, UUID id, ItemStack item, double x, double y, double z, float scale) {
+	static Entity spawnDisplay(ServerLevel level, UUID id, ItemStack item, double x, double y, double z, float scale) {
 		Entity existing = level.getEntity(id);
 
 		if (existing != null) {
@@ -743,7 +753,7 @@ public final class Library {
 		return id("aisle:" + network.room + ":" + network.libraryBuild + ":" + aisle.category.name() + ":" + aisle.x);
 	}
 
-	private static UUID id(String name) {
+	static UUID id(String name) {
 		return UUID.nameUUIDFromBytes(("storagedim:" + name).getBytes(StandardCharsets.UTF_8));
 	}
 
@@ -751,6 +761,9 @@ public final class Library {
 		Set<UUID> keep = new HashSet<>();
 		network.library.forEach(shelf -> keep.add(labelId(network, shelf)));
 		network.aisles.forEach(aisle -> keep.add(aisleId(network, aisle)));
+		// the extras remove these themselves when their items are gone
+		keep.add(LibraryExtras.eggId(network));
+		keep.add(LibraryExtras.doorId(network));
 		return keep;
 	}
 
@@ -776,6 +789,14 @@ public final class Library {
 	static void tick(ServerLevel level, StorageNetwork network) {
 		grow(level, network);
 		removeStale(level, network, keep(network));
+		LibraryExtras.State extras = LibraryExtras.state(level, network);
+
+		if (LibraryExtras.isBuilt(level, network, extras)) {
+			LibraryExtras.sync(level, network, extras);
+		} else {
+			// the egg or a villager came or went: the altar or the trading hall changes
+			build(level, network, null);
+		}
 
 		for (Shelf shelf : network.library) {
 			if (isProject(shelf.key())) {
@@ -845,7 +866,8 @@ public final class Library {
 		BlockPos centre = centre(network.room);
 		double dx = player.getX() - centre.getX();
 		double dz = player.getZ() - centre.getZ();
-		return dx >= hallMinX(network) - 3 && dx <= hallMaxX(network) + 4 && dz >= deepestZ(network) - 3 && dz <= HALL_DEPTH + 5
+		return dx >= hallMinX(network) - 3 && dx <= hallMaxX(network) + 4 && dz >= deepestZ(network) - 3
+				&& dz <= Math.max(HALL_DEPTH + 5, LibraryExtras.southEnd(network) + 4)
 				&& player.getY() > FLOOR_Y - 24 && player.getY() < FLOOR_Y + 64;
 	}
 

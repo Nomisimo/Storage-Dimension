@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import de.nomisimo.storagedim.storage.Library;
+import de.nomisimo.storagedim.storage.LibraryExtras;
 import de.nomisimo.storagedim.storage.Rooms;
 import de.nomisimo.storagedim.storage.StorageNetwork;
 import net.minecraft.core.BlockPos;
@@ -30,6 +31,84 @@ final class SmokeTest {
 		}
 
 		ServerLifecycleEvents.SERVER_STARTED.register(SmokeTest::run);
+	}
+
+	/** The dragon egg altar and the trading hall come with their items and go again when the items are taken out. */
+	private static void extrasTest(ServerLevel level, StorageNetwork network, List<String> errors) {
+		BlockPos centre = Library.centre(network.room);
+		ItemStack bucket = villagerBucket("minecraft:librarian");
+		network.insert(new ItemStack(Items.DRAGON_EGG));
+		network.insert(bucket.copy());
+		network.insert(villagerBucket("minecraft:farmer"));
+		Library.prepare(level, network);
+
+		if (!level.getBlockState(centre.offset(0, 1, 2)).is(Blocks.CRYING_OBSIDIAN)) {
+			errors.add("Drachenei-Altar fehlt");
+		}
+
+		if (network.tradeHallRows != 1) {
+			errors.add("Handelshalle hat " + network.tradeHallRows + " statt 1 Reihe");
+		}
+
+		long traders = level.getEntities((net.minecraft.world.entity.Entity) null, new net.minecraft.world.phys.AABB(centre).inflate(40),
+				e -> e.getTags().contains(LibraryExtras.TRADER_TAG)).size();
+
+		if (traders != 2) {
+			errors.add("Handelshalle hat " + traders + " statt 2 Dorfbewohner");
+		}
+
+		// stall 0 is west of the corridor, its sign is one block west of the middle
+		if (level.getBlockEntity(centre.offset(0, 1, 11)) instanceof net.minecraft.world.level.block.entity.SignBlockEntity sign) {
+			StringBuilder text = new StringBuilder();
+
+			for (int i = 0; i < 4; i++) {
+				text.append(sign.getFrontText().getMessage(i, false).getString()).append(" | ");
+			}
+
+			StorageDimensionMod.LOGGER.info("SMOKETEST Schild: {}", text);
+
+			if (sign.getFrontText().getMessage(1, false).getString().isEmpty()) {
+				errors.add("Schild der Handelshalle ist leer");
+			}
+		} else {
+			errors.add("Schild der Handelshalle fehlt");
+		}
+
+		network.extract(new ItemStack(Items.DRAGON_EGG), 1);
+		network.extract(bucket, 1);
+		network.extract(villagerBucket("minecraft:farmer"), 1);
+		Library.prepare(level, network);
+
+		if (level.getBlockState(centre.offset(0, 1, 2)).is(Blocks.CRYING_OBSIDIAN)) {
+			errors.add("Drachenei-Altar ist noch da, obwohl das Ei weg ist");
+		}
+
+		if (network.tradeHallRows != 0 || !level.getBlockState(centre.offset(1, 0, 11)).isAir()) {
+			errors.add("Handelshalle ist noch da, obwohl keine Dorfbewohner mehr gespeichert sind");
+		}
+
+		traders = level.getEntities((net.minecraft.world.entity.Entity) null, new net.minecraft.world.phys.AABB(centre).inflate(40),
+				e -> e.getTags().contains(LibraryExtras.TRADER_TAG) && e.isAlive()).size();
+
+		if (traders != 0) {
+			errors.add(traders + " Dorfbewohner stehen noch in der Handelshalle");
+		}
+	}
+
+	/** A bucket with a villager in it, the way bucket mods keep it: the saved villager in the item's data. */
+	static ItemStack villagerBucket(String profession) {
+		net.minecraft.nbt.CompoundTag villagerData = new net.minecraft.nbt.CompoundTag();
+		villagerData.putString("profession", profession);
+		villagerData.putString("type", "minecraft:plains");
+		villagerData.putInt("level", 2);
+		net.minecraft.nbt.CompoundTag entity = new net.minecraft.nbt.CompoundTag();
+		entity.putString("id", "minecraft:villager");
+		entity.put("VillagerData", villagerData);
+		net.minecraft.nbt.CompoundTag root = new net.minecraft.nbt.CompoundTag();
+		root.put("EntityTag", entity);
+		ItemStack stack = new ItemStack(Items.BUCKET);
+		stack.set(net.minecraft.core.component.DataComponents.CUSTOM_DATA, net.minecraft.world.item.component.CustomData.of(root));
+		return stack;
 	}
 
 	private static void run(MinecraftServer server) {
@@ -69,6 +148,8 @@ final class SmokeTest {
 				if (network.library.stream().filter(s -> s.key().is(Items.COBBLESTONE)).count() != 4) {
 					errors.add("Bruchstein sollte jetzt 4 Kisten haben");
 				}
+
+				extrasTest(level, network, errors);
 			}
 
 			for (String recipe : List.of("storage_chest", "me_terminal", "me_upgrade", "me_backpack", "filter_chest", "robot")) {
