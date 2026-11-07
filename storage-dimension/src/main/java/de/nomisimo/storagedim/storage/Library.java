@@ -26,6 +26,7 @@ import net.minecraft.core.component.DataComponents;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.protocol.game.ClientboundSetActionBarTextPacket;
+import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvents;
@@ -82,6 +83,16 @@ public final class Library {
 	private static final int PILLAR_EVERY = 7;
 	private static final int MIN_LENGTH = 8;
 	private static final int CEILING = 6;
+	/** The skylight in the hall ceiling: glass over x -3..3, z 3..5, between the lanterns, so the moon can be seen. */
+	private static final int SKYLIGHT_HALF_WIDTH = 3;
+	private static final int SKYLIGHT_MIN_Z = 3;
+	private static final int SKYLIGHT_MAX_Z = 5;
+	/** The chest moon: this far from the hall, this high over the horizon (north), this big. */
+	private static final double MOON_DISTANCE = 92;
+	private static final double MOON_PITCH = 70;
+	private static final float MOON_SCALE = 26f;
+	/** Item model of the moon: a flat chest front, drawn like the sun instead of as a block. */
+	private static final Identifier MOON_MODEL = StorageDimensionMod.id("sky_moon");
 
 	/** One chest: its block relative to the library centre, the kind it holds (count 1) and which of the kind's chests it is. */
 	public record Shelf(int dx, int dy, int dz, ItemStack key, int part, Direction facing) {
@@ -589,6 +600,22 @@ public final class Library {
 					centre.getY() + 4.3, centre.getZ() - 0.5, 0.7f);
 			aisleLabel(network, aisle, sign);
 		}
+
+		moon(level, network);
+	}
+
+	/**
+	 * The chest moon in the End sky over the library, seen through the skylight of the hall. Like the sun of the
+	 * overworld it is flat and always turns its face, the front of a chest, towards whoever looks at it.
+	 */
+	private static void moon(ServerLevel level, StorageNetwork network) {
+		BlockPos centre = centre(network.room);
+		double pitch = Math.toRadians(MOON_PITCH);
+		ItemStack moon = new ItemStack(Items.CHEST);
+		moon.set(DataComponents.ITEM_MODEL, MOON_MODEL);
+		spawnDisplay(level, moonId(network), moon, centre.getX() + 0.5, centre.getY() + Math.sin(pitch) * MOON_DISTANCE,
+				centre.getZ() + (SKYLIGHT_MIN_Z + SKYLIGHT_MAX_Z) / 2.0 - Math.cos(pitch) * MOON_DISTANCE, MOON_SCALE,
+				Display.BillboardConstraints.CENTER);
 	}
 
 	/** Every block of the library relative to its centre. */
@@ -597,6 +624,7 @@ public final class Library {
 		BlockState floor = Blocks.DARK_OAK_PLANKS.defaultBlockState();
 		BlockState hallFloor = Blocks.SPRUCE_PLANKS.defaultBlockState();
 		BlockState ceiling = Blocks.DARK_OAK_PLANKS.defaultBlockState();
+		BlockState glass = Blocks.GLASS.defaultBlockState();
 		BlockState shelf = Blocks.BOOKSHELF.defaultBlockState();
 		BlockState air = Blocks.AIR.defaultBlockState();
 		BlockState pillar = Blocks.STRIPPED_DARK_OAK_LOG.defaultBlockState().setValue(RotatedPillarBlock.AXIS, Direction.Axis.Y);
@@ -616,7 +644,8 @@ public final class Library {
 			for (int dz = inAisle ? 0 : -1; dz <= HALL_DEPTH + 1; dz++) {
 				boolean wall = dx == minX || dx == maxX || dz == -1 || dz == HALL_DEPTH + 1;
 				plan.put(new BlockPos(dx, 0, dz), hallFloor);
-				plan.put(new BlockPos(dx, CEILING, dz), ceiling);
+				boolean skylight = Math.abs(dx) <= SKYLIGHT_HALF_WIDTH && dz >= SKYLIGHT_MIN_Z && dz <= SKYLIGHT_MAX_Z;
+				plan.put(new BlockPos(dx, CEILING, dz), skylight ? glass : ceiling);
 
 				for (int dy = 1; dy < CEILING; dy++) {
 					plan.put(new BlockPos(dx, dy, dz), wall ? shelf : air);
@@ -684,6 +713,11 @@ public final class Library {
 	}
 
 	private static Entity spawnDisplay(ServerLevel level, UUID id, ItemStack item, double x, double y, double z, float scale) {
+		return spawnDisplay(level, id, item, x, y, z, scale, Display.BillboardConstraints.VERTICAL);
+	}
+
+	private static Entity spawnDisplay(ServerLevel level, UUID id, ItemStack item, double x, double y, double z, float scale,
+			Display.BillboardConstraints billboard) {
 		Entity existing = level.getEntity(id);
 
 		if (existing != null) {
@@ -697,7 +731,7 @@ public final class Library {
 		((ItemDisplayAccessor) display).storagedim$setItemStack(item.copyWithCount(1));
 		DisplayAccessor accessor = (DisplayAccessor) display;
 		accessor.storagedim$setTransformation(new Transformation(new Vector3f(), new Quaternionf(), new Vector3f(scale, scale, scale), new Quaternionf()));
-		accessor.storagedim$setBillboardConstraints(Display.BillboardConstraints.VERTICAL);
+		accessor.storagedim$setBillboardConstraints(billboard);
 		accessor.storagedim$setBrightnessOverride(new Brightness(15, 15));
 		level.addFreshEntity(display);
 		return display;
@@ -743,6 +777,11 @@ public final class Library {
 		return id("aisle:" + network.room + ":" + network.libraryBuild + ":" + aisle.category.name() + ":" + aisle.x);
 	}
 
+	/** A new id for the flat moon, so the block-shaped moon of the old chest island goes as a stale display. */
+	public static UUID moonId(StorageNetwork network) {
+		return id("moon:" + network.room + ":flat");
+	}
+
 	private static UUID id(String name) {
 		return UUID.nameUUIDFromBytes(("storagedim:" + name).getBytes(StandardCharsets.UTF_8));
 	}
@@ -751,6 +790,7 @@ public final class Library {
 		Set<UUID> keep = new HashSet<>();
 		network.library.forEach(shelf -> keep.add(labelId(network, shelf)));
 		network.aisles.forEach(aisle -> keep.add(aisleId(network, aisle)));
+		keep.add(moonId(network));
 		return keep;
 	}
 
