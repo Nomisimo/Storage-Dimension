@@ -52,11 +52,14 @@ jobs:
           grep -iE "jei|rezept|error|exception" /tmp/server.log | head -100 > /tmp/shots/server-log.txt || true
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git checkout --orphan screenshots
+          # runs on other branches get their own screenshot branch, so parallel runs do not overwrite each other
+          target=screenshots
+          if [ "${GITHUB_REF_NAME}" != "main" ]; then target="screenshots-${GITHUB_REF_NAME//\//-}"; fi
+          git checkout --orphan "$target"
           git rm -rf --quiet . || true
           cp /tmp/shots/* .
           git add -A
           git commit -m "Screenshots for ${GITHUB_SHA}" || true
-          git push -f origin screenshots
+          git push -f origin "HEAD:refs/heads/$target"
       - name: recipes reach JEI on a separate server
         run: grep -q "STORAGEDIM JEI CHECK external server OK" client.log

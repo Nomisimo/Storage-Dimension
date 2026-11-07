@@ -26,6 +26,8 @@ public class StorageNetwork {
 	public int libraryBuild;
 	/** Radius of the chest island of versions up to 0.7, still to be taken down; 0 when there is none. */
 	public int oldIslandRadius;
+	/** Rows of stalls of the trading hall as last built; 0 while there is none. */
+	public int tradeHallRows;
 
 	public StorageNetwork(UUID owner, int room) {
 		this.owner = owner;
