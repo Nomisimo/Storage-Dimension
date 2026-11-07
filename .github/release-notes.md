@@ -1,5 +1,7 @@
 Storage Dimension für **Minecraft 26.1.2** (Fabric).
 
+**Neu in 0.7.3:** Eigener Kreativ-Tab **Storage Dimension** mit allen Items (Kisten, ME-Terminal, Rucksack, ME-Upgrade, Roboter, Station, Barriere, Antenne, Fernbedienung). Dadurch tauchen sie jetzt auch in der JEI-Liste auf, und ihre Rezepte lassen sich mit R/U nachschlagen; Filterkiste, Dimensionskiste usw. werden in JEI nicht mehr mit der normalen Truhe zusammengeworfen. ME-Speicher im Browser: `/storage web` gibt jedem Spieler einen geheimen Link zu einer Webseite mit Suche, Mengen und Item-Icons, auch für Projekte und Projektkisten (Port und Adresse über `webPort`/`webAddress` in `config/storagedim.json`). Über der Bibliothek hängt wieder ein Kisten-Mond, flach wie die Sonne und durch ein Glasdach in der Eingangshalle zu sehen. Liegt ein Drachenei im ME-Speicher, schwebt es auf einem Altar mitten in der Halle. Dorfbewohner im Eimer (z. B. „Villager In A Bucket“) stehen in einer Handelshalle hinter der Südwand, jeder an einem eigenen Stand mit seinem wertvollsten Handel auf einem Schild; man kann mit ihnen handeln, sie füllen ihre Angebote wieder auf.
+
 **Neu in 0.7.2:** Die Storage Dimension ist jetzt eine Bibliothek statt der Kisten-Insel: eine Eingangshalle mit langen Bücherregal-Gängen im Stil einer alten Bibliothek, ein Gang pro Abteilung (Stein, Holz, Natur, Erze & Metalle, Essen, Mob-Drops, Redstone, Werkzeuge & Waffen, Rüstung, Tränke & Magie, Farben & Deko, Sonstiges). In den Regalen stehen normale Kisten mit echten Stapeln zu 64, 27 Stapel pro Kiste, eine Sorte bekommt so viele Kisten, wie sie braucht (höchstens 64). Das Lesepult in der Halle und am Ende jedes Gangs öffnet den Katalog: Teleport zu einer Abteilung oder per Suche direkt vor die Kisten eines Items. Projektkisten stehen in der Halle. Die alte Insel wird beim ersten Betreten abgebaut, die Items bleiben im ME-Speicher. Tränke (auch Wurf- und Verweiltränke und Trankpfeile) als Filter lassen jetzt nur genau diesen Trank durch, nicht mehr alle Tränke, in Filterkiste, Roboter-Station und Projektkiste. Die ME-Suche findet Tränke nach Wirkung und Items nach Verzauberung, die Projekt-Suche zeigt jeden Trank und jedes Verzauberungsbuch einzeln.
 
 **Neu in 0.7.1:** JEI zeigt die Rezepte jetzt auch auf Servern ohne JEI: Die Mod schickt alle Rezepte selbst an die Spieler, auf dem Server reichen Fabric API und Storage Dimension (0.7.1 muss dafür auf Server und Clients liegen). Das ME-Terminal nimmt Items von Trichtern und Maschinen an und lagert sie direkt im ME-Speicher ein. Die Antenne wird jetzt mit Blitzableiter statt End-Rute gecraftet. Traveler's-Backpack-Add-on 0.7.1: Die ME-Ansicht ist beim Öffnen des Rucksacks sofort da, ohne Verzögerung; wer das nicht will, schaltet in den Mod-Einstellungen (Mod Menu) „ME-Ansicht automatisch öffnen“ aus.
@@ -20,18 +22,18 @@ Storage Dimension für **Minecraft 26.1.2** (Fabric).
 
 **Neu in 0.4.1:** Im ME-Speicher (auch über das Rucksack-Upgrade) und im Filter-Fenster lassen sich Items im eigenen Inventar wieder ziehen und verteilen sowie per Doppelklick sammeln; vorher sprangen sie zurück in die Hand.
 
-**Neu in 0.4.0:** Sammelroboter, eigene Texturen für Dimensionskiste, Filterkiste, ME-Terminal und die ME-Items, Rezepte in JEI, Anbindung an Maschinen (z. B. Tech Reborn), doppelte Filterkisten mit 14 Filtern. Ab dieser Version brauchen **alle Spieler** `storage-dimension-0.7.2.jar`.
+**Neu in 0.4.0:** Sammelroboter, eigene Texturen für Dimensionskiste, Filterkiste, ME-Terminal und die ME-Items, Rezepte in JEI, Anbindung an Maschinen (z. B. Tech Reborn), doppelte Filterkisten mit 14 Filtern. Ab dieser Version brauchen **alle Spieler** `storage-dimension-0.7.3.jar`.
 
 ## Server, in den Ordner `mods`
 
-- `storage-dimension-0.7.2.jar`
-- `storagedim-tb-0.7.2.jar`
+- `storage-dimension-0.7.3.jar`
+- `storagedim-tb-0.7.3.jar`
 - dazu [Fabric API](https://modrinth.com/mod/fabric-api), [Traveler's Backpack](https://modrinth.com/mod/travelersbackpack) und [Forge Config API Port](https://modrinth.com/mod/forge-config-api-port), alle für 26.1.2
 
 ## Jeder Spieler, in den Ordner `mods`
 
-- `storage-dimension-0.7.2.jar`
-- `storagedim-tb-0.7.2.jar`
+- `storage-dimension-0.7.3.jar`
+- `storagedim-tb-0.7.3.jar`
 - dazu [Fabric API](https://modrinth.com/mod/fabric-api), [Traveler's Backpack](https://modrinth.com/mod/travelersbackpack), [Forge Config API Port](https://modrinth.com/mod/forge-config-api-port) und [JEI](https://modrinth.com/mod/jei), alle für 26.1.2
 
 ## Nur Storage Dimension, ohne Traveler's Backpack
