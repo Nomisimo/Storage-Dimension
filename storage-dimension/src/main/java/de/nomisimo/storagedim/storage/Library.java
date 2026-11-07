@@ -613,9 +613,11 @@ public final class Library {
 		double pitch = Math.toRadians(MOON_PITCH);
 		ItemStack moon = new ItemStack(Items.CHEST);
 		moon.set(DataComponents.ITEM_MODEL, MOON_MODEL);
-		spawnDisplay(level, moonId(network), moon, centre.getX() + 0.5, centre.getY() + Math.sin(pitch) * MOON_DISTANCE,
+		Entity display = spawnDisplay(level, moonId(network), moon, centre.getX() + 0.5, centre.getY() + Math.sin(pitch) * MOON_DISTANCE,
 				centre.getZ() + (SKYLIGHT_MIN_Z + SKYLIGHT_MAX_Z) / 2.0 - Math.cos(pitch) * MOON_DISTANCE, MOON_SCALE,
 				Display.BillboardConstraints.CENTER);
+		// displays are only drawn up to 64 blocks times their view range, the moon is about 92 blocks away
+		((DisplayAccessor) display).storagedim$setViewRange(4f);
 	}
 
 	/** Every block of the library relative to its centre. */
