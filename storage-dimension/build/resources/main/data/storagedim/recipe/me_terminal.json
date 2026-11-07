@@ -1,0 +1,32 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "pattern": [
+    "RAR",
+    "AEA",
+    "RAR"
+  ],
+  "key": {
+    "R": "minecraft:redstone",
+    "A": "minecraft:amethyst_shard",
+    "E": "minecraft:ender_chest"
+  },
+  "result": {
+    "id": "minecraft:ender_chest",
+    "count": 1,
+    "components": {
+      "minecraft:custom_data": {
+        "storagedim_terminal": true
+      },
+      "minecraft:item_name": "ME-Terminal",
+      "minecraft:lore": [
+        {
+          "text": "Öffnet den ME-Speicher direkt",
+          "color": "gray",
+          "italic": false
+        }
+      ],
+      "minecraft:item_model": "storagedim:me_terminal"
+    }
+  }
+}

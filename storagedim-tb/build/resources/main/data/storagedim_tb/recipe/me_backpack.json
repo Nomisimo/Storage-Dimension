@@ -1,0 +1,27 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "category": "misc",
+  "ingredients": [
+    "#minecraft:bundles",
+    "storagedim_tb:me_upgrade"
+  ],
+  "result": {
+    "id": "minecraft:bundle",
+    "count": 1,
+    "components": {
+      "minecraft:custom_data": {
+        "storagedim_backpack": true
+      },
+      "minecraft:item_name": "ME-Rucksack",
+      "minecraft:enchantment_glint_override": true,
+      "minecraft:lore": [
+        {
+          "text": "Rechtsklick öffnet den ME-Speicher, überall",
+          "color": "gray",
+          "italic": false
+        }
+      ],
+      "minecraft:item_model": "storagedim:me_backpack"
+    }
+  }
+}

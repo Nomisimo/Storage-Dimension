@@ -1,0 +1,6 @@
+{
+  "model": {
+    "type": "minecraft:model",
+    "model": "storagedim:block/robot_barrier"
+  }
+}

@@ -1,0 +1,37 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "pattern": [
+    "FFF",
+    "FCF",
+    "FEF"
+  ],
+  "key": {
+    "F": "minecraft:item_frame",
+    "C": "minecraft:chest",
+    "E": "minecraft:ender_eye"
+  },
+  "result": {
+    "id": "minecraft:chest",
+    "count": 1,
+    "components": {
+      "minecraft:custom_data": {
+        "storagedim_filter": true
+      },
+      "minecraft:item_name": "Filterkiste",
+      "minecraft:lore": [
+        {
+          "text": "Zeigt bis zu 7 gewählte Items aus dem ME-Speicher",
+          "color": "gray",
+          "italic": false
+        },
+        {
+          "text": "Schleichen + Rechtsklick: Filter einstellen",
+          "color": "gray",
+          "italic": false
+        }
+      ],
+      "minecraft:item_model": "storagedim:filter_chest"
+    }
+  }
+}

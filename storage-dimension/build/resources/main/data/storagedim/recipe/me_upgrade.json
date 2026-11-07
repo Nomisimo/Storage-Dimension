@@ -1,0 +1,43 @@
+{
+  "fabric:load_conditions": [
+    {
+      "condition": "fabric:not",
+      "value": {
+        "condition": "fabric:all_mods_loaded",
+        "values": [
+          "storagedim_tb"
+        ]
+      }
+    }
+  ],
+  "type": "minecraft:crafting_shapeless",
+  "category": "misc",
+  "ingredients": [
+    "minecraft:ender_eye",
+    "minecraft:amethyst_shard",
+    "minecraft:amethyst_shard",
+    "minecraft:redstone_block",
+    "minecraft:paper"
+  ],
+  "result": {
+    "id": "minecraft:paper",
+    "count": 1,
+    "components": {
+      "minecraft:custom_data": {
+        "storagedim_upgrade": true
+      },
+      "minecraft:item_name": "ME-Upgrade",
+      "minecraft:enchantment_glint_override": true,
+      "minecraft:rarity": "rare",
+      "minecraft:max_stack_size": 16,
+      "minecraft:lore": [
+        {
+          "text": "Mit einem Bündel kombinieren: ME-Rucksack",
+          "color": "gray",
+          "italic": false
+        }
+      ],
+      "minecraft:item_model": "storagedim:me_upgrade"
+    }
+  }
+}
