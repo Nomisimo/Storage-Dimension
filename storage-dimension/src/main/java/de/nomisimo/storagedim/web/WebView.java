@@ -20,31 +20,18 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
 import com.google.gson.Gson;
-import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpServer;
 
 import de.nomisimo.storagedim.StorageConfig;
 import de.nomisimo.storagedim.StorageDimensionMod;
-import de.nomisimo.storagedim.storage.Library;
-import de.nomisimo.storagedim.storage.Projects;
-import de.nomisimo.storagedim.storage.StorageData;
-import de.nomisimo.storagedim.storage.StorageNetwork;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
 import net.minecraft.ChatFormatting;
-import net.minecraft.core.Holder;
-import net.minecraft.core.component.DataComponents;
-import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.chat.ClickEvent;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.world.effect.MobEffectInstance;
-import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.item.alchemy.PotionContents;
-import net.minecraft.world.item.enchantment.Enchantment;
-import net.minecraft.world.item.enchantment.ItemEnchantments;
 import net.minecraft.world.level.storage.LevelResource;
 
 /**
@@ -59,6 +46,7 @@ public final class WebView {
 	private static final SecureRandom RANDOM = new SecureRandom();
 	/** Token to player. */
 	private static final Map<String, UUID> TOKENS = new ConcurrentHashMap<>();
+	private static final int MAX_BODY = 16 * 1024;
 
 	private static MinecraftServer server;
 	private static HttpServer http;
@@ -97,7 +85,8 @@ public final class WebView {
 			});
 			http.setExecutor(executor);
 			http.createContext("/", WebView::page);
-			http.createContext("/api/items", WebView::items);
+			http.createContext("/api/", WebView::api);
+			http.createContext("/icon/", WebView::icon);
 			http.start();
 			StorageDimensionMod.LOGGER.info("ME-Webansicht läuft auf Port {}", port);
 		} catch (IOException e) {
@@ -227,7 +216,7 @@ public final class WebView {
 		}
 	}
 
-	private static void items(HttpExchange exchange) throws IOException {
+	private static void api(HttpExchange exchange) throws IOException {
 		try (exchange) {
 			String auth = exchange.getRequestHeaders().getFirst("Authorization");
 			UUID player = auth != null && auth.startsWith("Bearer ") ? TOKENS.get(auth.substring(7).strip()) : null;
@@ -244,17 +233,74 @@ public final class WebView {
 				return;
 			}
 
+			String path = exchange.getRequestURI().getPath();
+			boolean post = exchange.getRequestMethod().equals("POST");
+			JsonObject body;
+
+			try {
+				body = post ? GSON.fromJson(new String(exchange.getRequestBody().readNBytes(MAX_BODY), StandardCharsets.UTF_8), JsonObject.class) : null;
+			} catch (Exception e) {
+				send(exchange, 400, "application/json", "{\"error\":\"Ungültige Anfrage.\"}");
+				return;
+			}
+
+			java.util.function.Supplier<String> task = switch (path) {
+				case "/api/items" -> post ? null : () -> WebContent.items(current, player);
+				case "/api/projects" -> post ? () -> WebContent.changeProject(current, player, body) : () -> WebContent.projects(current, player);
+				case "/api/catalog" -> post ? null : () -> WebContent.catalog(current);
+				default -> null;
+			};
+
+			if (task == null) {
+				send(exchange, 404, "application/json", "{\"error\":\"Nicht gefunden.\"}");
+				return;
+			}
+
 			String json;
 
 			try {
 				// Storage is only touched on the server thread.
-				json = current.submit(() -> snapshot(current, player)).get(5, TimeUnit.SECONDS);
+				json = current.submit(task).get(10, TimeUnit.SECONDS);
 			} catch (Exception e) {
+				StorageDimensionMod.LOGGER.warn("ME-Webansicht: Anfrage {} fehlgeschlagen", path, e);
 				send(exchange, 503, "application/json", "{\"error\":\"Server antwortet gerade nicht.\"}");
 				return;
 			}
 
-			send(exchange, 200, "application/json", json);
+			send(exchange, json.startsWith("{\"error\"") ? 400 : 200, "application/json", json);
+		}
+	}
+
+	/**
+	 * {@code /icon/<namespace>/<path>}: the texture of a mod item from the jar. Vanilla textures are not on the
+	 * server; the page loads those from a public copy of the game assets.
+	 */
+	private static void icon(HttpExchange exchange) throws IOException {
+		try (exchange) {
+			String[] parts = exchange.getRequestURI().getPath().substring("/icon/".length()).split("/", 2);
+
+			if (parts.length == 2 && parts[0].matches("[a-z0-9_.-]+") && parts[1].matches("[a-z0-9_./-]+") && !parts[1].contains("..")) {
+				for (String folder : new String[] { "item/", "block/" }) {
+					for (String suffix : new String[] { "", "_side", "_top" }) {
+						try (InputStream in = WebView.class.getResourceAsStream("/assets/" + parts[0] + "/textures/" + folder + parts[1] + suffix + ".png")) {
+							if (in != null) {
+								byte[] bytes = in.readAllBytes();
+								exchange.getResponseHeaders().set("Content-Type", "image/png");
+								exchange.getResponseHeaders().set("Cache-Control", "max-age=86400");
+								exchange.sendResponseHeaders(200, bytes.length);
+
+								try (OutputStream out = exchange.getResponseBody()) {
+									out.write(bytes);
+								}
+
+								return;
+							}
+						}
+					}
+				}
+			}
+
+			send(exchange, 404, "text/plain", "Kein Bild");
 		}
 	}
 
@@ -268,68 +314,6 @@ public final class WebView {
 
 		try (OutputStream out = exchange.getResponseBody()) {
 			out.write(bytes);
-		}
-	}
-
-	// ---- content ----
-
-	/** Everything the page shows, as JSON. Runs on the server thread. */
-	private static String snapshot(MinecraftServer server, UUID player) {
-		StorageData data = StorageData.get();
-		JsonObject root = new JsonObject();
-
-		if (data == null) {
-			root.addProperty("error", "Der Speicher ist noch nicht geladen.");
-			return GSON.toJson(root);
-		}
-
-		StorageNetwork network = data.networkFor(player);
-		ServerPlayer online = server.getPlayerList().getPlayer(player);
-		root.addProperty("player", online != null ? online.getGameProfile().name() : "");
-		root.addProperty("shared", network.owner.equals(StorageData.SHARED));
-		root.addProperty("types", network.typeCount());
-		root.addProperty("total", network.totalCount());
-		JsonArray items = new JsonArray();
-
-		for (StorageNetwork.StoredItem entry : network.sorted()) {
-			ItemStack stack = entry.prototype;
-			JsonObject item = new JsonObject();
-			item.addProperty("id", BuiltInRegistries.ITEM.getKey(stack.getItem()).toString());
-			item.addProperty("name", stack.getHoverName().getString());
-			item.addProperty("count", entry.count);
-			item.addProperty("available", Projects.available(network, entry, null));
-			item.addProperty("category", Library.category(stack).title);
-			item.addProperty("foil", stack.hasFoil());
-			JsonArray details = new JsonArray();
-			enchantments(stack.get(DataComponents.ENCHANTMENTS), details);
-			enchantments(stack.get(DataComponents.STORED_ENCHANTMENTS), details);
-			PotionContents potion = stack.get(DataComponents.POTION_CONTENTS);
-
-			if (potion != null) {
-				for (MobEffectInstance effect : potion.getAllEffects()) {
-					details.add(effect.getEffect().value().getDisplayName().getString());
-				}
-			}
-
-			if (stack.isDamaged()) {
-				details.add("Haltbarkeit " + (stack.getMaxDamage() - stack.getDamageValue()) + "/" + stack.getMaxDamage());
-			}
-
-			item.add("details", details);
-			items.add(item);
-		}
-
-		root.add("items", items);
-		return GSON.toJson(root);
-	}
-
-	private static void enchantments(ItemEnchantments enchantments, JsonArray details) {
-		if (enchantments == null) {
-			return;
-		}
-
-		for (Holder<Enchantment> enchantment : enchantments.keySet()) {
-			details.add(Enchantment.getFullname(enchantment, enchantments.getLevel(enchantment)).getString());
 		}
 	}
 }

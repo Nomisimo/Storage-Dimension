@@ -71,13 +71,17 @@ Eine uralte Kiste aus Tiefenschiefer mit Sculk-Rune. Hingestellt öffnet sie per
 
 ### ME-Speicher im Browser
 
-Der Server zeigt den Inhalt des ME-Speichers auch als Webseite, z. B. auf dem Handy neben dem Spiel.
+Der Server zeigt den ME-Speicher und die Projekte auch als Webseite, z. B. auf dem Handy neben dem Spiel.
 
-- `/storage web` schickt dir einen anklickbaren Link (`http://<adresse>:8765/#…`). Die Seite zeigt alle Items mit Menge, Abteilung, Verzauberungen und Trank-Wirkung, hat eine Suche, Sortierung nach Menge oder A–Z und Filter nach Abteilung. Sie aktualisiert sich alle 10 Sekunden.
-- Die Seite zeigt nur an, herausnehmen oder einlagern geht dort nicht.
-- Jeder Spieler sieht den Speicher, den er auch im Spiel benutzt. Der Link ist geheim: Wer ihn hat, sieht deinen Speicher. `/storage web neu` macht einen neuen Link, der alte geht dann nicht mehr. Die Links liegen in `world/storagedim-web.json`.
+- `/storage web` schickt dir einen anklickbaren Link (`http://<adresse>:8765/#…`). Die Seite aktualisiert sich alle 10 Sekunden.
+- **ME-Speicher:** alle Items mit Bild, Menge, Abteilung, Verzauberungen und Trank-Wirkung, mit Suche, Sortierung nach Menge oder A–Z und Filter nach Abteilung. Herausnehmen oder einlagern geht dort nicht.
+- **Projekte:** zeigt alle Projekte deines Speichers mit Fortschritt, was da ist und was fehlt. Du kannst dort neue Projekte anlegen, umbenennen, „Im ME blocken“ umschalten, Items über die Suche hinzufügen (Items im Speicher zuerst, dann alle Items des Spiels samt jedem Trank und Verzauberungsbuch), Mengen ändern und Items entfernen. Ein neues Projekt steht auch gleich in der Eingangshalle der Bibliothek.
+- Jeder Spieler sieht den Speicher, den er auch im Spiel benutzt. Der Link ist geheim: Wer ihn hat, sieht deinen Speicher und kann deine Projekte ändern. `/storage web neu` macht einen neuen Link, der alte geht dann nicht mehr. Die Links liegen in `world/storagedim-web.json`.
 - **Für den Server:** Der Port (`webPort`, Standard 8765) muss von außen erreichbar sein, bei einem Hoster also als zusätzlicher Port freigegeben. In `webAddress` gehört die Adresse, unter der die Spieler den Server erreichen (ohne Port), sonst steht im Link `localhost`. Mit `webPort = 0` ist die Webseite aus.
-- Item-Bilder kommen aus einer öffentlichen Kopie der Minecraft-Texturen (jsDelivr). Ohne Internet oder bei Items anderer Mods steht statt des Bilds der Anfangsbuchstabe. Item-Namen sind auf Englisch, weil der Server nur die englischen Namen kennt.
+- Bilder von Minecraft-Items kommen aus einer öffentlichen Kopie der Spieltexturen (jsDelivr bzw. GitHub), die der Mod liefert der Server selbst. Ohne Internet oder bei Items anderer Mods steht statt des Bilds der Anfangsbuchstabe. Item-Namen sind auf Englisch, weil der Server nur die englischen Namen kennt.
+
+![ME-Speicher im Browser](docs/screenshots/web-me.png)
+![Projekte im Browser](docs/screenshots/web-projekte.png)
 
 ### Filterkiste
 

@@ -15,6 +15,7 @@
 		--accent: #6b3fa0;
 		--accent-soft: #ece3f7;
 		--foil: #9b59d0;
+		--good: #2f8a4c;
 		color-scheme: light;
 	}
 
@@ -28,6 +29,7 @@
 			--accent: #b78cf0;
 			--accent-soft: #2e2540;
 			--foil: #c69bff;
+			--good: #6fcf8e;
 			color-scheme: dark;
 		}
 	}
@@ -162,37 +164,141 @@
 	.message { text-align: center; color: var(--muted); padding: 48px 16px; }
 	.message strong { display: block; color: var(--text); font-size: 17px; margin-bottom: 6px; }
 	code { background: var(--accent-soft); color: var(--accent); padding: 1px 5px; border-radius: 4px; }
+
+	.tabs { display: flex; gap: 4px; }
+	.tab {
+		font: inherit;
+		font-size: 14px;
+		color: var(--muted);
+		background: none;
+		border: 1px solid transparent;
+		border-radius: 8px;
+		padding: 4px 10px;
+		cursor: pointer;
+	}
+	.tab[aria-selected="true"] { color: var(--accent); background: var(--accent-soft); border-color: var(--accent); }
+
+	button.primary, button.plain {
+		font: inherit;
+		border-radius: 8px;
+		padding: 8px 12px;
+		cursor: pointer;
+		white-space: nowrap;
+	}
+	button.primary { background: var(--accent); color: var(--panel); border: 1px solid var(--accent); font-weight: 600; }
+	button.plain { background: var(--panel); color: var(--text); border: 1px solid var(--line); }
+	button.icon-btn {
+		font: inherit;
+		background: none;
+		border: none;
+		color: var(--muted);
+		cursor: pointer;
+		padding: 4px 6px;
+		border-radius: 6px;
+	}
+	button.icon-btn:hover { color: var(--text); background: var(--accent-soft); }
+
+	.project {
+		background: var(--panel);
+		border: 1px solid var(--line);
+		border-radius: 12px;
+		padding: 12px;
+		margin-bottom: 12px;
+	}
+	.project-head { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+	.project-head input.pname { flex: 1; min-width: 140px; font-weight: 600; font-size: 16px; }
+	.toggle { display: inline-flex; align-items: center; gap: 6px; font-size: 14px; color: var(--muted); cursor: pointer; user-select: none; }
+	.toggle input { accent-color: var(--accent); width: 16px; height: 16px; }
+	.progress { height: 6px; border-radius: 3px; background: var(--line); overflow: hidden; margin: 10px 0 4px; }
+	.progress div { height: 100%; background: var(--accent); }
+	.progress.done div { background: var(--good); }
+	.psum { font-size: 13px; color: var(--muted); font-variant-numeric: tabular-nums; }
+	.entries { margin-top: 8px; display: grid; gap: 4px; }
+	.entry { display: flex; align-items: center; gap: 10px; padding: 4px 0; border-top: 1px solid var(--line); }
+	.entry .info { min-width: 0; flex: 1; }
+	.entry .have { font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; }
+	.entry .have.ok { color: var(--good); }
+	.entry input.amount { flex: none; width: 92px; text-align: right; padding: 6px 8px; }
+	.adder { position: relative; margin-top: 8px; }
+	.adder input { width: 100%; }
+	.results {
+		position: absolute;
+		left: 0;
+		right: 0;
+		top: calc(100% + 4px);
+		z-index: 3;
+		max-height: 320px;
+		overflow-y: auto;
+		background: var(--panel);
+		border: 1px solid var(--line);
+		border-radius: 10px;
+		box-shadow: 0 8px 24px rgba(0, 0, 0, .18);
+	}
+	.result { display: flex; align-items: center; gap: 10px; padding: 6px 10px; cursor: pointer; }
+	.result:hover, .result.active { background: var(--accent-soft); }
+	.result .info { min-width: 0; flex: 1; }
+	.result .stock { font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; }
+	.toast {
+		position: fixed;
+		left: 50%;
+		bottom: 20px;
+		transform: translateX(-50%);
+		background: var(--text);
+		color: var(--bg);
+		padding: 8px 14px;
+		border-radius: 8px;
+		font-size: 14px;
+		z-index: 5;
+	}
 </style>
 </head>
 <body>
 <header>
 	<div class="top">
-		<h1>ME-Speicher</h1>
+		<div class="tabs" role="tablist">
+			<button class="tab" id="tab-items" role="tab" type="button">ME-Speicher</button>
+			<button class="tab" id="tab-projects" role="tab" type="button">Projekte</button>
+		</div>
 		<div class="stats" id="stats"></div>
 	</div>
-	<div class="controls">
-		<input id="search" type="search" placeholder="Suchen: Name, ID, Verzauberung, Trank …" autocomplete="off">
-		<select id="sort" aria-label="Sortierung">
-			<option value="count">Menge</option>
-			<option value="name">A–Z</option>
-		</select>
+	<div id="items-controls">
+		<div class="controls">
+			<input id="search" type="search" placeholder="Suchen: Name, ID, Verzauberung, Trank …" autocomplete="off">
+			<select id="sort" aria-label="Sortierung">
+				<option value="count">Menge</option>
+				<option value="name">A–Z</option>
+			</select>
+		</div>
+		<div class="chips" id="chips"></div>
 	</div>
-	<div class="chips" id="chips"></div>
+	<div id="projects-controls" hidden>
+		<form class="controls" id="new-project">
+			<input id="new-name" placeholder="Name für ein neues Projekt" maxlength="32" autocomplete="off">
+			<button class="primary" type="submit">Projekt anlegen</button>
+		</form>
+	</div>
 </header>
 <main>
-	<div class="grid" id="grid"></div>
+	<div id="items-view">
+		<div class="grid" id="grid"></div>
+	</div>
+	<div id="projects-view" hidden></div>
 	<div class="message" id="message" hidden></div>
 </main>
 <script>
 	"use strict";
 
-	// Vanilla textures are not on the server, so they come from a public copy of the game assets.
-	const ASSETS = "https://cdn.jsdelivr.net/gh/InventivetalentDev/minecraft-assets@1.21.4/assets/minecraft/textures/";
+	// Vanilla textures are not on the server, so they come from public copies of the game assets; mod items from the server.
+	const ASSETS = [
+		"https://cdn.jsdelivr.net/gh/InventivetalentDev/minecraft-assets@1.21.4/assets/minecraft/textures/",
+		"https://raw.githubusercontent.com/InventivetalentDev/minecraft-assets/1.21.4/assets/minecraft/textures/",
+		"https://assets.mcasset.cloud/1.21.4/assets/minecraft/textures/"
+	];
 	const REFRESH_MS = 10000;
 	const fmt = new Intl.NumberFormat("de-DE");
 
 	const el = id => document.getElementById(id);
-	const state = { items: [], category: "", search: "", sort: "count" };
+	const state = { view: "items", items: [], projects: [], catalog: null, category: "", search: "", sort: "count" };
 
 	function store(key, value) {
 		try {
@@ -214,12 +320,12 @@
 	}
 
 	state.sort = store("storagedim-sort") === "name" ? "name" : "count";
+	state.view = store("storagedim-view") === "projects" ? "projects" : "items";
 	el("sort").value = state.sort;
 
 	function short(n) {
 		if (n < 1000) return String(n);
-		const units = [["T", 1e12], ["B", 1e9], ["M", 1e6], ["k", 1e3]];
-		for (const [u, v] of units) {
+		for (const [u, v] of [["T", 1e12], ["B", 1e9], ["M", 1e6], ["k", 1e3]]) {
 			if (n >= v) {
 				const x = n / v;
 				return (x >= 100 ? Math.floor(x) : Math.floor(x * 10) / 10).toString().replace(".", ",") + u;
@@ -227,7 +333,17 @@
 		}
 	}
 
-	// Item id to the texture that loaded, or null when none did; avoids flicker and new requests on every refresh.
+	function toast(text) {
+		const t = document.createElement("div");
+		t.className = "toast";
+		t.textContent = text;
+		document.body.append(t);
+		setTimeout(() => t.remove(), 2500);
+	}
+
+	// ---- icons ----
+
+	// Icon id to the texture that loaded, or null when none did; avoids flicker and new requests on every refresh.
 	const icons = new Map();
 
 	function picture(url) {
@@ -238,44 +354,90 @@
 		return img;
 	}
 
-	function icon(item) {
-		const [ns, path] = item.id.split(":");
+	function iconUrls(icon) {
+		const [ns, path] = icon.split(":");
+		if (ns !== "minecraft") return ["icon/" + ns + "/" + path];
+		const names = ["item/" + path, "block/" + path, "block/" + path + "_side", "block/" + path + "_top", "block/" + path + "_front"];
+		return ASSETS.flatMap(base => names.map(n => base + n + ".png"));
+	}
 
-		if (icons.get(item.id)) return picture(icons.get(item.id));
+	function icon(item) {
+		const id = item.icon || item.id;
+		if (icons.get(id)) return picture(icons.get(id));
 
 		const box = document.createElement("div");
 		box.className = "letter";
 		box.textContent = item.name.charAt(0).toUpperCase();
 
-		if (ns !== "minecraft" || icons.has(item.id)) return box;
+		if (icons.has(id)) return box;
 
-		const tries = ["item/" + path, "block/" + path, "block/" + path + "_side", "block/" + path + "_top"].map(t => ASSETS + t + ".png");
+		const tries = iconUrls(id);
 		let i = 0;
 		const probe = new Image();
 		probe.onload = () => {
-			icons.set(item.id, tries[i]);
+			icons.set(id, tries[i]);
 			box.replaceWith(picture(tries[i]));
 		};
 		probe.onerror = () => {
 			if (++i < tries.length) probe.src = tries[i];
-			else icons.set(item.id, null);
+			else icons.set(id, null);
 		};
 		probe.src = tries[0];
 		return box;
 	}
 
-	function message(title, text) {
-		el("grid").replaceChildren();
+	function itemInfo(item, extra) {
+		const info = document.createElement("div");
+		info.className = "info";
+		const name = document.createElement("div");
+		name.className = "name";
+		name.textContent = item.name;
+		if (item.foil) name.style.color = "var(--foil)";
+		info.append(name);
+		const lines = item.details.slice();
+		if (extra) lines.unshift(extra);
+		if (lines.length) {
+			const d = document.createElement("div");
+			d.className = "details";
+			d.textContent = lines.join(" · ");
+			d.title = lines.join("\n");
+			info.append(d);
+		}
+		return info;
+	}
+
+	// ---- server ----
+
+	async function api(path, body) {
+		const res = await fetch("api/" + path, {
+			method: body ? "POST" : "GET",
+			headers: { Authorization: "Bearer " + token, "Content-Type": "application/json" },
+			body: body ? JSON.stringify(body) : undefined,
+			cache: "no-store"
+		});
+		let data = {};
+		try { data = await res.json(); } catch (e) { /* empty answer */ }
+		if (res.status === 401) throw Object.assign(new Error("401"), { unauthorized: true });
+		if (!res.ok || data.error) throw new Error(data.error || "Server antwortet nicht");
+		return data;
+	}
+
+	function message(title, html) {
 		const m = el("message");
 		m.hidden = false;
 		m.innerHTML = "";
 		const strong = document.createElement("strong");
 		strong.textContent = title;
-		m.append(strong);
 		const p = document.createElement("span");
-		p.innerHTML = text;
-		m.append(p);
+		p.innerHTML = html;
+		m.append(strong, p);
 	}
+
+	function clearMessage() {
+		el("message").hidden = true;
+	}
+
+	// ---- storage view ----
 
 	function matches(item, q) {
 		if (!q) return true;
@@ -298,47 +460,28 @@
 			const s = document.createElement("small");
 			s.textContent = n;
 			b.append(s);
-			b.onclick = () => { state.category = value; render(); };
+			b.onclick = () => { state.category = value; renderItems(); };
 			return b;
 		}));
 	}
 
-	function render() {
+	function renderItems() {
 		renderChips();
 		const q = state.search.trim().toLowerCase();
 		let list = state.items.filter(i => (!state.category || i.category === state.category) && matches(i, q));
 
 		if (state.sort === "name") list = list.slice().sort((a, b) => a.name.localeCompare(b.name, "de"));
 
-		if (state.items.length === 0) {
-			message("Der Speicher ist leer", "Lagere im Spiel etwas ein, dann taucht es hier auf.");
-			return;
-		}
+		el("grid").replaceChildren();
 
-		if (list.length === 0) {
-			message("Nichts gefunden", "Versuch es mit einem anderen Suchbegriff oder einer anderen Abteilung.");
-			return;
-		}
+		if (state.items.length === 0) return message("Der Speicher ist leer", "Lagere im Spiel etwas ein, dann taucht es hier auf.");
+		if (list.length === 0) return message("Nichts gefunden", "Versuch es mit einem anderen Suchbegriff oder einer anderen Abteilung.");
 
-		el("message").hidden = true;
+		clearMessage();
 		el("grid").replaceChildren(...list.map(item => {
 			const row = document.createElement("div");
-			row.className = "item" + (item.foil ? " foil" : "");
+			row.className = "item";
 			row.title = item.id;
-			const info = document.createElement("div");
-			info.className = "info";
-			const name = document.createElement("div");
-			name.className = "name";
-			name.textContent = item.name;
-			info.append(name);
-
-			if (item.details.length) {
-				const d = document.createElement("div");
-				d.className = "details";
-				d.textContent = item.details.join(" · ");
-				d.title = item.details.join("\n");
-				info.append(d);
-			}
 
 			const count = document.createElement("div");
 			count.className = "count";
@@ -357,38 +500,267 @@
 				count.append(s);
 			}
 
-			row.append(icon(item), info, count);
+			row.append(icon(item), itemInfo(item), count);
 			return row;
 		}));
 	}
 
-	async function load() {
-		if (!token) {
-			message("Kein Zugang", "Gib im Spiel <code>/storage web</code> ein und öffne den Link, den du bekommst.");
-			return;
-		}
+	// ---- projects view ----
 
+	function stockOf(key) {
+		const item = state.items.find(i => i.key === key);
+		return item ? item.count : 0;
+	}
+
+	async function change(body) {
 		try {
-			const res = await fetch("api/items", { headers: { Authorization: "Bearer " + token }, cache: "no-store" });
-			const data = await res.json();
-
-			if (!res.ok || data.error) {
-				if (res.status === 401) message("Link ungültig", "Gib im Spiel <code>/storage web</code> ein und öffne den neuen Link.");
-				else el("stats").textContent = data.error || "Server antwortet nicht";
-				return;
-			}
-
-			state.items = data.items;
-			el("stats").textContent = fmt.format(data.types) + " Sorten · " + fmt.format(data.total) + " Items" + (data.shared ? " · gemeinsamer Speicher" : "");
-			render();
+			const data = await api("projects", body);
+			state.projects = data.projects;
+			renderProjects();
+			return true;
 		} catch (e) {
-			el("stats").textContent = "Server nicht erreichbar, versuche es gleich wieder …";
+			toast(e.message);
+			return false;
 		}
 	}
 
-	el("search").addEventListener("input", e => { state.search = e.target.value; render(); });
-	el("sort").addEventListener("change", e => { state.sort = e.target.value; store("storagedim-sort", state.sort); render(); });
+	function amountInput(project, entry) {
+		const input = document.createElement("input");
+		input.className = "amount";
+		input.type = "number";
+		input.min = "0";
+		input.step = "1";
+		input.value = entry.target;
+		input.setAttribute("aria-label", "Menge");
+		input.onchange = () => {
+			const target = Math.max(0, Math.floor(Number(input.value) || 0));
+			change({ action: "set", id: project.id, key: entry.key, target });
+		};
+		return input;
+	}
 
+	function adder(project) {
+		const box = document.createElement("div");
+		box.className = "adder";
+		const input = document.createElement("input");
+		input.type = "search";
+		input.placeholder = "Item hinzufügen: suchen …";
+		input.autocomplete = "off";
+		const results = document.createElement("div");
+		results.className = "results";
+		results.hidden = true;
+		box.append(input, results);
+
+		let active = 0;
+		let shown = [];
+
+		function pick(item) {
+			const existing = project.entries.find(e => e.key === item.key);
+			change({ action: "set", id: project.id, key: item.key, target: (existing ? existing.target : 0) + 64 });
+			input.value = "";
+			results.hidden = true;
+		}
+
+		async function update() {
+			const q = input.value.trim().toLowerCase();
+			if (!q) { results.hidden = true; return; }
+			if (!state.catalog) {
+				results.hidden = false;
+				results.textContent = "Lade Items …";
+				try {
+					state.catalog = (await api("catalog")).items;
+				} catch (e) {
+					results.textContent = e.message;
+					return;
+				}
+			}
+			// Stored items first (they carry their exact components), then the rest of the game.
+			const seen = new Set();
+			shown = [];
+			for (const item of [...state.items, ...state.catalog]) {
+				if (shown.length >= 40) break;
+				if (seen.has(item.key) || !matches(item, q)) continue;
+				seen.add(item.key);
+				shown.push(item);
+			}
+			active = 0;
+			results.hidden = false;
+			if (!shown.length) { results.textContent = "Nichts gefunden"; return; }
+			results.replaceChildren(...shown.map((item, i) => {
+				const row = document.createElement("div");
+				row.className = "result" + (i === active ? " active" : "");
+				const stock = document.createElement("div");
+				stock.className = "stock";
+				stock.textContent = "im ME: " + fmt.format(stockOf(item.key));
+				row.append(icon(item), itemInfo(item), stock);
+				row.onmousedown = e => { e.preventDefault(); pick(item); };
+				return row;
+			}));
+		}
+
+		input.addEventListener("input", update);
+		input.addEventListener("blur", () => setTimeout(() => { results.hidden = true; }, 150));
+		input.addEventListener("keydown", e => {
+			if (results.hidden || !shown.length) return;
+			if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+				e.preventDefault();
+				active = (active + (e.key === "ArrowDown" ? 1 : shown.length - 1)) % shown.length;
+				[...results.children].forEach((c, i) => c.classList.toggle("active", i === active));
+				results.children[active].scrollIntoView({ block: "nearest" });
+			} else if (e.key === "Enter") {
+				e.preventDefault();
+				pick(shown[active]);
+			} else if (e.key === "Escape") {
+				results.hidden = true;
+			}
+		});
+		return box;
+	}
+
+	function renderProject(project) {
+		const card = document.createElement("section");
+		card.className = "project";
+		card.dataset.id = project.id;
+
+		const head = document.createElement("div");
+		head.className = "project-head";
+		const name = document.createElement("input");
+		name.className = "pname";
+		name.value = project.name;
+		name.maxLength = 32;
+		name.setAttribute("aria-label", "Projektname");
+		name.onchange = () => {
+			if (name.value.trim()) change({ action: "name", id: project.id, name: name.value });
+			else name.value = project.name;
+		};
+		const toggle = document.createElement("label");
+		toggle.className = "toggle";
+		toggle.title = "Die Mengen bleiben für das Projekt im ME-Speicher, woanders lässt sich nur der Rest herausnehmen.";
+		const check = document.createElement("input");
+		check.type = "checkbox";
+		check.checked = project.block;
+		check.onchange = () => change({ action: "block", id: project.id, block: check.checked });
+		toggle.append(check, "Im ME blocken");
+		head.append(name, toggle);
+
+		let need = 0;
+		let have = 0;
+		for (const e of project.entries) {
+			need += e.target;
+			have += Math.min(e.target, e.have);
+		}
+		const done = need > 0 && have >= need;
+		const bar = document.createElement("div");
+		bar.className = "progress" + (done ? " done" : "");
+		const fill = document.createElement("div");
+		fill.style.width = (need ? Math.round(have / need * 100) : 0) + "%";
+		bar.append(fill);
+		const sum = document.createElement("div");
+		sum.className = "psum";
+		sum.textContent = project.entries.length
+			? project.entries.length + (project.entries.length === 1 ? " Item" : " Items") + " · " + fmt.format(have) + " von " + fmt.format(need) + " da" + (done ? " · fertig" : "")
+			: "Noch keine Items. Füge unten welche hinzu.";
+
+		const entries = document.createElement("div");
+		entries.className = "entries";
+		for (const entry of project.entries) {
+			const row = document.createElement("div");
+			row.className = "entry";
+			const missing = entry.target - entry.have;
+			const remove = document.createElement("button");
+			remove.className = "icon-btn";
+			remove.type = "button";
+			remove.textContent = "✕";
+			remove.title = "Entfernen";
+			remove.onclick = () => change({ action: "set", id: project.id, key: entry.key, target: 0 });
+			const info = itemInfo(entry);
+			const h = document.createElement("div");
+			h.className = "have" + (missing <= 0 ? " ok" : "");
+			h.textContent = "im ME: " + fmt.format(entry.have) + (missing > 0 ? " · fehlt " + fmt.format(missing) : " · alles da");
+			info.append(h);
+			row.append(icon(entry), info, amountInput(project, entry), remove);
+			entries.append(row);
+		}
+
+		card.append(head, bar, sum, entries, adder(project));
+		return card;
+	}
+
+	function renderProjects() {
+		const view = el("projects-view");
+		if (!state.projects.length) {
+			view.replaceChildren();
+			return message("Noch keine Projekte", "Leg oben eins an. Es steht dann auch in der Eingangshalle der Bibliothek.");
+		}
+		clearMessage();
+		view.replaceChildren(...state.projects.map(renderProject));
+	}
+
+	// ---- loading ----
+
+	function renderStats() {
+		if (state.view === "items") {
+			el("stats").textContent = state.total === undefined ? "" : fmt.format(state.types) + " Sorten · " + fmt.format(state.total) + " Items" + (state.shared ? " · gemeinsamer Speicher" : "");
+		} else {
+			el("stats").textContent = state.projects.length + (state.projects.length === 1 ? " Projekt" : " Projekte");
+		}
+	}
+
+	function editing() {
+		const a = document.activeElement;
+		return a && el("projects-view").contains(a) && (a.tagName === "INPUT");
+	}
+
+	async function load() {
+		if (!token) return message("Kein Zugang", "Gib im Spiel <code>/storage web</code> ein und öffne den Link, den du bekommst.");
+
+		try {
+			const [items, projects] = await Promise.all([api("items"), api("projects")]);
+			state.items = items.items;
+			state.types = items.types;
+			state.total = items.total;
+			state.shared = items.shared;
+			state.projects = projects.projects;
+			renderStats();
+			if (state.view === "items") renderItems();
+			else if (!editing()) renderProjects();
+		} catch (e) {
+			if (e.unauthorized) message("Link ungültig", "Gib im Spiel <code>/storage web</code> ein und öffne den neuen Link.");
+			else el("stats").textContent = "Server nicht erreichbar, versuche es gleich wieder …";
+		}
+	}
+
+	function show(view) {
+		state.view = view;
+		store("storagedim-view", view);
+		el("tab-items").setAttribute("aria-selected", String(view === "items"));
+		el("tab-projects").setAttribute("aria-selected", String(view === "projects"));
+		el("items-controls").hidden = view !== "items";
+		el("items-view").hidden = view !== "items";
+		el("projects-controls").hidden = view !== "projects";
+		el("projects-view").hidden = view !== "projects";
+		document.title = view === "items" ? "ME-Speicher" : "Projekte";
+		renderStats();
+		if (state.total === undefined) return;
+		if (view === "items") renderItems();
+		else renderProjects();
+	}
+
+	el("tab-items").onclick = () => show("items");
+	el("tab-projects").onclick = () => show("projects");
+	el("search").addEventListener("input", e => { state.search = e.target.value; renderItems(); });
+	el("sort").addEventListener("change", e => { state.sort = e.target.value; store("storagedim-sort", state.sort); renderItems(); });
+	el("new-project").addEventListener("submit", async e => {
+		e.preventDefault();
+		const name = el("new-name").value.trim();
+		if (await change({ action: "create", name })) {
+			el("new-name").value = "";
+			renderStats();
+			toast("Projekt angelegt");
+		}
+	});
+
+	show(state.view);
 	load();
 	setInterval(() => { if (!document.hidden) load(); }, REFRESH_MS);
 	document.addEventListener("visibilitychange", () => { if (!document.hidden) load(); });

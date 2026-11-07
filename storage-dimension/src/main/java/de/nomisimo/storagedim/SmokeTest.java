@@ -90,6 +90,10 @@ final class SmokeTest {
 				if (status(port, "/api/items", "Bearer falsch") != 401) {
 					errors.add("ME-Webansicht nimmt einen falschen Link an");
 				}
+
+				if (status(port, "/icon/storagedim/robot", null) != 200) {
+					errors.add("ME-Webansicht liefert kein Bild für Mod-Items");
+				}
 			}
 		} catch (Throwable t) {
 			StorageDimensionMod.LOGGER.error("SMOKETEST Ausnahme", t);
