@@ -27,6 +27,15 @@ public final class StorageConfig {
 	/** Server. true: a chest a robot puts something into also makes its opening and closing sound (the lid moves either way). */
 	public boolean robotChestSound = false;
 
+	/** Server. Port of the ME web view ({@code /storage web}); 0 switches it off. */
+	public int webPort = 8765;
+
+	/**
+	 * Server. Address players open the web view at, e.g. "mc.example.de" or "123.45.67.89" (without port).
+	 * Empty: the server-ip from server.properties, or "localhost".
+	 */
+	public String webAddress = "";
+
 	public static StorageConfig get() {
 		if (instance == null) {
 			load();
@@ -42,6 +51,11 @@ public final class StorageConfig {
 			if (Files.exists(file)) {
 				try (Reader reader = Files.newBufferedReader(file, StandardCharsets.UTF_8)) {
 					instance = GSON.fromJson(reader, StorageConfig.class);
+				}
+
+				if (instance != null) {
+					// Adds settings that are new in this version to the file, so they can be found.
+					save();
 				}
 			}
 		} catch (Exception e) {
