@@ -9,7 +9,7 @@ Ein Fabric-Mod für **Minecraft 26.1.2**: eine Bibliothek voller Kisten in einer
 ## Inhalt
 
 - [Installation](#installation)
-- [Speicher](#speicher): Dimensionskiste und Bibliothek, ME-Speicher, ME-Terminal, Filterkiste, Projektkiste, Trichter und Maschinen
+- [Speicher](#speicher): Dimensionskiste und Bibliothek, ME-Speicher, ME-Terminal, ME-Speicher im Browser, Filterkiste, Projektkiste, Trichter und Maschinen
 - [Sammelroboter](#sammelroboter): Roboter, Roboter-Station, Rückruf, Roboter-Barriere, Antennen und Fernbedienung
 - [ME-Rucksack und Traveler's Backpack](#me-rucksack-und-travelers-backpack)
 - [Rezepte](#rezepte)
@@ -68,6 +68,16 @@ Alle Items liegen ohne Stapel- oder Slot-Grenzen im ME-Speicher. Die genaue Meng
 ### ME-Terminal
 
 Eine uralte Kiste aus Tiefenschiefer mit Sculk-Rune. Hingestellt öffnet sie per Rechtsklick direkt den ME-Speicher, ohne Dimensionswechsel.
+
+### ME-Speicher im Browser
+
+Der Server zeigt den Inhalt des ME-Speichers auch als Webseite, z. B. auf dem Handy neben dem Spiel.
+
+- `/storage web` schickt dir einen anklickbaren Link (`http://<adresse>:8765/#…`). Die Seite zeigt alle Items mit Menge, Abteilung, Verzauberungen und Trank-Wirkung, hat eine Suche, Sortierung nach Menge oder A–Z und Filter nach Abteilung. Sie aktualisiert sich alle 10 Sekunden.
+- Die Seite zeigt nur an, herausnehmen oder einlagern geht dort nicht.
+- Jeder Spieler sieht den Speicher, den er auch im Spiel benutzt. Der Link ist geheim: Wer ihn hat, sieht deinen Speicher. `/storage web neu` macht einen neuen Link, der alte geht dann nicht mehr. Die Links liegen in `world/storagedim-web.json`.
+- **Für den Server:** Der Port (`webPort`, Standard 8765) muss von außen erreichbar sein, bei einem Hoster also als zusätzlicher Port freigegeben. In `webAddress` gehört die Adresse, unter der die Spieler den Server erreichen (ohne Port), sonst steht im Link `localhost`. Mit `webPort = 0` ist die Webseite aus.
+- Item-Bilder kommen aus einer öffentlichen Kopie der Minecraft-Texturen (jsDelivr). Ohne Internet oder bei Items anderer Mods steht statt des Bilds der Anfangsbuchstabe. Item-Namen sind auf Englisch, weil der Server nur die englischen Namen kennt.
 
 ### Filterkiste
 
@@ -281,6 +291,8 @@ Alle Rezepte stehen auch in [JEI](https://modrinth.com/mod/jei), auch auf Server
 | --- | --- |
 | `/storage` | Infos zum eigenen Speicher |
 | `/storage raus` | Verlässt die Bibliothek |
+| `/storage web` | Link zum ME-Speicher im Browser ([mehr](#me-speicher-im-browser)) |
+| `/storage web neu` | Neuer Link, der alte geht dann nicht mehr |
 | `/storage me` | Öffnet den ME-Speicher, wenn du einen ME-Rucksack trägst oder dabeihast |
 | `/storage teilen <spieler>` | Lädt jemanden in deinen Speicher ein (nur ohne gemeinsamen Speicher) |
 | `/storage annehmen` | Nimmt eine Einladung an. Dein eigener Speicher bleibt erhalten. |
@@ -305,6 +317,8 @@ In `config/storagedim.json`:
 | --- | --- | --- |
 | `sharedStorage` | `true` | Alle Spieler teilen sich einen Speicher und eine Bibliothek. Mit `false` bekommt jeder seinen eigenen, der sich per `/storage teilen` freigeben lässt (auf dem Server). |
 | `robotChestSound` | `false` | Geht eine Kiste beim Einlagern durch einen Roboter auf, ist sie standardmäßig still (nur der Deckel bewegt sich). Mit `true` macht sie dabei das Öffnen- und Schließen-Geräusch (auf dem Server). |
+| `webPort` | `8765` | Port der [Webansicht](#me-speicher-im-browser) (auf dem Server). `0` schaltet sie aus. |
+| `webAddress` | `""` | Adresse des Servers für den Link von `/storage web`, z. B. `mc.example.de` (ohne Port). Leer: `localhost`. |
 | `jeiSearchSync` | `false` | Schalter **J**: Suche im ME-Speicher mit der JEI-Suchleiste koppeln (beim Spieler, lässt sich im Fenster umschalten). |
 
 ## Selbst bauen

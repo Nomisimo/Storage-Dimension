@@ -1,0 +1,397 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="referrer" content="no-referrer">
+<title>ME-Speicher</title>
+<style>
+	:root {
+		--bg: #f4f1ea;
+		--panel: #fffdf8;
+		--text: #2a2620;
+		--muted: #776f63;
+		--line: #e2dccf;
+		--accent: #6b3fa0;
+		--accent-soft: #ece3f7;
+		--foil: #9b59d0;
+		color-scheme: light;
+	}
+
+	@media (prefers-color-scheme: dark) {
+		:root {
+			--bg: #17151c;
+			--panel: #211e28;
+			--text: #ece8f2;
+			--muted: #9a93a8;
+			--line: #322d3c;
+			--accent: #b78cf0;
+			--accent-soft: #2e2540;
+			--foil: #c69bff;
+			color-scheme: dark;
+		}
+	}
+
+	* { box-sizing: border-box; }
+
+	body {
+		margin: 0;
+		background: var(--bg);
+		color: var(--text);
+		font: 15px/1.4 system-ui, -apple-system, "Segoe UI", sans-serif;
+	}
+
+	header {
+		position: sticky;
+		top: 0;
+		z-index: 2;
+		background: var(--bg);
+		border-bottom: 1px solid var(--line);
+		padding: 14px 16px 10px;
+	}
+
+	.top {
+		display: flex;
+		align-items: baseline;
+		justify-content: space-between;
+		gap: 12px;
+		flex-wrap: wrap;
+		max-width: 1100px;
+		margin: 0 auto;
+	}
+
+	h1 { margin: 0; font-size: 20px; }
+	.stats { color: var(--muted); font-size: 14px; font-variant-numeric: tabular-nums; }
+
+	.controls {
+		display: flex;
+		gap: 8px;
+		max-width: 1100px;
+		margin: 10px auto 0;
+	}
+
+	input, select {
+		font: inherit;
+		color: inherit;
+		background: var(--panel);
+		border: 1px solid var(--line);
+		border-radius: 8px;
+		padding: 8px 10px;
+	}
+
+	input { flex: 1; min-width: 0; }
+	input:focus, select:focus { outline: 2px solid var(--accent); outline-offset: -1px; }
+
+	.chips {
+		display: flex;
+		gap: 6px;
+		overflow-x: auto;
+		max-width: 1100px;
+		margin: 10px auto 0;
+		padding-bottom: 2px;
+		scrollbar-width: thin;
+	}
+
+	.chip {
+		flex: none;
+		font: inherit;
+		font-size: 13px;
+		color: var(--text);
+		background: var(--panel);
+		border: 1px solid var(--line);
+		border-radius: 999px;
+		padding: 4px 10px;
+		cursor: pointer;
+	}
+
+	.chip[aria-pressed="true"] { background: var(--accent-soft); border-color: var(--accent); color: var(--accent); }
+	.chip small { color: var(--muted); margin-left: 4px; }
+
+	main { max-width: 1100px; margin: 0 auto; padding: 12px 16px 40px; }
+
+	.grid {
+		display: grid;
+		grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+		gap: 8px;
+	}
+
+	.item {
+		display: flex;
+		align-items: center;
+		gap: 10px;
+		background: var(--panel);
+		border: 1px solid var(--line);
+		border-radius: 10px;
+		padding: 8px 10px;
+		min-width: 0;
+	}
+
+	.icon {
+		flex: none;
+		width: 32px;
+		height: 32px;
+		image-rendering: pixelated;
+	}
+
+	.letter {
+		flex: none;
+		width: 32px;
+		height: 32px;
+		border-radius: 6px;
+		display: grid;
+		place-items: center;
+		font-weight: 700;
+		color: var(--accent);
+		background: var(--accent-soft);
+	}
+
+	.info { min-width: 0; flex: 1; }
+	.name { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+	.item.foil .name { color: var(--foil); }
+	.details { color: var(--muted); font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+	.count {
+		flex: none;
+		text-align: right;
+		font-weight: 600;
+		font-variant-numeric: tabular-nums;
+	}
+
+	.count small { display: block; font-weight: 400; color: var(--muted); font-size: 11px; }
+
+	.message { text-align: center; color: var(--muted); padding: 48px 16px; }
+	.message strong { display: block; color: var(--text); font-size: 17px; margin-bottom: 6px; }
+	code { background: var(--accent-soft); color: var(--accent); padding: 1px 5px; border-radius: 4px; }
+</style>
+</head>
+<body>
+<header>
+	<div class="top">
+		<h1>ME-Speicher</h1>
+		<div class="stats" id="stats"></div>
+	</div>
+	<div class="controls">
+		<input id="search" type="search" placeholder="Suchen: Name, ID, Verzauberung, Trank …" autocomplete="off">
+		<select id="sort" aria-label="Sortierung">
+			<option value="count">Menge</option>
+			<option value="name">A–Z</option>
+		</select>
+	</div>
+	<div class="chips" id="chips"></div>
+</header>
+<main>
+	<div class="grid" id="grid"></div>
+	<div class="message" id="message" hidden></div>
+</main>
+<script>
+	"use strict";
+
+	// Vanilla textures are not on the server, so they come from a public copy of the game assets.
+	const ASSETS = "https://cdn.jsdelivr.net/gh/InventivetalentDev/minecraft-assets@1.21.4/assets/minecraft/textures/";
+	const REFRESH_MS = 10000;
+	const fmt = new Intl.NumberFormat("de-DE");
+
+	const el = id => document.getElementById(id);
+	const state = { items: [], category: "", search: "", sort: "count" };
+
+	function store(key, value) {
+		try {
+			if (value === undefined) return localStorage.getItem(key);
+			localStorage.setItem(key, value);
+		} catch (e) {
+			return null;
+		}
+	}
+
+	// The link from /storage web carries the token after "#"; it is kept so a bookmark without it still works.
+	let token = location.hash.slice(1);
+
+	if (token) {
+		store("storagedim-token", token);
+		history.replaceState(null, "", location.pathname);
+	} else {
+		token = store("storagedim-token") || "";
+	}
+
+	state.sort = store("storagedim-sort") === "name" ? "name" : "count";
+	el("sort").value = state.sort;
+
+	function short(n) {
+		if (n < 1000) return String(n);
+		const units = [["T", 1e12], ["B", 1e9], ["M", 1e6], ["k", 1e3]];
+		for (const [u, v] of units) {
+			if (n >= v) {
+				const x = n / v;
+				return (x >= 100 ? Math.floor(x) : Math.floor(x * 10) / 10).toString().replace(".", ",") + u;
+			}
+		}
+	}
+
+	// Item id to the texture that loaded, or null when none did; avoids flicker and new requests on every refresh.
+	const icons = new Map();
+
+	function picture(url) {
+		const img = document.createElement("img");
+		img.className = "icon";
+		img.alt = "";
+		img.src = url;
+		return img;
+	}
+
+	function icon(item) {
+		const [ns, path] = item.id.split(":");
+
+		if (icons.get(item.id)) return picture(icons.get(item.id));
+
+		const box = document.createElement("div");
+		box.className = "letter";
+		box.textContent = item.name.charAt(0).toUpperCase();
+
+		if (ns !== "minecraft" || icons.has(item.id)) return box;
+
+		const tries = ["item/" + path, "block/" + path, "block/" + path + "_side", "block/" + path + "_top"].map(t => ASSETS + t + ".png");
+		let i = 0;
+		const probe = new Image();
+		probe.onload = () => {
+			icons.set(item.id, tries[i]);
+			box.replaceWith(picture(tries[i]));
+		};
+		probe.onerror = () => {
+			if (++i < tries.length) probe.src = tries[i];
+			else icons.set(item.id, null);
+		};
+		probe.src = tries[0];
+		return box;
+	}
+
+	function message(title, text) {
+		el("grid").replaceChildren();
+		const m = el("message");
+		m.hidden = false;
+		m.innerHTML = "";
+		const strong = document.createElement("strong");
+		strong.textContent = title;
+		m.append(strong);
+		const p = document.createElement("span");
+		p.innerHTML = text;
+		m.append(p);
+	}
+
+	function matches(item, q) {
+		if (!q) return true;
+		return item.name.toLowerCase().includes(q) || item.id.includes(q) || item.details.some(d => d.toLowerCase().includes(q));
+	}
+
+	function renderChips() {
+		const counts = new Map();
+		for (const item of state.items) counts.set(item.category, (counts.get(item.category) || 0) + 1);
+		const chips = [["", "Alle", state.items.length], ...[...counts.entries()].sort((a, b) => a[0].localeCompare(b[0], "de")).map(([c, n]) => [c, c, n])];
+
+		if (state.category && !counts.has(state.category)) state.category = "";
+
+		el("chips").replaceChildren(...chips.map(([value, label, n]) => {
+			const b = document.createElement("button");
+			b.className = "chip";
+			b.type = "button";
+			b.setAttribute("aria-pressed", String(value === state.category));
+			b.append(label);
+			const s = document.createElement("small");
+			s.textContent = n;
+			b.append(s);
+			b.onclick = () => { state.category = value; render(); };
+			return b;
+		}));
+	}
+
+	function render() {
+		renderChips();
+		const q = state.search.trim().toLowerCase();
+		let list = state.items.filter(i => (!state.category || i.category === state.category) && matches(i, q));
+
+		if (state.sort === "name") list = list.slice().sort((a, b) => a.name.localeCompare(b.name, "de"));
+
+		if (state.items.length === 0) {
+			message("Der Speicher ist leer", "Lagere im Spiel etwas ein, dann taucht es hier auf.");
+			return;
+		}
+
+		if (list.length === 0) {
+			message("Nichts gefunden", "Versuch es mit einem anderen Suchbegriff oder einer anderen Abteilung.");
+			return;
+		}
+
+		el("message").hidden = true;
+		el("grid").replaceChildren(...list.map(item => {
+			const row = document.createElement("div");
+			row.className = "item" + (item.foil ? " foil" : "");
+			row.title = item.id;
+			const info = document.createElement("div");
+			info.className = "info";
+			const name = document.createElement("div");
+			name.className = "name";
+			name.textContent = item.name;
+			info.append(name);
+
+			if (item.details.length) {
+				const d = document.createElement("div");
+				d.className = "details";
+				d.textContent = item.details.join(" · ");
+				d.title = item.details.join("\n");
+				info.append(d);
+			}
+
+			const count = document.createElement("div");
+			count.className = "count";
+			count.textContent = short(item.count);
+			count.title = fmt.format(item.count);
+
+			if (item.count >= 1000) {
+				const s = document.createElement("small");
+				s.textContent = fmt.format(item.count);
+				count.append(s);
+			}
+
+			if (item.available < item.count) {
+				const s = document.createElement("small");
+				s.textContent = fmt.format(item.count - item.available) + " für Projekte";
+				count.append(s);
+			}
+
+			row.append(icon(item), info, count);
+			return row;
+		}));
+	}
+
+	async function load() {
+		if (!token) {
+			message("Kein Zugang", "Gib im Spiel <code>/storage web</code> ein und öffne den Link, den du bekommst.");
+			return;
+		}
+
+		try {
+			const res = await fetch("api/items", { headers: { Authorization: "Bearer " + token }, cache: "no-store" });
+			const data = await res.json();
+
+			if (!res.ok || data.error) {
+				if (res.status === 401) message("Link ungültig", "Gib im Spiel <code>/storage web</code> ein und öffne den neuen Link.");
+				else el("stats").textContent = data.error || "Server antwortet nicht";
+				return;
+			}
+
+			state.items = data.items;
+			el("stats").textContent = fmt.format(data.types) + " Sorten · " + fmt.format(data.total) + " Items" + (data.shared ? " · gemeinsamer Speicher" : "");
+			render();
+		} catch (e) {
+			el("stats").textContent = "Server nicht erreichbar, versuche es gleich wieder …";
+		}
+	}
+
+	el("search").addEventListener("input", e => { state.search = e.target.value; render(); });
+	el("sort").addEventListener("change", e => { state.sort = e.target.value; store("storagedim-sort", state.sort); render(); });
+
+	load();
+	setInterval(() => { if (!document.hidden) load(); }, REFRESH_MS);
+	document.addEventListener("visibilitychange", () => { if (!document.hidden) load(); });
+</script>
+</body>
+</html>

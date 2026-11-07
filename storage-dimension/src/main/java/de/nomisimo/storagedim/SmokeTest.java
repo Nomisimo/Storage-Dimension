@@ -76,6 +76,21 @@ final class SmokeTest {
 					errors.add("Rezept fehlt: " + recipe);
 				}
 			}
+
+			int port = de.nomisimo.storagedim.web.WebView.port();
+
+			if (port == 0) {
+				errors.add("ME-Webansicht läuft nicht");
+			} else {
+				if (status(port, "/", null) != 200) {
+					errors.add("ME-Webansicht liefert keine Seite");
+				}
+
+				// A wrong token must not show anything; a valid one would wait for this (the server) thread.
+				if (status(port, "/api/items", "Bearer falsch") != 401) {
+					errors.add("ME-Webansicht nimmt einen falschen Link an");
+				}
+			}
 		} catch (Throwable t) {
 			StorageDimensionMod.LOGGER.error("SMOKETEST Ausnahme", t);
 			errors.add(t.toString());
@@ -87,6 +102,23 @@ final class SmokeTest {
 		} else {
 			errors.forEach(e -> StorageDimensionMod.LOGGER.error("SMOKETEST FEHLER: {}", e));
 			Runtime.getRuntime().halt(1);
+		}
+	}
+
+	private static int status(int port, String path, String auth) throws java.io.IOException {
+		java.net.HttpURLConnection connection = (java.net.HttpURLConnection) java.net.URI.create("http://127.0.0.1:" + port + path).toURL()
+				.openConnection(java.net.Proxy.NO_PROXY);
+		connection.setConnectTimeout(5000);
+		connection.setReadTimeout(5000);
+
+		if (auth != null) {
+			connection.setRequestProperty("Authorization", auth);
+		}
+
+		try {
+			return connection.getResponseCode();
+		} finally {
+			connection.disconnect();
 		}
 	}
 }
