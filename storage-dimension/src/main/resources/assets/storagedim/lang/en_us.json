@@ -9,5 +9,6 @@
 	"config.jade.plugin_storagedim.robot_station": "Robot station",
 	"block.storagedim.antenna": "Antenna",
 	"item.storagedim.antenna": "Antenna",
-	"item.storagedim.remote": "Remote"
+	"item.storagedim.remote": "Remote",
+	"itemGroup.storagedim.main": "Storage Dimension"
 }

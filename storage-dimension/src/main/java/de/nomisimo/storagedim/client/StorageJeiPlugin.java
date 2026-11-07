@@ -20,6 +20,9 @@ import mezz.jei.api.gui.handlers.IGuiContainerHandler;
 import mezz.jei.api.ingredients.ITypedIngredient;
 import mezz.jei.api.registration.IGuiHandlerRegistration;
 import mezz.jei.api.registration.IRecipeRegistration;
+import mezz.jei.api.registration.ISubtypeRegistration;
+import mezz.jei.api.ingredients.subtypes.ISubtypeInterpreter;
+import mezz.jei.api.ingredients.subtypes.UidContext;
 import mezz.jei.api.runtime.IJeiRuntime;
 import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.client.Minecraft;
@@ -28,7 +31,13 @@ import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.Identifier;
 import net.minecraft.resources.RegistryOps;
 import net.minecraft.resources.ResourceKey;
+import net.minecraft.core.component.DataComponents;
+import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
+import net.minecraft.world.item.component.CustomData;
+import de.nomisimo.storagedim.storage.Projects;
+import de.nomisimo.storagedim.storage.StorageItems;
 import net.minecraft.world.item.crafting.CraftingRecipe;
 import net.minecraft.world.item.crafting.Recipe;
 import net.minecraft.world.item.crafting.RecipeHolder;
@@ -45,6 +54,53 @@ public class StorageJeiPlugin implements IModPlugin {
 	public Identifier getPluginUid() {
 		return Identifier.fromNamespaceAndPath("storagedim", "jei");
 	}
+
+	/**
+	 * The dimension chest, filter chest, project chest, terminal, ME upgrade and ME backpack are vanilla chests, ender chests,
+	 * paper and bundles with a marker in their custom data. Without a subtype JEI takes them for the plain vanilla item:
+	 * they would not show up in its list and "R" on them would show the vanilla recipes.
+	 */
+	@Override
+	public void registerItemSubtypes(ISubtypeRegistration registration) {
+		for (Item item : List.of(Items.CHEST, Items.ENDER_CHEST, Items.PAPER, Items.BUNDLE)) {
+			try {
+				registration.registerSubtypeInterpreter(item, MARKER);
+			} catch (RuntimeException e) {
+				StorageDimensionMod.LOGGER.warn("JEI: Untertypen für {} nicht registriert", item, e);
+			}
+		}
+	}
+
+	private static final List<String> MARKERS = List.of(StorageItems.CHEST_TAG, StorageItems.TERMINAL_TAG, StorageItems.FILTER_TAG,
+			Projects.ID_KEY, StorageItems.UPGRADE_TAG, StorageItems.BACKPACK_TAG);
+
+	/** Our marker key, or null for the plain vanilla item. */
+	private static final ISubtypeInterpreter<ItemStack> MARKER = new ISubtypeInterpreter<>() {
+		@Override
+		public Object getSubtypeData(ItemStack stack, UidContext context) {
+			CustomData data = stack.get(DataComponents.CUSTOM_DATA);
+
+			if (data == null) {
+				return null;
+			}
+
+			var tag = data.copyTag();
+
+			for (String marker : MARKERS) {
+				if (tag.contains(marker)) {
+					return marker;
+				}
+			}
+
+			return null;
+		}
+
+		@Override
+		public String getLegacyStringSubtypeInfo(ItemStack stack, UidContext context) {
+			Object marker = getSubtypeData(stack, context);
+			return marker == null ? "" : marker.toString();
+		}
+	};
 
 	/** JEI's item list keeps clear of the robot list beside the robot station window. */
 	@Override
