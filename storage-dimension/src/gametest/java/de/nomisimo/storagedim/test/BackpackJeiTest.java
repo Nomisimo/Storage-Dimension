@@ -17,6 +17,7 @@ import com.tiviacz.travelersbackpack.util.Reference;
 
 import de.nomisimo.storagedim.StorageConfig;
 import de.nomisimo.storagedim.api.StorageApi;
+import de.nomisimo.storagedim.storage.StorageItems;
 import mezz.jei.api.constants.RecipeTypes;
 import mezz.jei.api.gui.IRecipeLayoutDrawable;
 import mezz.jei.api.recipe.IRecipeManager;
@@ -143,6 +144,13 @@ public class BackpackJeiTest implements FabricClientGameTest {
 			List<String> own = all.stream().map(holder -> holder.id().identifier().toString())
 					.filter(id -> id.startsWith("storagedim")).sorted().toList();
 			log("recipes " + where + ": " + all.size() + " crafting, ours " + own.size() + " " + own);
+
+			// our items in JEI's list (it takes them from the creative tabs), vanilla ones with our data told apart by name
+			List<String> items = TestJeiPlugin.runtime.getIngredientManager().getAllItemStacks().stream()
+					.filter(stack -> BuiltInRegistries.ITEM.getKey(stack.getItem()).getNamespace().startsWith("storagedim")
+							|| StorageItems.variant(stack) != null)
+					.map(stack -> stack.getHoverName().getString()).sorted().toList();
+			log("items " + where + ": " + items.size() + " " + items);
 		});
 	}
 
