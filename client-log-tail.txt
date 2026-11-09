@@ -1,0 +1,300 @@
+[19:49:51] [Server thread/INFO] (Minecraft) ThreadedAnvilChunkStorage (DIM-1): All chunks are saved
+[19:49:51] [Server thread/INFO] (Minecraft) ThreadedAnvilChunkStorage: All dimensions are saved
+[19:49:51] [Render thread/INFO] (ClientLifecycleHandler) Stopping JEI
+[19:49:51] [Render thread/INFO] (JeiStarter) Stopping JEI
+[19:49:51] [Render thread/INFO] (PluginCaller) Sending Runtime Unavailable...
+[19:49:51] [Render thread/INFO] (FabricGuiPlugin) Stopping JEI GUI
+[19:49:51] [Render thread/INFO] (PluginCaller) Sending Runtime Unavailable took 783.6 microseconds
+[19:49:52] [Render thread/INFO] (Minecraft) Loaded 1669 recipes
+[19:49:52] [Render thread/INFO] (Minecraft) Loaded 1781 advancements
+[19:49:52] [Render thread/INFO] (Jade) LootTableMineableCollector took 2.266 ms
+[19:49:52] [Thread-25/INFO] (Minecraft) Environment: Environment[sessionHost=https://sessionserver.mojang.com, servicesHost=https://api.minecraftservices.com, profilesHost=https://api.mojang.com, name=PROD]
+[19:49:53] [Thread-25/INFO] (Minecraft) Loaded 1669 recipes
+[19:49:53] [Thread-25/INFO] (Minecraft) Loaded 1781 advancements
+[19:49:53] [Thread-25/INFO] (Jade) LootTableMineableCollector took 1.965 ms
+[19:49:53] [Thread-25/INFO] (BiomeModificationImpl) Applied 0 biome modifications to 0 of 65 new biomes in 250.6 μs
+[19:49:53] [Server thread/INFO] (Minecraft) Starting minecraft server version 26.1.2
+[19:49:53] [Server thread/INFO] (Minecraft) Loading properties
+[19:49:53] [Server thread/INFO] (Minecraft) Default game type: SURVIVAL
+[19:49:53] [Server thread/INFO] (Minecraft) Generating keypair
+[19:49:53] [Server thread/INFO] (Minecraft) Starting Minecraft server on *:25565
+[19:49:53] [Server thread/WARN] (Minecraft) **** SERVER IS RUNNING IN OFFLINE/INSECURE MODE!
+[19:49:53] [Server thread/WARN] (Minecraft) The server will make no attempt to authenticate usernames. Beware.
+[19:49:53] [Server thread/WARN] (Minecraft) While this makes the game possible to play without internet access, it also opens up the ability for hackers to connect with any username they choose.
+[19:49:53] [Server thread/WARN] (Minecraft) To change this, set "online-mode" to "true" in the server.properties file.
+[19:49:53] [Server thread/INFO] (Minecraft) Preparing level "world"
+[19:49:53] [Server thread/INFO] (Minecraft) Selecting global world spawn...
+[19:49:53] [Server thread/INFO] (Minecraft) Loading 0 persistent chunks...
+[19:49:53] [Server thread/INFO] (Minecraft) Preparing spawn area: 100%
+[19:49:53] [Server thread/INFO] (Minecraft) Time elapsed: 141 ms
+[19:49:53] [Server thread/INFO] (Minecraft) Done (0.147s)! For help, type "help"
+[19:49:53] [Server thread/INFO] (Minecraft) Saving chunks for level 'ServerLevel[New World]'/minecraft:overworld
+[19:49:53] [Server thread/INFO] (Minecraft) Saving chunks for level 'ServerLevel[New World]'/minecraft:the_end
+[19:49:53] [Server thread/INFO] (Minecraft) Saving chunks for level 'ServerLevel[New World]'/storagedim:storage
+[19:49:53] [Server thread/INFO] (Minecraft) Saving chunks for level 'ServerLevel[New World]'/minecraft:the_nether
+[19:49:53] [Server thread/INFO] (Minecraft) ThreadedAnvilChunkStorage (world): All chunks are saved
+[19:49:53] [Server thread/INFO] (Minecraft) ThreadedAnvilChunkStorage (DIM1): All chunks are saved
+[19:49:53] [Server thread/INFO] (Minecraft) ThreadedAnvilChunkStorage (storage): All chunks are saved
+[19:49:53] [Server thread/INFO] (Minecraft) ThreadedAnvilChunkStorage (DIM-1): All chunks are saved
+[19:49:53] [Server thread/INFO] (Minecraft) ThreadedAnvilChunkStorage: All dimensions are saved
+[19:49:53] [Server thread/ERROR] (storagedim) ME-Webansicht konnte Port 8765 nicht öffnen (webPort in config/storagedim.json ändern)
+
+java.net.BindException: Address already in use
+	at java.base/sun.nio.ch.Net.bind0(Native Method)
+	at java.base/sun.nio.ch.Net.bind(Net.java:522)
+	at java.base/sun.nio.ch.ServerSocketChannelImpl.netBind(ServerSocketChannelImpl.java:335)
+	at java.base/sun.nio.ch.ServerSocketChannelImpl.bind(ServerSocketChannelImpl.java:297)
+	at java.base/sun.nio.ch.ServerSocketAdaptor.bind(ServerSocketAdaptor.java:80)
+	at jdk.httpserver/sun.net.httpserver.ServerImpl.<init>(ServerImpl.java:145)
+	at jdk.httpserver/sun.net.httpserver.HttpServerImpl.<init>(HttpServerImpl.java:45)
+	at jdk.httpserver/sun.net.httpserver.DefaultHttpServerProvider.createHttpServer(DefaultHttpServerProvider.java:35)
+	at jdk.httpserver/com.sun.net.httpserver.HttpServer.create(HttpServer.java:152)
+	at knot//de.nomisimo.storagedim.web.WebView.start(WebView.java:80)
+	at knot//net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents.lambda$static$3(ServerLifecycleEvents.java:49)
+	at knot//net.minecraft.server.MinecraftServer.handler$zfd000$fabric-lifecycle-events-v1$afterSetupServer(MinecraftServer.java:2886)
+	at knot//net.minecraft.server.MinecraftServer.runServer$mixinextras$wrapped$303(MinecraftServer.java:746)
+	at knot//net.minecraft.server.MinecraftServer.mixinextras$bridge$runServer$mixinextras$wrapped$303$304(MinecraftServer.java)
+	at knot//net.minecraft.server.MinecraftServer.wrapMethod$bfc000$fabric-client-gametest-api-v1$onRunServer(MinecraftServer.java:5881)
+	at knot//net.minecraft.server.MinecraftServer.runServer(MinecraftServer.java)
+	at knot//net.minecraft.server.MinecraftServer.lambda$spin$0(MinecraftServer.java:321)
+	at java.base/java.lang.Thread.run(Thread.java:1474)
+[19:49:53] [Server thread/WARN] (TranslationConventionLogWarnings) 
+	Dev warning - Untranslated Item Tags detected. Please translate your item tags so other mods such as recipe viewers can properly display your tag's name.
+	The format desired is tag.item.<namespace>.<path> for the translation key with slashes in path turned into periods.
+	To disable this message, set this system property in your runs: `-Dfabric-tag-conventions-v2.missingTagTranslationWarning=SILENCED`.
+	To see individual untranslated item tags found, set the system property to `-Dfabric-tag-conventions-v2.missingTagTranslationWarning=VERBOSE`.
+	Default is `SHORT`.
+
+[19:49:53] [Server thread/INFO] (Jade) Start loading plugin from Storage Dimension: de.nomisimo.storagedim.compat.StorageJadePlugin
+[19:49:53] [Server thread/INFO] (Jade) de.nomisimo.storagedim.compat.StorageJadePlugin loaded: 67.84 μs
+[19:49:53] [Server thread/INFO] (Jade) Start loading plugin from Jade: snownee.jade.addon.core.CorePlugin
+[19:49:53] [Server thread/INFO] (Jade) snownee.jade.addon.core.CorePlugin loaded: 128.7 μs
+[19:49:53] [Server thread/INFO] (Jade) Start loading plugin from Jade: snownee.jade.addon.vanilla.VanillaPlugin
+[19:49:53] [Server thread/INFO] (Jade) snownee.jade.addon.vanilla.VanillaPlugin loaded: 610.7 μs
+[19:49:53] [Server thread/INFO] (Jade) Start loading plugin from Jade: snownee.jade.addon.universal.UniversalPlugin
+[19:49:53] [Server thread/INFO] (Jade) snownee.jade.addon.universal.UniversalPlugin loaded: 155.9 μs
+[19:49:53] [Server thread/INFO] (Jade) Start loading plugin from Jade: snownee.jade.addon.access.AccessibilityPlugin
+[19:49:53] [Server thread/INFO] (Jade) snownee.jade.addon.access.AccessibilityPlugin loaded: 79.29 μs
+[19:49:53] [Server thread/INFO] (Jade) Start loading plugin from Jade: snownee.jade.addon.debug.DebugPlugin
+[19:49:53] [Server thread/INFO] (Jade) snownee.jade.addon.debug.DebugPlugin loaded: 75.76 μs
+[19:49:54] [Render thread/INFO] (Minecraft) Connecting to localhost, 25565
+[19:49:54] [Render thread/INFO] (fabric-client-gametest-api-v1) World loading finished: null screen: net.minecraft.client.gui.screens.ConnectScreen@4e505b55
+[19:49:54] [Download-3/ERROR] (Minecraft) Failed to retrieve profile key pair
+
+com.mojang.authlib.exceptions.MinecraftClientHttpException: Status: 401
+	at knot//com.mojang.authlib.minecraft.client.MinecraftClient.readInputStream(MinecraftClient.java:103)
+	at knot//com.mojang.authlib.minecraft.client.MinecraftClient.post(MinecraftClient.java:64)
+	at knot//com.mojang.authlib.yggdrasil.YggdrasilUserApiService.getKeyPair(YggdrasilUserApiService.java:61)
+	at knot//net.minecraft.client.multiplayer.AccountProfileKeyPairManager.fetchProfileKeyPair(AccountProfileKeyPairManager.java:128)
+	at knot//net.minecraft.client.multiplayer.AccountProfileKeyPairManager.lambda$readOrFetchProfileKeyPair$0(AccountProfileKeyPairManager.java:77)
+	at java.base/java.util.concurrent.CompletableFuture$AsyncSupply.run(CompletableFuture.java:1789)
+	at java.base/java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1090)
+	at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:614)
+	at java.base/java.lang.Thread.run(Thread.java:1474)
+[19:49:54] [Render thread/INFO] (fabric-client-gametest-api-v1) World loading finished: null screen: net.minecraft.client.gui.screens.ConnectScreen@4e505b55
+[19:49:54] [Render thread/INFO] (fabric-client-gametest-api-v1) World loading finished: null screen: net.minecraft.client.gui.screens.ConnectScreen@4e505b55
+[19:49:54] [Render thread/INFO] (fabric-client-gametest-api-v1) World loading finished: null screen: net.minecraft.client.gui.screens.ConnectScreen@4e505b55
+[19:49:54] [Render thread/INFO] (fabric-client-gametest-api-v1) World loading finished: null screen: net.minecraft.client.gui.screens.ConnectScreen@4e505b55
+[19:49:54] [Netty Epoll IO #1/WARN] (ConfigTracker) Overwriting non-null config LoadedConfig[config=SynchronizedConfig{DataHolder:{server=SynchronizedConfig{DataHolder:{backpackSettings=SynchronizedConfig{DataHolder:{rightClickEquip=true, rightClickUnequip=false, allowOnlyEquippedBackpack=false, allowOpeningFromSlot=false, preventMultiplePlayersAccess=false, allowToolSwapping=true, neverDespawn=true, fireResistant=true, explosionResistant=true, invulnerableBackpack=true, toolSlotsAcceptEverything=false, toolSlotsAcceptableItems=[], blacklistedItems=[], allowShulkerBoxes=false, voidProtection=true, backpackDeathPlace=true, backpackForceDeathPlace=false, quickSleepingBag=true, enableSleepingBagSpawnPoint=false, backSlotIntegration=true, leatherTierBackpack=SynchronizedConfig{DataHolder:{inventorySlotCount=27, upgradeSlotCount=2, toolSlotCount=2, tankCapacity=81000}}, ironTierBackpack=SynchronizedConfig{DataHolder:{inventorySlotCount=45, upgradeSlotCount=3, toolSlotCount=3, tankCapacity=81000}}, goldTierBackpack=SynchronizedConfig{DataHolder:{inventorySlotCount=63, upgradeSlotCount=4, toolSlotCount=4, tankCapacity=81000}}, diamondTierBackpack=SynchronizedConfig{DataHolder:{inventorySlotCount=81, upgradeSlotCount=5, toolSlotCount=5, tankCapacity=81000}}, netheriteTierBackpack=SynchronizedConfig{DataHolder:{inventorySlotCount=99, upgradeSlotCount=6, toolSlotCount=6, tankCapacity=81000}}}}, backpackUpgrades=SynchronizedConfig{DataHolder:{enableSleepingBag=true, enableTanksUpgrade=true, enableCraftingUpgrade=true, enableFurnaceUpgrade=true, enableSmokerUpgrade=true, enableBlastFurnaceUpgrade=true, enableJukeboxUpgrade=true, enableLanternUpgrade=true, pickupUpgradeSettings=SynchronizedConfig{DataHolder:{enablePickupUpgrade=true, filterSlotCount=9, slotsInRow=3}}, magnetUpgradeSettings=SynchronizedConfig{DataHolder:{enableMagnetUpgrade=true, filterSlotCount=9, slotsInRow=3, pullRange=5, tickRate=10}}, feedingUpgradeSettings=SynchronizedConfig{DataHolder:{enableFeedingUpgrade=true, filterSlotCount=9, slotsInRow=3, tickRate=100}}, refillUpgradeSettings=SynchronizedConfig{DataHolder:{enableRefillUpgrade=true, filterSlotCount=9, slotsInRow=3, tickRate=5}}, voidUpgradeSettings=SynchronizedConfig{DataHolder:{enableVoidUpgrade=true, filterSlotCount=9, slotsInRow=3}}}}, world=SynchronizedConfig{DataHolder:{spawnEntitiesWithBackpack=true, chance=0.005, possibleOverworldEntityTypes=[minecraft:zombie, minecraft:skeleton, minecraft:enderman], possibleNetherEntityTypes=[minecraft:wither_skeleton, minecraft:piglin], overworldBackpacks=[travelersbackpack:standard, travelersbackpack:diamond, travelersbackpack:gold, travelersbackpack:emerald, travelersbackpack:iron, travelersbackpack:lapis, travelersbackpack:redstone, travelersbackpack:coal, travelersbackpack:bookshelf, travelersbackpack:sandstone, travelersbackpack:snow, travelersbackpack:sponge, travelersbackpack:cake, travelersbackpack:cactus, travelersbackpack:hay, travelersbackpack:melon, travelersbackpack:pumpkin, travelersbackpack:creeper, travelersbackpack:enderman, travelersbackpack:skeleton, travelersbackpack:spider, travelersbackpack:bee, travelersbackpack:wolf, travelersbackpack:fox, travelersbackpack:ocelot, travelersbackpack:horse, travelersbackpack:cow, travelersbackpack:pig, travelersbackpack:sheep, travelersbackpack:chicken, travelersbackpack:squid], netherBackpacks=[travelersbackpack:quartz, travelersbackpack:nether, travelersbackpack:blaze, travelersbackpack:ghast, travelersbackpack:magma_cube, travelersbackpack:wither]}}, backpackAbilities=SynchronizedConfig{DataHolder:{enableBackpackAbilities=true, forceAbilityEnabled=true, allowedAbilities=[travelersbackpack:netherite, travelersbackpack:diamond, travelersbackpack:gold, travelersbackpack:emerald, travelersbackpack:iron, travelersbackpack:lapis, travelersbackpack:redstone, travelersbackpack:bookshelf, travelersbackpack:sponge, travelersbackpack:cake, travelersbackpack:cactus, travelersbackpack:melon, travelersbackpack:pumpkin, travelersbackpack:creeper, travelersbackpack:dragon, travelersbackpack:enderman, travelersbackpack:blaze, travelersbackpack:ghast, travelersbackpack:magma_cube, travelersbackpack:spider, travelersbackpack:wither, travelersbackpack:warden, travelersbackpack:bat, travelersbackpack:bee, travelersbackpack:ocelot, travelersbackpack:cow, travelersbackpack:chicken, travelersbackpack:squid, travelersbackpack:hay, travelersbackpack:fox], backpackEffects=[travelersbackpack:bat, minecraft:night_vision, 260, 300, 0, travelersbackpack:magma_cube, minecraft:fire_resistance, 260, 300, 0, travelersbackpack:squid, minecraft:water_breathing, 260, 300, 0, travelersbackpack:squid, minecraft:night_vision, 260, 300, 0, travelersbackpack:dragon, minecraft:regeneration, 260, 300, 0, travelersbackpack:dragon, minecraft:strength, 250, 290, 0, travelersbackpack:quartz, minecraft:haste, 260, 300, 0, travelersbackpack:fox, minecraft:jump_boost, 260, 300, 0], cooldowns=[travelersbackpack:creeper, 1200, 1800, travelersbackpack:cow, 480, 540, travelersbackpack:chicken, 360, 600, travelersbackpack:cake, 360, 480, travelersbackpack:melon, 120, 480]}}, slownessDebuff=SynchronizedConfig{DataHolder:{tooManyBackpacksSlowness=false, maxNumberOfBackpacks=3, slownessPerExcessedBackpack=1.0}}}}}}, path=/home/runner/work/Storage-Dimension/Storage-Dimension/storage-dimension/build/run/clientGameTest/config/travelersbackpack-server.toml, modConfig=net.neoforged.fml.config.ModConfig@95a63e1] at path travelersbackpack-server.toml with synced config
+[19:49:54] [Render thread/INFO] (fabric-client-gametest-api-v1) World loading finished: null screen: net.minecraft.client.gui.screens.ConnectScreen@4e505b55
+[19:49:54] [Render thread/INFO] (fabric-client-gametest-api-v1) World loading finished: null screen: net.minecraft.client.gui.screens.ConnectScreen@4e505b55
+[19:49:54] [Render thread/INFO] (fabric-client-gametest-api-v1) World loading finished: null screen: net.minecraft.client.gui.screens.ConnectScreen@4e505b55
+[19:49:54] [Render thread/INFO] (fabric-client-gametest-api-v1) World loading finished: null screen: net.minecraft.client.gui.screens.ConnectScreen@4e505b55
+[19:49:54] [Render thread/INFO] (fabric-client-gametest-api-v1) World loading finished: null screen: net.minecraft.client.gui.screens.ConnectScreen@4e505b55
+[19:49:54] [Render thread/INFO] (fabric-client-gametest-api-v1) World loading finished: null screen: net.minecraft.client.gui.screens.ConnectScreen@4e505b55
+[19:49:54] [Render thread/INFO] (fabric-client-gametest-api-v1) World loading finished: null screen: net.minecraft.client.gui.screens.ConnectScreen@4e505b55
+[19:49:54] [Server thread/INFO] (Minecraft) Player0[/127.0.0.1:54732] logged in with entity id 593 at (0.5, -60.0, 0.5)
+[19:49:54] [Server thread/INFO] (Minecraft) Player0 joined the game
+[19:49:55] [Render thread/INFO] (MinimapLogs) Minimap required item set to nothing.
+[19:49:55] [Render thread/INFO] (MinimapLogs) New Xaero hud session initialized!
+[19:49:55] [Render thread/INFO] (LoggedTimer) Starting JEI...
+[19:49:55] [Render thread/INFO] (PluginCaller) Configuring JEI...
+[19:49:55] [Render thread/INFO] (PluginCaller) Configuring JEI took 491.7 microseconds
+[19:49:55] [Render thread/INFO] (PluginCaller) Registering item subtypes...
+[19:49:55] [Render thread/INFO] (PluginCaller) Registering item subtypes took 523.9 microseconds
+[19:49:55] [Render thread/INFO] (PluginCaller) Registering fluid subtypes...
+[19:49:55] [Render thread/INFO] (PluginCaller) Registering fluid subtypes took 295.4 microseconds
+[19:49:55] [Render thread/INFO] (PluginCaller) Registering ingredients...
+[19:49:55] [Render thread/WARN] (ItemStackListFactory) 4 duplicate items were found in 'Traveler's Backpack' creative tab's: displayItems
+This may indicate that these types of item need a subtype interpreter added to JEI:
+[travelersbackpack:standard]
+[19:49:55] [Render thread/INFO] (PluginCallerTimerRunnable) Registering ingredients: jei:minecraft took 23.21 milliseconds
+[19:49:55] [Render thread/INFO] (PluginCaller) Registering ingredients took 23.74 milliseconds
+[19:49:55] [Render thread/INFO] (PluginCaller) Registering extra ingredients...
+[19:49:55] [Render thread/INFO] (PluginCaller) Registering extra ingredients took 513.0 microseconds
+[19:49:55] [Render thread/INFO] (PluginCaller) Registering search ingredient aliases...
+[19:49:55] [Render thread/INFO] (PluginCaller) Registering search ingredient aliases took 445.0 microseconds
+[19:49:55] [Render thread/INFO] (PluginCaller) Registering slot display interpreters...
+[19:49:55] [Render thread/INFO] (PluginCaller) Registering slot display interpreters took 1.029 milliseconds
+[19:49:55] [Render thread/INFO] (PluginCaller) Registering Mod Info...
+[19:49:55] [Render thread/INFO] (PluginCaller) Registering Mod Info took 274.2 microseconds
+[19:49:55] [Render thread/INFO] (PluginCaller) Registering advanced search...
+[19:49:55] [Render thread/INFO] (PluginCaller) Registering advanced search took 392.1 microseconds
+[19:49:55] [Render thread/INFO] (PluginCaller) Registering categories...
+[19:49:55] [Render thread/INFO] (PluginCaller) Registering categories took 1.355 milliseconds
+[19:49:55] [Render thread/INFO] (PluginCaller) Registering vanilla category extensions...
+[19:49:55] [Render thread/INFO] (PluginCaller) Registering vanilla category extensions took 931.2 microseconds
+[19:49:55] [Render thread/INFO] (PluginCaller) Registering recipe catalysts...
+[19:49:55] [Render thread/INFO] (PluginCaller) Registering recipe catalysts took 338.7 microseconds
+[19:49:55] [Render thread/INFO] (LoggedTimer) Building recipe registry...
+[19:49:55] [Render thread/INFO] (LoggedTimer) Building recipe registry took 835.2 microseconds
+[19:49:55] [Render thread/INFO] (PluginCaller) Registering advanced plugins...
+[19:49:55] [Render thread/INFO] (AdvancedRegistration) Added typed recipe manager plugin: class mezz.jei.library.plugins.vanilla.crafting.FireworkStarRecipeManagerPlugin
+[19:49:55] [Render thread/INFO] (PluginCaller) Registering advanced plugins took 4.602 milliseconds
+[19:49:55] [Render thread/INFO] (PluginCaller) Registering recipes...
+[19:49:55] [Render thread/INFO] (PluginCallerTimerRunnable) Registering recipes: jei:minecraft took 221.2 milliseconds
+[19:49:55] [Render thread/INFO] (PluginCallerTimerRunnable) Registering recipes: jei:internal took 114.4 milliseconds
+[19:49:55] [Render thread/INFO] (PluginCaller) Registering recipes took 336.9 milliseconds
+[19:49:55] [Render thread/INFO] (PluginCaller) Registering recipes transfer handlers...
+[19:49:55] [Render thread/INFO] (PluginCaller) Registering recipes transfer handlers took 484.3 microseconds
+[19:49:55] [Render thread/INFO] (LoggedTimer) Building runtime...
+[19:49:55] [Render thread/INFO] (PluginCaller) Registering gui handlers...
+[19:49:55] [Render thread/INFO] (PluginCaller) Registering gui handlers took 1.012 milliseconds
+[19:49:55] [Render thread/INFO] (PluginCaller) Registering Runtime...
+[19:49:55] [Render thread/INFO] (JeiGuiStarter) Starting JEI GUI
+[19:49:55] [Render thread/INFO] (LoggedTimer) Building ingredient list...
+[19:49:55] [Render thread/INFO] (LoggedTimer) Building ingredient list took 14.88 milliseconds
+[19:49:55] [Render thread/INFO] (LoggedTimer) Building ingredient filter...
+[19:49:55] [Render thread/INFO] (IngredientFilter) Adding 1968 ingredients
+[19:49:55] [Render thread/INFO] (IngredientFilter) Added 1968 ingredients
+[19:49:55] [Render thread/INFO] (LoggedTimer) Building ingredient filter took 83.68 milliseconds
+[19:49:55] [Render thread/INFO] (PluginCallerTimerRunnable) Registering Runtime: jei:fabric_gui took 116.9 milliseconds
+[19:49:55] [Render thread/INFO] (PluginCaller) Registering Runtime took 117.6 milliseconds
+[19:49:55] [Render thread/INFO] (LoggedTimer) Building runtime took 119.0 milliseconds
+[19:49:55] [Render thread/INFO] (PluginCaller) Sending Runtime...
+[19:49:55] [Render thread/INFO] (PluginCaller) Sending Runtime took 455.2 microseconds
+[19:49:55] [Render thread/INFO] (LoggedTimer) Starting JEI took 496.7 milliseconds
+[19:49:55] [Render thread/INFO] (MinimapLogs) Minimap updated server level id: -746951758 for world ResourceKey[minecraft:dimension / minecraft:overworld]
+[19:49:55] [Render thread/INFO] (Minecraft) Loaded 6 advancements
+[19:49:55] [Render thread/INFO] (fabric-client-gametest-api-v1) World loading finished: ClientLevel screen: net.minecraft.client.gui.screens.LevelLoadingScreen@5a0fa989
+[19:49:55] [Render thread/INFO] (Jade) Received config from the server: {}
+[19:49:56] [Render thread/INFO] (fabric-client-gametest-api-v1) World loading finished: ClientLevel screen: net.minecraft.client.gui.screens.LevelLoadingScreen@5a0fa989
+[19:49:56] [Render thread/INFO] (fabric-client-gametest-api-v1) World loading finished: ClientLevel screen: net.minecraft.client.gui.screens.LevelLoadingScreen@5a0fa989
+[19:49:56] [Render thread/INFO] (fabric-client-gametest-api-v1) World loading finished: ClientLevel screen: net.minecraft.client.gui.screens.LevelLoadingScreen@5a0fa989
+[19:49:56] [Render thread/INFO] (fabric-client-gametest-api-v1) World loading finished: ClientLevel screen: null
+[19:49:56] [Render thread/INFO] (XaeroLib) Resized a dynamic immediate buffer to 192!
+[19:49:56] [Render thread/INFO] (XaeroLib) Resized a dynamic immediate buffer to 384!
+[19:49:56] [Render thread/INFO] (XaeroLib) Resized a dynamic immediate buffer to 192!
+[19:49:56] [Render thread/INFO] (XaeroLib) Resized a dynamic immediate buffer to 384!
+[19:49:57] [Render thread/INFO] (XaeroLib) Resized a dynamic immediate buffer to 768!
+[19:49:57] [Render thread/INFO] (XaeroLib) Resized a dynamic immediate buffer to 768!
+[19:49:58] [Render thread/INFO] (XaeroLib) Resized a dynamic immediate buffer to 1536!
+[19:49:58] [Render thread/INFO] (XaeroLib) Resized a dynamic immediate buffer to 1536!
+[19:49:59] [Render thread/INFO] (Minecraft) [STDOUT]: STORAGEDIM JEI recipes server: 1203 crafting, ours 13 [storagedim:antenna, storagedim:filter_chest, storagedim:me_backpack, storagedim:me_terminal, storagedim:project_chest, storagedim:remote, storagedim:robot, storagedim:robot_barrier, storagedim:robot_station, storagedim:storage_chest, storagedim_tb:me_backpack, storagedim_tb:me_upgrade, storagedim_tb:me_upgrade_from_paper]
+[19:49:59] [Render thread/INFO] (Minecraft) [STDOUT]: STORAGEDIM JEI items server: 11 [Antenna, Collector Robot, Dimension Chest, Filter Chest, ME Backpack, ME Terminal, ME Upgrade, Project Chest, Remote, Robot Barrier, Robot Station]
+[19:49:59] [Render thread/INFO] (Minecraft) [STDOUT]: STORAGEDIM JEI CHECK items server OK
+[19:49:59] [Render thread/INFO] (MinimapLogs) Xaero hud session finalized.
+[19:49:59] [Render thread/INFO] (ClientLifecycleHandler) Stopping JEI
+[19:49:59] [Render thread/INFO] (JeiStarter) Stopping JEI
+[19:49:59] [Render thread/INFO] (PluginCaller) Sending Runtime Unavailable...
+[19:49:59] [Render thread/INFO] (FabricGuiPlugin) Stopping JEI GUI
+[19:49:59] [Render thread/INFO] (PluginCaller) Sending Runtime Unavailable took 591.9 microseconds
+[19:49:59] [Server thread/INFO] (Minecraft) Player0 lost connection: Disconnected
+[19:49:59] [Server thread/INFO] (Minecraft) Player0 left the game
+[19:49:59] [Server thread/INFO] (Minecraft) Stopping server
+[19:49:59] [Server thread/INFO] (Minecraft) Saving players
+[19:49:59] [Server thread/INFO] (Minecraft) Saving worlds
+[19:49:59] [Server thread/INFO] (Minecraft) Saving chunks for level 'ServerLevel[New World]'/minecraft:overworld
+[19:50:00] [Server thread/INFO] (Minecraft) Saving chunks for level 'ServerLevel[New World]'/minecraft:the_end
+[19:50:00] [Server thread/INFO] (Minecraft) Saving chunks for level 'ServerLevel[New World]'/storagedim:storage
+[19:50:00] [Server thread/INFO] (Minecraft) Saving chunks for level 'ServerLevel[New World]'/minecraft:the_nether
+[19:50:00] [Server thread/INFO] (Minecraft) ThreadedAnvilChunkStorage (world): All chunks are saved
+[19:50:00] [Server thread/INFO] (Minecraft) ThreadedAnvilChunkStorage (DIM1): All chunks are saved
+[19:50:00] [Server thread/INFO] (Minecraft) ThreadedAnvilChunkStorage (storage): All chunks are saved
+[19:50:00] [Server thread/INFO] (Minecraft) ThreadedAnvilChunkStorage (DIM-1): All chunks are saved
+[19:50:00] [Server thread/INFO] (Minecraft) ThreadedAnvilChunkStorage: All dimensions are saved
+[19:50:00] [Render thread/INFO] (Minecraft) Connecting to localhost, 25570
+[19:50:00] [Download-3/ERROR] (Minecraft) Failed to retrieve profile key pair
+
+com.mojang.authlib.exceptions.MinecraftClientHttpException: Status: 401
+	at knot//com.mojang.authlib.minecraft.client.MinecraftClient.readInputStream(MinecraftClient.java:103)
+	at knot//com.mojang.authlib.minecraft.client.MinecraftClient.post(MinecraftClient.java:64)
+	at knot//com.mojang.authlib.yggdrasil.YggdrasilUserApiService.getKeyPair(YggdrasilUserApiService.java:61)
+	at knot//net.minecraft.client.multiplayer.AccountProfileKeyPairManager.fetchProfileKeyPair(AccountProfileKeyPairManager.java:128)
+	at knot//net.minecraft.client.multiplayer.AccountProfileKeyPairManager.lambda$readOrFetchProfileKeyPair$0(AccountProfileKeyPairManager.java:77)
+	at java.base/java.util.concurrent.CompletableFuture$AsyncSupply.run(CompletableFuture.java:1789)
+	at java.base/java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1090)
+	at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:614)
+	at java.base/java.lang.Thread.run(Thread.java:1474)
+[19:50:12] [Render thread/INFO] (MinimapLogs) Minimap required item set to nothing.
+[19:50:12] [Render thread/INFO] (MinimapLogs) New Xaero hud session initialized!
+[19:50:13] [Render thread/INFO] (LoggedTimer) Starting JEI...
+[19:50:13] [Render thread/INFO] (PluginCaller) Configuring JEI...
+[19:50:13] [Render thread/INFO] (PluginCaller) Configuring JEI took 3.939 milliseconds
+[19:50:13] [Render thread/INFO] (PluginCaller) Registering item subtypes...
+[19:50:13] [Render thread/INFO] (PluginCaller) Registering item subtypes took 2.976 milliseconds
+[19:50:13] [Render thread/INFO] (PluginCaller) Registering fluid subtypes...
+[19:50:13] [Render thread/INFO] (PluginCaller) Registering fluid subtypes took 5.695 milliseconds
+[19:50:13] [Render thread/INFO] (PluginCaller) Registering ingredients...
+[19:50:13] [Render thread/WARN] (ItemStackListFactory) 4 duplicate items were found in 'Traveler's Backpack' creative tab's: displayItems
+This may indicate that these types of item need a subtype interpreter added to JEI:
+[travelersbackpack:standard]
+[19:50:13] [Render thread/INFO] (PluginCallerTimerRunnable) Registering ingredients: jei:minecraft took 126.5 milliseconds
+[19:50:13] [Render thread/INFO] (PluginCaller) Registering ingredients took 134.0 milliseconds
+[19:50:13] [Render thread/INFO] (PluginCaller) Registering extra ingredients...
+[19:50:13] [Render thread/INFO] (PluginCaller) Registering extra ingredients took 805.1 microseconds
+[19:50:13] [Render thread/INFO] (PluginCaller) Registering search ingredient aliases...
+[19:50:13] [Render thread/INFO] (PluginCaller) Registering search ingredient aliases took 5.744 milliseconds
+[19:50:13] [Render thread/INFO] (PluginCaller) Registering slot display interpreters...
+[19:50:13] [Render thread/INFO] (PluginCaller) Registering slot display interpreters took 510.1 microseconds
+[19:50:13] [Render thread/INFO] (PluginCaller) Registering Mod Info...
+[19:50:13] [Render thread/INFO] (PluginCaller) Registering Mod Info took 4.053 milliseconds
+[19:50:13] [Render thread/INFO] (PluginCaller) Registering advanced search...
+[19:50:13] [Render thread/INFO] (PluginCaller) Registering advanced search took 8.493 milliseconds
+[19:50:13] [Render thread/INFO] (PluginCaller) Registering categories...
+[19:50:13] [Render thread/INFO] (PluginCaller) Registering categories took 1.870 milliseconds
+[19:50:13] [Render thread/INFO] (PluginCaller) Registering vanilla category extensions...
+[19:50:13] [Render thread/INFO] (PluginCaller) Registering vanilla category extensions took 7.177 milliseconds
+[19:50:13] [Render thread/INFO] (PluginCaller) Registering recipe catalysts...
+[19:50:13] [Render thread/INFO] (PluginCaller) Registering recipe catalysts took 4.095 milliseconds
+[19:50:13] [Render thread/INFO] (LoggedTimer) Building recipe registry...
+[19:50:13] [Render thread/INFO] (LoggedTimer) Building recipe registry took 982.8 microseconds
+[19:50:13] [Render thread/INFO] (PluginCaller) Registering advanced plugins...
+[19:50:13] [Render thread/INFO] (AdvancedRegistration) Added typed recipe manager plugin: class mezz.jei.library.plugins.vanilla.crafting.FireworkStarRecipeManagerPlugin
+[19:50:13] [Render thread/INFO] (PluginCaller) Registering advanced plugins took 11.45 milliseconds
+[19:50:13] [Render thread/INFO] (PluginCaller) Registering recipes...
+[19:50:14] [Render thread/INFO] (PluginCallerTimerRunnable) Registering recipes: jei:minecraft took 375.4 milliseconds
+[19:50:14] [Render thread/INFO] (PluginCallerTimerRunnable) Registering recipes: jei:internal took 128.8 milliseconds
+[19:50:14] [Render thread/INFO] (PluginCaller) Registering recipes took 508.0 milliseconds
+[19:50:14] [Render thread/INFO] (PluginCaller) Registering recipes transfer handlers...
+[19:50:14] [Render thread/INFO] (PluginCaller) Registering recipes transfer handlers took 6.271 milliseconds
+[19:50:14] [Render thread/INFO] (LoggedTimer) Building runtime...
+[19:50:14] [Render thread/INFO] (PluginCaller) Registering gui handlers...
+[19:50:14] [Render thread/INFO] (PluginCaller) Registering gui handlers took 716.7 microseconds
+[19:50:14] [Render thread/INFO] (PluginCaller) Registering Runtime...
+[19:50:14] [Render thread/INFO] (JeiGuiStarter) Starting JEI GUI
+[19:50:14] [Render thread/INFO] (LoggedTimer) Building ingredient list...
+[19:50:14] [Render thread/INFO] (LoggedTimer) Building ingredient list took 30.75 milliseconds
+[19:50:14] [Render thread/INFO] (LoggedTimer) Building ingredient filter...
+[19:50:14] [Render thread/INFO] (IngredientFilter) Adding 1968 ingredients
+[19:50:14] [Render thread/INFO] (IngredientFilter) Added 1968 ingredients
+[19:50:14] [Render thread/INFO] (LoggedTimer) Building ingredient filter took 109.7 milliseconds
+[19:50:14] [Render thread/INFO] (PluginCallerTimerRunnable) Registering Runtime: jei:fabric_gui took 161.2 milliseconds
+[19:50:14] [Render thread/INFO] (PluginCaller) Registering Runtime took 163.1 milliseconds
+[19:50:14] [Render thread/INFO] (LoggedTimer) Building runtime took 164.0 milliseconds
+[19:50:14] [Render thread/INFO] (PluginCaller) Sending Runtime...
+[19:50:14] [Render thread/INFO] (PluginCaller) Sending Runtime took 3.055 milliseconds
+[19:50:14] [Render thread/INFO] (LoggedTimer) Starting JEI took 883.5 milliseconds
+[19:50:14] [Render thread/INFO] (Minecraft) Loaded 2 advancements
+[19:50:14] [Render thread/WARN] (XaeroLib) Server side doesn't have XaeroLib installed! Resetting.
+[19:50:16] [Render thread/INFO] (XaeroLib) Resized a dynamic immediate buffer to 192!
+[19:50:16] [Render thread/INFO] (XaeroLib) Resized a dynamic immediate buffer to 192!
+[19:50:16] [Render thread/INFO] (XaeroLib) Resized a dynamic immediate buffer to 384!
+[19:50:16] [Render thread/INFO] (XaeroLib) Resized a dynamic immediate buffer to 384!
+[19:50:16] [Render thread/INFO] (Minecraft) [STDOUT]: STORAGEDIM JEI recipes external server: 1106 crafting, ours 11 [storagedim:antenna, storagedim:filter_chest, storagedim:me_backpack, storagedim:me_terminal, storagedim:me_upgrade, storagedim:project_chest, storagedim:remote, storagedim:robot, storagedim:robot_barrier, storagedim:robot_station, storagedim:storage_chest]
+[19:50:16] [Render thread/INFO] (Minecraft) [STDOUT]: STORAGEDIM JEI items external server: 11 [Antenna, Collector Robot, Dimension Chest, Filter Chest, ME Backpack, ME Terminal, ME Upgrade, Project Chest, Remote, Robot Barrier, Robot Station]
+[19:50:16] [Render thread/INFO] (Minecraft) [STDOUT]: STORAGEDIM JEI CHECK items external server OK
+[19:50:16] [Render thread/INFO] (Minecraft) [STDOUT]: STORAGEDIM JEI CHECK external server OK
+[19:50:16] [Render thread/INFO] (MinimapLogs) Xaero hud session finalized.
+[19:50:16] [Render thread/INFO] (ClientLifecycleHandler) Stopping JEI
+[19:50:16] [Render thread/INFO] (JeiStarter) Stopping JEI
+[19:50:16] [Render thread/INFO] (PluginCaller) Sending Runtime Unavailable...
+[19:50:16] [Render thread/INFO] (FabricGuiPlugin) Stopping JEI GUI
+[19:50:16] [Render thread/INFO] (PluginCaller) Sending Runtime Unavailable took 1.878 milliseconds
+[19:50:17] [Render thread/INFO] (Minecraft) Stopping!
+
+[Incubating] Problems report is available at: file:///home/runner/work/Storage-Dimension/Storage-Dimension/storage-dimension/build/reports/problems/problems-report.html
+
+BUILD SUCCESSFUL in 5m 51s
+10 actionable tasks: 9 executed, 1 up-to-date
+Configuration cache entry stored.

@@ -1,0 +1,26 @@
+{
+  "fabric:load_conditions": [
+    {
+      "condition": "fabric:not",
+      "value": {
+        "condition": "fabric:all_mods_loaded",
+        "values": [
+          "storagedim_tb"
+        ]
+      }
+    }
+  ],
+  "type": "minecraft:crafting_shapeless",
+  "category": "misc",
+  "ingredients": [
+    "minecraft:ender_eye",
+    "minecraft:amethyst_shard",
+    "minecraft:amethyst_shard",
+    "minecraft:redstone_block",
+    "minecraft:paper"
+  ],
+  "result": {
+    "id": "storagedim:me_upgrade",
+    "count": 1
+  }
+}
