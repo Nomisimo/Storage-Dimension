@@ -19,6 +19,9 @@ import com.mojang.math.Transformation;
 import de.nomisimo.storagedim.StorageDimensionMod;
 import de.nomisimo.storagedim.mixin.DisplayAccessor;
 import de.nomisimo.storagedim.mixin.ItemDisplayAccessor;
+import de.nomisimo.storagedim.mixin.ItemFrameAccessor;
+import net.fabricmc.fabric.api.event.player.AttackEntityCallback;
+import net.fabricmc.fabric.api.event.player.UseEntityCallback;
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -32,11 +35,14 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.util.Brightness;
+import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.Display;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.Relative;
+import net.minecraft.world.entity.decoration.GlowItemFrame;
+import net.minecraft.world.entity.decoration.ItemFrame;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
@@ -67,6 +73,8 @@ public final class Library {
 	public static final int FLOOR_Y = 100;
 	/** Tag on every display entity of a library, so stale ones can be found again. */
 	public static final String TAG = "storagedim_island";
+	/** Tag on the item frames on the chests. */
+	static final String FRAME_TAG = "storagedim_chest_frame";
 	/** Stacks per chest. */
 	public static final int CHEST_SLOTS = 27;
 	/** Most chests one kind gets; what goes beyond is still in ME storage, just not in a chest. */
@@ -590,9 +598,7 @@ public final class Library {
 				spawnDisplay(level, labelId(network, shelf), shelf.key(), pos.getX() + 0.5, pos.getY() + 1.2, pos.getZ() + 0.5, 0.4f);
 				nameLabel(level, network, shelf);
 			} else {
-				double x = pos.getX() + 0.5 + shelf.facing().getStepX() * 0.65;
-				double z = pos.getZ() + 0.5 + shelf.facing().getStepZ() * 0.65;
-				spawnDisplay(level, labelId(network, shelf), shelf.key(), x, pos.getY() + 0.45, z, 0.32f);
+				spawnFrame(level, frameId(network, shelf), shelf.key(), pos, shelf.facing());
 			}
 		}
 
@@ -749,6 +755,53 @@ public final class Library {
 		return display;
 	}
 
+	/**
+	 * A glowing item frame on the front of a chest that shows what the chest holds. It is fixed: nobody can take the
+	 * item out, turn it or knock the frame off, and a click on it opens the chest behind it.
+	 */
+	private static Entity spawnFrame(ServerLevel level, UUID id, ItemStack item, BlockPos chest, Direction facing) {
+		Entity existing = level.getEntity(id);
+
+		if (existing != null) {
+			return existing;
+		}
+
+		ItemFrame frame = new GlowItemFrame(level, chest.relative(facing), facing);
+		frame.setUUID(id);
+		frame.addTag(TAG);
+		frame.addTag(FRAME_TAG);
+		frame.setItem(item.copyWithCount(1), false);
+		((ItemFrameAccessor) frame).storagedim$setFixed(true);
+		frame.setInvulnerable(true);
+		frame.setSilent(true);
+		level.addFreshEntity(frame);
+		return frame;
+	}
+
+	/** True for the item frames on the library chests. Only works on the server, tags are not sent to clients. */
+	static boolean isChestFrame(Entity entity) {
+		return entity instanceof ItemFrame && entity.entityTags().contains(FRAME_TAG);
+	}
+
+	/** Clicks on a chest frame open the chest behind it; hitting it does nothing. */
+	public static void register() {
+		UseEntityCallback.EVENT.register((player, level, hand, entity, hit) -> {
+			if (level.isClientSide() || !isChestFrame(entity)) {
+				return InteractionResult.PASS;
+			}
+
+			// a click sends two packets, the one with the hit point opens the chest; the other may not turn the frame
+			if (hit == null || hand != InteractionHand.MAIN_HAND || !(player instanceof ServerPlayer serverPlayer)) {
+				return InteractionResult.FAIL;
+			}
+
+			BlockPos chest = entity.blockPosition().relative(entity.getDirection().getOpposite());
+			return use(serverPlayer, (ServerLevel) level, chest);
+		});
+		AttackEntityCallback.EVENT.register((player, level, hand, entity, hit) -> !level.isClientSide() && isChestFrame(entity)
+				? InteractionResult.FAIL : InteractionResult.PASS);
+	}
+
 	/** The sign over an aisle shows its name and how many kinds it holds. */
 	private static void aisleLabel(StorageNetwork network, Aisle aisle, Entity sign) {
 		if (sign == null) {
@@ -785,6 +838,11 @@ public final class Library {
 		return id("shelf:" + network.room + ":" + network.libraryBuild + ":" + shelf.dx() + ":" + shelf.dy() + ":" + shelf.dz());
 	}
 
+	/** A new kind of id for the frames, so the floating items of older versions go as stale displays. */
+	private static UUID frameId(StorageNetwork network, Shelf shelf) {
+		return id("frame:" + network.room + ":" + network.libraryBuild + ":" + shelf.dx() + ":" + shelf.dy() + ":" + shelf.dz());
+	}
+
 	private static UUID aisleId(StorageNetwork network, Aisle aisle) {
 		return id("aisle:" + network.room + ":" + network.libraryBuild + ":" + aisle.category.name() + ":" + aisle.x);
 	}
@@ -800,7 +858,7 @@ public final class Library {
 
 	private static Set<UUID> keep(StorageNetwork network) {
 		Set<UUID> keep = new HashSet<>();
-		network.library.forEach(shelf -> keep.add(labelId(network, shelf)));
+		network.library.forEach(shelf -> keep.add(isProject(shelf.key()) ? labelId(network, shelf) : frameId(network, shelf)));
 		network.aisles.forEach(aisle -> keep.add(aisleId(network, aisle)));
 		// the extras remove these themselves when their items are gone
 		keep.add(LibraryExtras.eggId(network));
@@ -820,7 +878,7 @@ public final class Library {
 		AABB box = new AABB(centre.getX() - reach, centre.getY() - 30, centre.getZ() - depth, centre.getX() + reach + 1, centre.getY() + 100,
 				centre.getZ() + 100);
 
-		for (Entity entity : level.getEntities((Entity) null, box, e -> e instanceof Display.ItemDisplay)) {
+		for (Entity entity : level.getEntities((Entity) null, box, e -> e instanceof Display.ItemDisplay || isChestFrame(e))) {
 			if (!keep.contains(entity.getUUID())) {
 				entity.discard();
 			}
@@ -915,7 +973,7 @@ public final class Library {
 
 	// ---- chests ----
 
-	/** Right click on a block of the storage dimension. Only the chests, the lecterns and the exit do something. */
+	/** Right click on a block of the storage dimension. Only the chests, the lecterns, the trading hall's gate and the exit do something. */
 	public static InteractionResult use(ServerPlayer player, ServerLevel level, BlockPos pos) {
 		StorageNetwork network = StorageData.get().networkByRoom(roomAt(pos));
 
@@ -928,7 +986,15 @@ public final class Library {
 			return InteractionResult.FAIL;
 		}
 
-		if (level.getBlockState(pos).is(Blocks.LECTERN)) {
+		boolean tradeHall = LibraryExtras.inTradeHall(network, pos.subtract(centre(network.room)));
+
+		if (tradeHall && level.getBlockState(pos).getBlock() instanceof net.minecraft.world.level.block.FenceGateBlock) {
+			// the door of the trading hall
+			return InteractionResult.PASS;
+		}
+
+		// the lecterns of the librarians in the trading hall are only workstations
+		if (level.getBlockState(pos).is(Blocks.LECTERN) && !tradeHall) {
 			CatalogMenu.open(player, network);
 			return InteractionResult.SUCCESS;
 		}

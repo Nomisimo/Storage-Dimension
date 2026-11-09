@@ -647,7 +647,7 @@
 		let have = 0;
 		for (const e of project.entries) {
 			need += e.target;
-			have += Math.min(e.target, e.have);
+			have += Math.min(e.target, (e.taken || 0) + e.have);
 		}
 		const done = need > 0 && have >= need;
 		const bar = document.createElement("div");
@@ -666,7 +666,8 @@
 		for (const entry of project.entries) {
 			const row = document.createElement("div");
 			row.className = "entry";
-			const missing = entry.target - entry.have;
+			const taken = entry.taken || 0;
+			const missing = entry.target - taken - entry.have;
 			const remove = document.createElement("button");
 			remove.className = "icon-btn";
 			remove.type = "button";
@@ -676,7 +677,8 @@
 			const info = itemInfo(entry);
 			const h = document.createElement("div");
 			h.className = "have" + (missing <= 0 ? " ok" : "");
-			h.textContent = "im ME: " + fmt.format(entry.have) + (missing > 0 ? " · fehlt " + fmt.format(missing) : " · alles da");
+			h.textContent = "im ME: " + fmt.format(entry.have) + (taken > 0 ? " · entnommen " + fmt.format(taken) : "")
+				+ (taken >= entry.target ? " · alles entnommen" : missing > 0 ? " · fehlt " + fmt.format(missing) : " · alles da");
 			info.append(h);
 			row.append(icon(entry), info, amountInput(project, entry), remove);
 			entries.append(row);

@@ -99,6 +99,7 @@ final class WebContent {
 				JsonObject e = item(ops, entry.item);
 				e.addProperty("target", entry.target);
 				e.addProperty("have", stored(network, entry));
+				e.addProperty("taken", entry.taken);
 				entries.add(e);
 			}
 

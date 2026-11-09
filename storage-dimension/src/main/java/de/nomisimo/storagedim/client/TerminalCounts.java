@@ -56,11 +56,13 @@ public final class TerminalCounts {
 	}
 
 	public static void draw(GuiGraphicsExtractor graphics, Font font, long count, int x, int y, int color) {
-		if (count <= 1) {
+		if (count == 1 || count < 0) {
 			return;
 		}
 
+		// 0: a project item ME storage does not have, in red
 		String text = format(count);
+		color = count == 0 ? 0xFFFF5555 : color;
 		Matrix3x2fStack pose = graphics.pose();
 		pose.pushMatrix();
 		// bottom right corner of the slot, like the normal count
