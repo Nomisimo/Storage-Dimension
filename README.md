@@ -112,7 +112,7 @@ Eine Kiste für ein Bauprojekt: Du legst fest, welche Items in welcher Menge geb
 ![Einstellungen der Projektkiste](docs/screenshots/projekt-fenster.png)
 ![Item-Suche über alle Items](docs/screenshots/projekt-suche.png)
 
-- **Benutzen:** Normaler Rechtsklick zeigt die Projekt-Items, die im ME-Speicher sind. Die Zahlen sind grün, sobald die benötigte Menge da ist, und der Tooltip sagt, wie viele von wie vielen da sind und wie viele fehlen. Baumaterial kann direkt in die Kiste gelegt werden. Das Zahnrad ⚙ neben dem Suchfeld wechselt zu den Einstellungen.
+- **Benutzen:** Normaler Rechtsklick zeigt alle Projekt-Items; was nicht im ME-Speicher liegt, steht mit einer roten 0 da. Die Zahlen sind grün, sobald die benötigte Menge da ist, und der Tooltip sagt, wie viele von wie vielen da sind und wie viele fehlen. Baumaterial kann direkt in die Kiste gelegt werden. Das Zahnrad ⚙ neben dem Suchfeld wechselt zu den Einstellungen.
 - **Nur die eingestellte Menge:** Aus der Projektkiste lässt sich von jedem Item höchstens die eingestellte Menge herausnehmen. Die Kiste zählt mit, wie viel schon entnommen wurde (Tooltip „Entnommen: 40 von 64“); ist alles draußen, verschwindet das Item aus der Kiste und die Einstellungen zeigen „✔ alles entnommen“. So weißt du, dass du von dem Item alles verbaut hast. Legst du Items zurück in die Projektkiste, zählen sie nicht mehr als entnommen. Entnommenes zählt im Fortschritt als erledigt und wird nicht mehr im ME geblockt.
 
 ![Item-Ansicht der Projektkiste](docs/screenshots/projekt-items.png)

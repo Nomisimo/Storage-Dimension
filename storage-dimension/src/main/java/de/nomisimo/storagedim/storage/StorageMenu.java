@@ -204,7 +204,9 @@ public class StorageMenu extends ChestMenu {
 					extra.add(Component.literal("Entnommen: " + format(wanted.taken) + " von " + format(wanted.target)).withStyle(ChatFormatting.GOLD));
 				}
 
-				if (count >= remaining) {
+				if (remaining <= 0) {
+					extra.add(Component.literal("✔ alles entnommen").withStyle(ChatFormatting.GREEN));
+				} else if (count >= remaining) {
 					extra.add(Component.literal("✔ " + format(remaining) + " von " + format(remaining) + " da").withStyle(ChatFormatting.GREEN));
 					// the client draws the amount green
 					CompoundTag tag = icon.getOrDefault(DataComponents.CUSTOM_DATA, CustomData.EMPTY).copyTag();
@@ -260,6 +262,15 @@ public class StorageMenu extends ChestMenu {
 		for (StorageNetwork.StoredItem entry : network.items) {
 			if (accepts(entry.prototype) && matchesSearch(entry.prototype) && shownCount(entry) > 0) {
 				list.add(entry);
+			}
+		}
+
+		if (project != null) {
+			// a project chest also shows the project's items that ME storage does not have (any more), with 0
+			for (Projects.Entry wanted : project.entries) {
+				if (matchesSearch(wanted.item) && list.stream().noneMatch(e -> wanted.matches(e.prototype))) {
+					list.add(new StorageNetwork.StoredItem(wanted.item.copyWithCount(1), 0));
+				}
 			}
 		}
 
@@ -349,7 +360,8 @@ public class StorageMenu extends ChestMenu {
 
 		if (max > 1) {
 			icon.set(DataComponents.MAX_STACK_SIZE, ICON_MAX);
-			icon.setCount((int) Math.min(count, ICON_MAX));
+			// at least 1, so an item a project still needs shows with 0
+			icon.setCount((int) Math.max(1, Math.min(count, ICON_MAX)));
 		}
 
 		icon.set(DataComponents.CUSTOM_NAME, Component.empty()
