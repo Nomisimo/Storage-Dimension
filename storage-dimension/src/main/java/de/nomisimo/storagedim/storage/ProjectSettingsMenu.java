@@ -292,10 +292,12 @@ public class ProjectSettingsMenu extends AbstractContainerMenu {
 		List<ItemStack> items = new ArrayList<>();
 		List<Long> targets = new ArrayList<>();
 		List<Long> have = new ArrayList<>();
+		List<Long> taken = new ArrayList<>();
 
 		for (Projects.Entry entry : project.entries) {
 			items.add(entry.item.copy());
 			targets.add(entry.target);
+			taken.add(entry.taken);
 			long count = 0;
 
 			for (StorageNetwork.StoredItem stored : network.entries()) {
@@ -307,7 +309,7 @@ public class ProjectSettingsMenu extends AbstractContainerMenu {
 			have.add(count);
 		}
 
-		ProjectNetworking.SyncPayload payload = new ProjectNetworking.SyncPayload(containerId, project.name, project.block, items, targets, have);
+		ProjectNetworking.SyncPayload payload = new ProjectNetworking.SyncPayload(containerId, project.name, project.block, items, targets, have, taken);
 
 		if (force || lastSync == null || !same(payload, lastSync)) {
 			lastSync = payload;
@@ -317,6 +319,7 @@ public class ProjectSettingsMenu extends AbstractContainerMenu {
 
 	private static boolean same(ProjectNetworking.SyncPayload a, ProjectNetworking.SyncPayload b) {
 		if (!a.name().equals(b.name()) || a.block() != b.block() || !a.targets().equals(b.targets()) || !a.have().equals(b.have())
+				|| !a.taken().equals(b.taken())
 				|| a.items().size() != b.items().size()) {
 			return false;
 		}

@@ -76,7 +76,7 @@ public final class LibraryExtras {
 	private static final long RESTOCK_EVERY = 12_000;
 
 	/** One villager of the trading hall: its entity id, its saved data and its stall. */
-	record Trader(UUID id, CompoundTag data, String profession, int stall) {
+	record Trader(UUID id, CompoundTag data, String profession, int level, int stall) {
 	}
 
 	/** What the library should show right now. */
@@ -135,22 +135,25 @@ public final class LibraryExtras {
 			}
 
 			String profession = data.getCompound("VillagerData").flatMap(d -> d.getString("profession")).orElse("minecraft:none");
+			int villagerLevel = data.getCompound("VillagerData").flatMap(d -> d.getInt("level")).orElse(1);
 			String key = data.toString();
 
 			for (long i = 0; i < available && traders.size() < MAX_TRADERS * 2; i++) {
 				UUID id = UUID.nameUUIDFromBytes(("storagedim:trader:" + network.room + ":" + i + ":" + key).getBytes(java.nio.charset.StandardCharsets.UTF_8));
-				traders.add(new Trader(id, data, profession, 0));
+				traders.add(new Trader(id, data, profession, villagerLevel, 0));
 			}
 		}
 
-		// jobless and nitwits at the end, the others grouped by profession
+		// jobless and nitwits at the end, the others grouped by profession, in each profession the highest level
+		// (master) first, nearest the door
 		traders.sort(Comparator.comparing((Trader t) -> t.profession().endsWith(":none") || t.profession().endsWith(":nitwit"))
-				.thenComparing(Trader::profession).thenComparing(t -> t.id().toString()));
+				.thenComparing(Trader::profession).thenComparing(Comparator.comparingInt(Trader::level).reversed())
+				.thenComparing(t -> t.id().toString()));
 		List<Trader> placed = new ArrayList<>();
 
 		for (int i = 0; i < Math.min(MAX_TRADERS, traders.size()); i++) {
 			Trader t = traders.get(i);
-			placed.add(new Trader(t.id(), t.data(), t.profession(), i));
+			placed.add(new Trader(t.id(), t.data(), t.profession(), t.level(), i));
 		}
 
 		return new State(egg, placed);

@@ -5,6 +5,7 @@ import java.util.List;
 
 import de.nomisimo.storagedim.storage.Library;
 import de.nomisimo.storagedim.storage.LibraryExtras;
+import de.nomisimo.storagedim.storage.Projects;
 import de.nomisimo.storagedim.storage.Rooms;
 import de.nomisimo.storagedim.storage.StorageNetwork;
 import net.minecraft.core.BlockPos;
@@ -95,6 +96,32 @@ final class SmokeTest {
 		}
 	}
 
+	/** A project chest gives out only the amount set for an item; what is put back can be taken again. */
+	private static void projectTest(List<String> errors) {
+		StorageNetwork network = new StorageNetwork(java.util.UUID.randomUUID(), 251);
+		network.insert(new ItemStack(Items.DIRT, 100));
+		Projects.Project project = new Projects.Project(java.util.UUID.randomUUID(), java.util.UUID.randomUUID(), "Test", false);
+		project.entries.add(new Projects.Entry(new ItemStack(Items.DIRT), 10));
+		int first = network.extract(new ItemStack(Items.DIRT), 64, project).getCount();
+		int second = network.extract(new ItemStack(Items.DIRT), 64, project).getCount();
+
+		if (first != 10 || second != 0) {
+			errors.add("Projektkiste gibt " + first + " und dann " + second + " statt 10 und 0 Erde heraus");
+		}
+
+		project.returned(new ItemStack(Items.DIRT, 4), 4);
+		int again = network.extract(new ItemStack(Items.DIRT), 64, project).getCount();
+
+		if (again != 4) {
+			errors.add("Projektkiste gibt nach dem Zurücklegen " + again + " statt 4 Erde heraus");
+		}
+
+		// outside the project chest everything is free
+		if (network.extract(new ItemStack(Items.DIRT), 64).getCount() != 64) {
+			errors.add("Erde außerhalb der Projektkiste nicht frei");
+		}
+	}
+
 	/** A bucket with a villager in it, the way bucket mods keep it: the saved villager in the item's data. */
 	static ItemStack villagerBucket(String profession) {
 		net.minecraft.nbt.CompoundTag villagerData = new net.minecraft.nbt.CompoundTag();
@@ -150,6 +177,7 @@ final class SmokeTest {
 				}
 
 				extrasTest(level, network, errors);
+				projectTest(errors);
 			}
 
 			for (String recipe : List.of("storage_chest", "me_terminal", "me_upgrade", "me_backpack", "filter_chest", "robot")) {

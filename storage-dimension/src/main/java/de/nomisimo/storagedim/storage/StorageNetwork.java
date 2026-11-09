@@ -71,7 +71,10 @@ public class StorageNetwork {
 		return extract(prototype, amount, null);
 	}
 
-	/** Like {@link #extract(ItemStack, int)}, for a project chest: the project's own blocked items may go too. */
+	/**
+	 * Like {@link #extract(ItemStack, int)}, for a project chest: the project's own blocked items may go too, but only
+	 * as many as the project still needs; they count as taken for the project.
+	 */
 	public ItemStack extract(ItemStack prototype, int amount, Projects.Project project) {
 		StoredItem entry = find(prototype);
 
@@ -89,6 +92,10 @@ public class StorageNetwork {
 
 		if (entry.count <= 0) {
 			items.remove(entry);
+		}
+
+		if (project != null) {
+			project.took(entry.prototype, taken);
 		}
 
 		StorageData.markDirty();
