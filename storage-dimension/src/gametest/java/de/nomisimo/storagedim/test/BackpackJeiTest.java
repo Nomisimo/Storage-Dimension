@@ -479,6 +479,120 @@ public class BackpackJeiTest implements FabricClientGameTest {
 			client.player.closeContainer();
 		});
 		context.waitTicks(5);
+
+		// Momo: typing "o" into JEI's search closed JEI (its Ctrl+O shortcut). Letters typed into JEI's search must
+		// stay text, in the inventory, in the ME terminal (also after typing into its own search field first) and
+		// in the backpack's ME view.
+		List<String> failed = new java.util.ArrayList<>();
+		context.setScreen(() -> new net.minecraft.client.gui.screens.inventory.InventoryScreen(net.minecraft.client.Minecraft.getInstance().player));
+		context.waitTicks(10);
+		typeIntoJei(context, "inventory", failed);
+		context.setScreen(() -> null);
+		context.waitTicks(5);
+
+		world.getServer().runOnServer(server -> StorageApi.openStorage(server.getPlayerList().getPlayers().get(0)));
+		context.waitTicks(10);
+		focusOwnSearch(context);
+		context.getInput().typeChars("st");
+		context.waitTicks(5);
+		typeIntoJei(context, "terminal", failed);
+		context.runOnClient(client -> client.player.closeContainer());
+		context.waitTicks(5);
+
+		reopenBackpack(context, world, "for typing");
+		context.waitTicks(10);
+		focusOwnSearch(context);
+		context.getInput().typeChars("st");
+		context.waitTicks(5);
+		typeIntoJei(context, "backpack", failed);
+		context.runOnClient(client -> client.player.closeContainer());
+		context.waitTicks(5);
+		log("CHECK typing " + (failed.isEmpty() ? "OK" : "FEHLT " + failed));
+	}
+
+	/** JEI's search bar (an EditBox inside its ingredient list overlay), found by reflection; null if not found. */
+	private static net.minecraft.client.gui.components.EditBox jeiSearchField() {
+		Object overlay = TestJeiPlugin.runtime.getIngredientListOverlay();
+
+		for (Class<?> c = overlay.getClass(); c != null; c = c.getSuperclass()) {
+			for (Field field : c.getDeclaredFields()) {
+				if (net.minecraft.client.gui.components.EditBox.class.isAssignableFrom(field.getType())) {
+					try {
+						field.setAccessible(true);
+						return (net.minecraft.client.gui.components.EditBox) field.get(overlay);
+					} catch (ReflectiveOperationException | RuntimeException e) {
+						log("JEI search field: " + e);
+					}
+				}
+			}
+		}
+
+		return null;
+	}
+
+	/** Puts the keyboard focus on the screen's own search field (our ME search), like a click into it. */
+	private static void focusOwnSearch(ClientGameTestContext context) {
+		context.runOnClient(client -> client.screen.children().stream()
+				.filter(child -> child instanceof net.minecraft.client.gui.components.EditBox)
+				.map(child -> (net.minecraft.client.gui.components.EditBox) child).findFirst()
+				.ifPresent(box -> client.screen.setFocused(box)));
+	}
+
+	/** Clicks into JEI's search, then types "oe" key by key like a player; JEI must stay open and get the text. */
+	private static void typeIntoJei(ClientGameTestContext context, String where, List<String> failed) {
+		context.runOnClient(client -> TestJeiPlugin.runtime.getIngredientFilter().setFilterText(""));
+		context.waitTicks(2);
+		net.minecraft.client.gui.screens.Screen before = context.computeOnClient(client -> client.screen);
+		// a click into JEI's search bar, like a player
+		double[] at = context.computeOnClient(client -> {
+			net.minecraft.client.gui.components.EditBox field = jeiSearchField();
+			double scale = client.getWindow().getGuiScale();
+			return field == null ? null : new double[] {(field.getX() + field.getWidth() / 2.0) * scale, (field.getY() + field.getHeight() / 2.0) * scale};
+		});
+
+		if (at == null) {
+			log("typing " + where + ": JEI search field not found");
+			failed.add(where + " (kein JEI-Suchfeld)");
+			return;
+		}
+
+		context.getInput().setCursorPos(at[0], at[1]);
+		context.getInput().pressMouse(GLFW.GLFW_MOUSE_BUTTON_LEFT);
+		context.waitTicks(3);
+		boolean focused = context.computeOnClient(client -> TestJeiPlugin.runtime.getIngredientListOverlay().hasKeyboardFocus());
+
+		for (int key : new int[] {GLFW.GLFW_KEY_O, GLFW.GLFW_KEY_E}) {
+			context.getInput().pressKey(key);
+			context.getInput().typeChars(key == GLFW.GLFW_KEY_O ? "o" : "e");
+			context.waitTicks(2);
+		}
+
+		context.waitTicks(3);
+		String result = context.computeOnClient(client -> {
+			boolean shown = TestJeiPlugin.runtime.getIngredientListOverlay().isListDisplayed();
+			String text = TestJeiPlugin.runtime.getIngredientFilter().getFilterText();
+			String own = client.screen == null ? "-" : client.screen.children().stream()
+					.filter(child -> child instanceof net.minecraft.client.gui.components.EditBox)
+					.map(child -> ((net.minecraft.client.gui.components.EditBox) child).getValue()).findFirst().orElse("-");
+			return "jeiFocus=" + focused + " shown=" + shown + " jeiText='" + text + "' ownSearch='" + own + "' sameScreen=" + (client.screen == before);
+		});
+		log("typing " + where + ": " + result);
+
+		if (!result.contains("shown=true") || !result.contains("jeiText='oe'") || !result.contains("sameScreen=true")) {
+			failed.add(where);
+		}
+
+		// JEI back to normal for the next steps: shown again (Ctrl+O, now that its search has no focus) and empty
+		if (!result.contains("shown=true")) {
+			context.getInput().setCursorPos(0, 0);
+			context.getInput().pressMouse(GLFW.GLFW_MOUSE_BUTTON_LEFT);
+			context.getInput().holdKey(GLFW.GLFW_KEY_LEFT_CONTROL);
+			context.getInput().pressKey(GLFW.GLFW_KEY_O);
+			context.getInput().releaseKey(GLFW.GLFW_KEY_LEFT_CONTROL);
+		}
+
+		context.runOnClient(client -> TestJeiPlugin.runtime.getIngredientFilter().setFilterText(""));
+		context.waitTicks(3);
 	}
 
 	private static void reopenBackpack(ClientGameTestContext context, TestSingleplayerContext world, String label) {

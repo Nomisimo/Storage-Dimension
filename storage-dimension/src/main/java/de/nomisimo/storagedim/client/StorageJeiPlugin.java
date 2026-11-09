@@ -100,6 +100,11 @@ public class StorageJeiPlugin implements IModPlugin {
 		runtime = null;
 	}
 
+	/** Whether JEI's search bar has the keyboard focus. */
+	static boolean searchFocused() {
+		return runtime != null && runtime.getIngredientListOverlay().hasKeyboardFocus();
+	}
+
 	/** The text in JEI's search bar, or null while JEI is not ready. */
 	static String searchText() {
 		return runtime == null ? null : runtime.getIngredientFilter().getFilterText();

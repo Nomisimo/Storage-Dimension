@@ -65,6 +65,10 @@ public class StorageDimensionClient implements ClientModInitializer {
 		ModelLayerRegistry.registerModelLayer(RobotModel.LAYER, RobotModel::createBodyLayer);
 		EntityRendererRegistry.register(Robots.ROBOT, RobotRenderer::new);
 		ClientChestMarks.register();
+
+		if (JEI) {
+			JeiSearchFocus.register();
+		}
 		MenuScreens.register(StationMenu.TYPE, StationScreen::new);
 		MenuScreens.register(de.nomisimo.storagedim.storage.ProjectSettingsMenu.TYPE, ProjectScreen::new);
 		ClientPlayNetworking.registerGlobalReceiver(de.nomisimo.storagedim.storage.ProjectNetworking.SyncPayload.TYPE,
