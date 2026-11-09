@@ -68,3 +68,7 @@ jobs:
           grep "STORAGEDIM JEI CHECK items" client.log
           grep -q "STORAGEDIM JEI CHECK items singleplayer OK" client.log
           grep -q "STORAGEDIM JEI CHECK items external server OK" client.log
+      - name: letters typed into JEI's search stay text (no JEI shortcut fires)
+        run: |
+          grep "STORAGEDIM JEI typing" client.log
+          grep -q "STORAGEDIM JEI CHECK typing OK" client.log
