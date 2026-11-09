@@ -510,6 +510,26 @@ public class BackpackJeiTest implements FabricClientGameTest {
 		log("CHECK typing " + (failed.isEmpty() ? "OK" : "FEHLT " + failed));
 	}
 
+	/** JEI's search bar (an EditBox inside its ingredient list overlay), found by reflection; null if not found. */
+	private static net.minecraft.client.gui.components.EditBox jeiSearchField() {
+		Object overlay = TestJeiPlugin.runtime.getIngredientListOverlay();
+
+		for (Class<?> c = overlay.getClass(); c != null; c = c.getSuperclass()) {
+			for (Field field : c.getDeclaredFields()) {
+				if (net.minecraft.client.gui.components.EditBox.class.isAssignableFrom(field.getType())) {
+					try {
+						field.setAccessible(true);
+						return (net.minecraft.client.gui.components.EditBox) field.get(overlay);
+					} catch (ReflectiveOperationException | RuntimeException e) {
+						log("JEI search field: " + e);
+					}
+				}
+			}
+		}
+
+		return null;
+	}
+
 	/** Puts the keyboard focus on the screen's own search field (our ME search), like a click into it. */
 	private static void focusOwnSearch(ClientGameTestContext context) {
 		context.runOnClient(client -> client.screen.children().stream()
@@ -518,14 +538,26 @@ public class BackpackJeiTest implements FabricClientGameTest {
 				.ifPresent(box -> client.screen.setFocused(box)));
 	}
 
-	/** Ctrl+F into JEI's search, then types "oe" key by key like a player; JEI must stay open and get the text. */
+	/** Clicks into JEI's search, then types "oe" key by key like a player; JEI must stay open and get the text. */
 	private static void typeIntoJei(ClientGameTestContext context, String where, List<String> failed) {
 		context.runOnClient(client -> TestJeiPlugin.runtime.getIngredientFilter().setFilterText(""));
 		context.waitTicks(2);
 		net.minecraft.client.gui.screens.Screen before = context.computeOnClient(client -> client.screen);
-		context.getInput().holdKey(GLFW.GLFW_KEY_LEFT_CONTROL);
-		context.getInput().pressKey(GLFW.GLFW_KEY_F);
-		context.getInput().releaseKey(GLFW.GLFW_KEY_LEFT_CONTROL);
+		// a click into JEI's search bar, like a player
+		double[] at = context.computeOnClient(client -> {
+			net.minecraft.client.gui.components.EditBox field = jeiSearchField();
+			double scale = client.getWindow().getGuiScale();
+			return field == null ? null : new double[] {(field.getX() + field.getWidth() / 2.0) * scale, (field.getY() + field.getHeight() / 2.0) * scale};
+		});
+
+		if (at == null) {
+			log("typing " + where + ": JEI search field not found");
+			failed.add(where + " (kein JEI-Suchfeld)");
+			return;
+		}
+
+		context.getInput().setCursorPos(at[0], at[1]);
+		context.getInput().pressMouse(GLFW.GLFW_MOUSE_BUTTON_LEFT);
 		context.waitTicks(3);
 		boolean focused = context.computeOnClient(client -> TestJeiPlugin.runtime.getIngredientListOverlay().hasKeyboardFocus());
 
@@ -552,6 +584,8 @@ public class BackpackJeiTest implements FabricClientGameTest {
 
 		// JEI back to normal for the next steps: shown again (Ctrl+O, now that its search has no focus) and empty
 		if (!result.contains("shown=true")) {
+			context.getInput().setCursorPos(0, 0);
+			context.getInput().pressMouse(GLFW.GLFW_MOUSE_BUTTON_LEFT);
 			context.getInput().holdKey(GLFW.GLFW_KEY_LEFT_CONTROL);
 			context.getInput().pressKey(GLFW.GLFW_KEY_O);
 			context.getInput().releaseKey(GLFW.GLFW_KEY_LEFT_CONTROL);
