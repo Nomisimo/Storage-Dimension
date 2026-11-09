@@ -20,4 +20,8 @@ public class RobotRenderState extends HoldingEntityRenderState {
 	public boolean umbrella;
 	/** Standing on a fence or wall post: drawn this much lower, onto the visible top of the post. */
 	public float postDrop;
+	/** In mining mode: wears its helmet with the lamp. */
+	public boolean helmet;
+	/** Digging a block right now. */
+	public boolean digging;
 }

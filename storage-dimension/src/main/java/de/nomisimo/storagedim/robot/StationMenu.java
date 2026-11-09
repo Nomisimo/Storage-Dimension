@@ -73,6 +73,7 @@ public class StationMenu extends AbstractContainerMenu {
 	public static final int ACTION_STATION_NAME = 4;
 	public static final int ACTION_ROBOT_NAME = 5;
 	public static final int ACTION_AREA_NAME = 6;
+	public static final int ACTION_WORK_MODE = 7;
 
 	private final Container filterSlots;
 	private final Container io;
@@ -168,6 +169,11 @@ public class StationMenu extends AbstractContainerMenu {
 			case ACTION_ROBOT_NAME -> {
 				// for the robots set up from now on; placed ones keep their own name
 				config = config.withName(clean(text));
+			}
+			case ACTION_WORK_MODE -> {
+				StationMining.Result result = StationMining.toggle((ServerLevel) viewer.level(), dim, pos);
+				viewer.sendSystemMessage(result.message());
+				config = StorageData.get().station(dim, pos);
 			}
 			case ACTION_AREA_NAME -> {
 				StorageData data = StorageData.get();
@@ -342,7 +348,7 @@ public class StationMenu extends AbstractContainerMenu {
 		String areaState = area.connected() ? (area.enabled() ? Areas.autoPaused(dim, pos) ? "pausiert (Auto)" : "an" : "aus") : "";
 		StationNetworking.SyncPayload payload = new StationNetworking.SyncPayload(containerId, config.stationName(), config.name(),
 				config.range(), config.color(), config.exclude(), antennas, area.name(), area.connected() ? area.sizeText(pos) : "", areaState,
-				names, states);
+				names, states, config.mining());
 
 		if (force || !Objects.equals(payload, lastSync)) {
 			lastSync = payload;

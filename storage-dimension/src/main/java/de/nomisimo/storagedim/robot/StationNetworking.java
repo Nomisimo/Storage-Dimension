@@ -36,7 +36,7 @@ public final class StationNetworking {
 
 	/** Server to client: the station's settings and its robots (names and what each is doing). */
 	public record SyncPayload(int containerId, String stationName, String robotName, int range, int color, boolean exclude,
-			int antennas, String areaName, String areaSize, String areaState, List<Component> names, List<Component> states) implements CustomPacketPayload {
+			int antennas, String areaName, String areaSize, String areaState, List<Component> names, List<Component> states, boolean mining) implements CustomPacketPayload {
 		public static final Type<SyncPayload> TYPE = new Type<>(StorageDimensionMod.id("station_sync"));
 		public static final StreamCodec<RegistryFriendlyByteBuf, SyncPayload> CODEC = StreamCodec.of((buf, payload) -> {
 			buf.writeVarInt(payload.containerId);
@@ -55,6 +55,8 @@ public final class StationNetworking {
 				ComponentSerialization.STREAM_CODEC.encode(buf, payload.names.get(i));
 				ComponentSerialization.STREAM_CODEC.encode(buf, payload.states.get(i));
 			}
+
+			buf.writeBoolean(payload.mining);
 		}, buf -> {
 			int containerId = buf.readVarInt();
 			String stationName = buf.readUtf();
@@ -75,7 +77,8 @@ public final class StationNetworking {
 				states.add(ComponentSerialization.STREAM_CODEC.decode(buf));
 			}
 
-			return new SyncPayload(containerId, stationName, robotName, range, color, exclude, antennas, areaName, areaSize, areaState, names, states);
+			boolean mining = buf.readBoolean();
+			return new SyncPayload(containerId, stationName, robotName, range, color, exclude, antennas, areaName, areaSize, areaState, names, states, mining);
 		});
 
 		@Override

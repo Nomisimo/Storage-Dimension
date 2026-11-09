@@ -236,6 +236,21 @@ final class SmokeTest {
 			errors.add(t.toString());
 		}
 
+		if (!errors.isEmpty()) {
+			report(server, errors);
+			return;
+		}
+
+		// the mining robots need a few minutes of game time; the result comes later
+		try {
+			de.nomisimo.storagedim.robot.MiningSmokeTest.start(server, miningErrors -> report(server, miningErrors));
+		} catch (Throwable t) {
+			StorageDimensionMod.LOGGER.error("SMOKETEST Ausnahme", t);
+			report(server, List.of(t.toString()));
+		}
+	}
+
+	private static void report(MinecraftServer server, List<String> errors) {
 		if (errors.isEmpty()) {
 			StorageDimensionMod.LOGGER.info("SMOKETEST OK");
 			server.halt(false);
