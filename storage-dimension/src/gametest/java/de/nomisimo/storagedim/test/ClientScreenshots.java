@@ -604,6 +604,67 @@ public class ClientScreenshots implements FabricClientGameTest {
 	}
 
 	/** Puts the player {@code distance} blocks south-east of the point and turns them to look at it. */
+	/** Mining mode: robots with helmets dig a small hill, by day and at night (the glowing helmet lamps). */
+	private static void miningTest(ClientGameTestContext context, TestSingleplayerContext world) {
+		BlockPos station = stationBase.offset(0, 0, -120);
+		world.getServer().runOnServer(server -> {
+			ServerPlayer player = server.getPlayerList().getPlayers().get(0);
+			ServerLevel level = player.level();
+			player.teleportTo(level, station.getX() + 0.5, station.getY(), station.getZ() + 9.5, java.util.Set.of(), 180, 20, true);
+			level.setBlockAndUpdate(station, RobotStationBlock.BLOCK.defaultBlockState());
+			level.setBlockAndUpdate(station.east(), Blocks.CHEST.defaultBlockState().setValue(ChestBlock.FACING, Direction.EAST));
+
+			for (int dx = -2; dx <= 2; dx++) {
+				for (int dz = 3; dz <= 6; dz++) {
+					for (int dy = 0; dy < 3; dy++) {
+						level.setBlockAndUpdate(station.offset(dx, dy, -dz), dy == 2 ? Blocks.GRASS_BLOCK.defaultBlockState()
+								: dy == 1 ? Blocks.DIRT.defaultBlockState() : Blocks.STONE.defaultBlockState());
+					}
+				}
+			}
+
+			String dim = Rooms.id(level);
+			StorageData.get().setStation(dim, station, StorageData.get().station(dim, station).withRange(16).withName("Kumpel").withColor(0xF9801D));
+			StationMenu.open(player, station);
+			((StationMenu) player.containerMenu).action(StationMenu.ACTION_WORK_MODE, 0, "");
+		});
+		context.waitTicks(15);
+		context.takeScreenshot("station-mining-menu");
+		world.getServer().runOnServer(server -> {
+			ServerPlayer player = server.getPlayerList().getPlayers().get(0);
+			player.closeContainer();
+			ServerLevel level = player.level();
+			String dim = Rooms.id(level);
+			RobotConfig config = StorageData.get().station(dim, station);
+			System.out.println("STORAGEDIM MINING CHECK toolChest=" + config.toolChest() + " mining=" + config.mining());
+			var tools = (net.minecraft.world.level.block.entity.ChestBlockEntity) level.getBlockEntity(config.toolChest().orElse(station));
+
+			for (int i = 0; i < 3; i++) {
+				tools.setItem(i * 3, new ItemStack(Items.IRON_PICKAXE));
+				tools.setItem(i * 3 + 1, new ItemStack(Items.IRON_AXE));
+				tools.setItem(i * 3 + 2, new ItemStack(Items.IRON_SHOVEL));
+				RobotEntity robot = Robots.ROBOT.create(level, EntitySpawnReason.SPAWN_ITEM_USE);
+				robot.snapTo(station.getX() - 1.5 + i * 1.5, station.getY(), station.getZ() + 2.5, 180, 0);
+				robot.setup(player.getUUID(), station);
+				robot.applyConfig(config);
+				level.addFreshEntity(robot);
+			}
+		});
+		context.waitTicks(160);
+		context.takeScreenshot("robot-mining");
+		world.getServer().runOnServer(server -> {
+			for (RobotEntity robot : server.getPlayerList().getPlayers().get(0).level().getEntities(Robots.ROBOT, r -> r.isMining())) {
+				System.out.println("STORAGEDIM MINING " + robot.describeMining() + " " + robot.status().getString());
+			}
+
+			server.getCommands().performPrefixedCommand(server.createCommandSourceStack(), "time set midnight");
+		});
+		context.waitTicks(40);
+		context.takeScreenshot("robot-mining-night");
+		world.getServer().runOnServer(server -> server.getCommands().performPrefixedCommand(server.createCommandSourceStack(), "time set day"));
+		context.waitTicks(5);
+	}
+
 	private static void lookAt(ServerPlayer player, Vec3 target, double distance) {
 		Vec3 eye = target.add(distance * 0.55, distance * 0.6, distance * 0.6);
 		double dx = target.x - eye.x;
@@ -1408,6 +1469,7 @@ public class ClientScreenshots implements FabricClientGameTest {
 			fullChestTest(context, world);
 			logBarrel(world);
 			slabChestTest(context, world);
+			miningTest(context, world);
 			projectTest(context, world);
 			antennaTest(context, world);
 			islandTest(context, world);
