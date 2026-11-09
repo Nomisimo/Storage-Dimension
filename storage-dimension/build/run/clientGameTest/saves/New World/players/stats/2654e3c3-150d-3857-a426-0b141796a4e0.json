@@ -1,0 +1,21 @@
+{
+  "stats": {
+    "minecraft:picked_up": {
+      "minecraft:oak_planks": 8
+    },
+    "minecraft:custom": {
+      "minecraft:time_since_rest": 4397,
+      "minecraft:fall_one_cm": 650,
+      "minecraft:walk_one_cm": 60,
+      "minecraft:total_world_time": 4397,
+      "minecraft:leave_game": 1,
+      "minecraft:play_time": 4397,
+      "minecraft:time_since_death": 4397
+    },
+    "minecraft:used": {
+      "storagedim:robot": 5,
+      "storagedim:antenna": 2
+    }
+  },
+  "DataVersion": 4790
+}
