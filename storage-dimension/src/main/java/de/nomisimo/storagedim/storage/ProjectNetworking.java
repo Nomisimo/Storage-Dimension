@@ -35,8 +35,12 @@ public final class ProjectNetworking {
 		}
 	}
 
-	/** Server to client: the project's name, switch and list, with how many of each item the ME storage holds. */
-	public record SyncPayload(int containerId, String name, boolean block, List<ItemStack> items, List<Long> targets, List<Long> have)
+	/**
+	 * Server to client: the project's name, switch and list, with how many of each item the ME storage holds and how
+	 * many were taken out of the project chest already.
+	 */
+	public record SyncPayload(int containerId, String name, boolean block, List<ItemStack> items, List<Long> targets, List<Long> have,
+			List<Long> taken)
 			implements CustomPacketPayload {
 		public static final Type<SyncPayload> TYPE = new Type<>(StorageDimensionMod.id("project_sync"));
 		public static final StreamCodec<RegistryFriendlyByteBuf, SyncPayload> CODEC = StreamCodec.of((buf, payload) -> {
@@ -49,6 +53,7 @@ public final class ProjectNetworking {
 				ItemStack.STREAM_CODEC.encode(buf, payload.items.get(i));
 				buf.writeVarLong(payload.targets.get(i));
 				buf.writeVarLong(payload.have.get(i));
+				buf.writeVarLong(payload.taken.get(i));
 			}
 		}, buf -> {
 			int containerId = buf.readVarInt();
@@ -58,14 +63,16 @@ public final class ProjectNetworking {
 			List<ItemStack> items = new ArrayList<>();
 			List<Long> targets = new ArrayList<>();
 			List<Long> have = new ArrayList<>();
+			List<Long> taken = new ArrayList<>();
 
 			for (int i = 0; i < size; i++) {
 				items.add(ItemStack.STREAM_CODEC.decode(buf));
 				targets.add(buf.readVarLong());
 				have.add(buf.readVarLong());
+				taken.add(buf.readVarLong());
 			}
 
-			return new SyncPayload(containerId, name, block, items, targets, have);
+			return new SyncPayload(containerId, name, block, items, targets, have, taken);
 		});
 
 		@Override

@@ -2,7 +2,7 @@
 
 Ein Fabric-Mod für **Minecraft 26.1.2**: eine Bibliothek voller Kisten in einer eigenen Dimension, ein ME-Speicher ohne Stapelgrenzen und kleine Sammelroboter, die herumliegende Items einsammeln und einlagern.
 
-**Aktuelle Version: 0.7.3.2.** Die fertigen Dateien gibt es unter [Releases](https://github.com/Nomisimo/Storage-Dimension/releases), dort steht auch, welche Datei wohin gehört.
+**Aktuelle Version: 0.8.0.** Die fertigen Dateien gibt es unter [Releases](https://github.com/Nomisimo/Storage-Dimension/releases), dort steht auch, welche Datei wohin gehört.
 
 ![Dimensionskiste, Filterkiste, doppelte Filterkiste und ME-Terminal, davor der Sammelroboter](docs/screenshots/kisten-und-roboter.png)
 
@@ -19,11 +19,11 @@ Ein Fabric-Mod für **Minecraft 26.1.2**: eine Bibliothek voller Kisten in einer
 
 ## Installation
 
-`storage-dimension-0.7.3.2.jar` muss **auf dem Server und bei allen Spielern** im Ordner `mods` liegen.
+`storage-dimension-0.8.0.jar` muss **auf dem Server und bei allen Spielern** im Ordner `mods` liegen.
 
 1. Fabric Loader 0.19.5 oder neuer und [Fabric API](https://modrinth.com/mod/fabric-api) für 26.1.2 auf Server und Clients installieren.
-2. `storage-dimension-0.7.3.2.jar` (nicht die `-sources.jar`) in den `mods`-Ordner legen.
-3. Optional das [Traveler's-Backpack-Add-on](#me-rucksack-und-travelers-backpack) `storagedim-tb-0.7.3.2.jar` dazulegen, ebenfalls auf Server und Clients.
+2. `storage-dimension-0.8.0.jar` (nicht die `-sources.jar`) in den `mods`-Ordner legen.
+3. Optional das [Traveler's-Backpack-Add-on](#me-rucksack-und-travelers-backpack) `storagedim-tb-0.8.0.jar` dazulegen, ebenfalls auf Server und Clients.
 4. Server starten. Die Dimension `storagedim:storage` wird automatisch angelegt, die Daten liegen in `world/storagedim.json`.
 
 **Passt gut dazu (optional):** [JEI](https://modrinth.com/mod/jei) (Rezepte, Suche koppeln, „+“ im Rucksack), [Jade](https://modrinth.com/mod/jade) (Infos zu Robotern und Stationen), [Xaero's Minimap](https://modrinth.com/mod/xaeros-minimap) (Roboter auf der Karte). Getestet mit JEI 29.47.0.111, Jade 26.1.11 und Xaero's Minimap 26.6.2.
@@ -49,7 +49,7 @@ Ein Fabric-Mod für **Minecraft 26.1.2**: eine Bibliothek voller Kisten in einer
 - **Katalog und Teleport:** Rechtsklick auf das Lesepult in der Halle oder am Ende jedes Gangs öffnet den Katalog. Ein Klick auf eine Abteilung teleportiert an den Anfang ihres Gangs. **Item suchen** teleportiert direkt vor die erste Kiste eines Items (sucht auch nach Trank-Wirkung und Verzauberung). Außerdem gibt es dort Knöpfe zurück in die Halle und zum Verlassen.
 - Die Bibliothek wächst mit: Neue Sorten bekommen sofort Kisten am Ende ihres Gangs. Leere Kisten verschwinden und die Kistenzahl wird angepasst, wenn gerade niemand in der Bibliothek ist; beim nächsten Betreten wird neu sortiert.
 - **Drachenei-Altar:** Liegt ein Drachenei im ME-Speicher, steht mitten in der Eingangshalle ein Altar, über dem das Ei schwebt. Ist das Ei wieder draußen, verschwindet der Altar.
-- **Handelshalle:** Dorfbewohner, die im Eimer im ME-Speicher liegen (z. B. mit [Villager In A Bucket](https://modrinth.com/mod/villager-in-a-bucket)), stehen in einer Handelshalle hinter der Südwand der Eingangshalle, der Durchgang ist rechts neben dem roten Läufer. Jeder hat einen eigenen Stand mit Theke und Arbeitsblock, an der Theke hängt ein Holzschild mit seinem wertvollsten Handel. Man kann mit ihnen handeln, sie füllen ihre Angebote regelmäßig auf. Schlagen, mit dem Eimer einfangen, anleinen oder umbenennen geht nicht. Die Halle gibt es nur, solange Dorfbewohner im ME-Speicher liegen (höchstens 64 stehen dort). Was ein Dorfbewohner in der Halle dazulernt, bleibt nur, solange sein Eimer im ME-Speicher liegt; der Eimer selbst ändert sich nicht.
+- **Handelshalle:** Dorfbewohner, die im Eimer im ME-Speicher liegen (z. B. mit [Villager In A Bucket](https://modrinth.com/mod/villager-in-a-bucket)), leben in einer Handelshalle hinter der Südwand der Eingangshalle. Der Eingang ist ein Zauntor rechts neben dem roten Läufer: Du kannst es öffnen, die Dorfbewohner nicht. Jeder hat einen offenen Stand mit seinem Arbeitsblock, darüber hängt ein Holzschild mit seinem wertvollsten Handel. Die Stände sind nach Beruf sortiert, innerhalb eines Berufs die mit der höchsten Stufe (Meister) vorne an der Tür. Hinten liegt ein Dorfplatz mit Glocke und Bänken. Die Dorfbewohner laufen herum, arbeiten an ihren Arbeitsblöcken, treffen sich am Platz und tratschen wie im Dorf. **Markt:** Stellst du dich an einen Arbeitsblock, kommen alle Dorfbewohner dieses Berufs zu dir, die besten zuerst und am nächsten. Man kann mit ihnen handeln, sie füllen ihre Angebote regelmäßig auf. Schlagen, mit dem Eimer einfangen, anleinen oder umbenennen geht nicht. Arbeitslose stehen still, damit sie keinem anderen den Arbeitsblock wegnehmen; Babys und Dorfbewohner, die nicht aus einem Eimer kommen, verschwinden (sonst wären es Kopien). Die Halle gibt es nur, solange Dorfbewohner im ME-Speicher liegen (höchstens 64 leben dort). Was ein Dorfbewohner in der Halle dazulernt, bleibt nur, solange sein Eimer im ME-Speicher liegt; der Eimer selbst ändert sich nicht.
 - In der Bibliothek lässt sich nichts abbauen oder hinstellen.
 - Raus geht es per Rechtsklick auf den Leuchtstein in der Halle, über den Katalog oder mit `/storage raus`.
 - Standardmäßig teilen sich alle Spieler einen Speicher und eine Bibliothek. Mit `sharedStorage = false` bekommt jeder Speicher seine eigene (siehe [Einstellungen](#einstellungen)).
@@ -112,7 +112,8 @@ Eine Kiste für ein Bauprojekt: Du legst fest, welche Items in welcher Menge geb
 ![Einstellungen der Projektkiste](docs/screenshots/projekt-fenster.png)
 ![Item-Suche über alle Items](docs/screenshots/projekt-suche.png)
 
-- **Benutzen:** Normaler Rechtsklick zeigt die Projekt-Items, die im ME-Speicher sind. Die Zahlen sind grün, sobald die benötigte Menge da ist, und der Tooltip sagt, wie viele von wie vielen da sind und wie viele fehlen. Baumaterial kann direkt in die Kiste gelegt werden. Das Zahnrad ⚙ neben dem Suchfeld wechselt zu den Einstellungen.
+- **Benutzen:** Normaler Rechtsklick zeigt alle Projekt-Items; was nicht im ME-Speicher liegt, steht mit einer roten 0 da. Die Zahlen sind grün, sobald die benötigte Menge da ist, und der Tooltip sagt, wie viele von wie vielen da sind und wie viele fehlen. Baumaterial kann direkt in die Kiste gelegt werden. Das Zahnrad ⚙ neben dem Suchfeld wechselt zu den Einstellungen.
+- **Nur die eingestellte Menge:** Aus der Projektkiste lässt sich von jedem Item höchstens die eingestellte Menge herausnehmen. Die Kiste zählt mit, wie viel schon entnommen wurde (Tooltip „Entnommen: 40 von 64“); ist alles draußen, verschwindet das Item aus der Kiste und die Einstellungen zeigen „✔ alles entnommen“. So weißt du, dass du von dem Item alles verbaut hast. Legst du Items zurück in die Projektkiste, zählen sie nicht mehr als entnommen. Entnommenes zählt im Fortschritt als erledigt und wird nicht mehr im ME geblockt.
 
 ![Item-Ansicht der Projektkiste](docs/screenshots/projekt-items.png)
 ![Tooltip: 40 von 64 da, 24 fehlen](docs/screenshots/projekt-items-tooltip.png)
@@ -243,7 +244,7 @@ Ein Rucksack, der mit dem Speicher verbunden ist und ihn von überall öffnet.
 
 ### Traveler's-Backpack-Add-on
 
-Das Add-on `storagedim-tb-0.7.3.2.jar` fügt ein echtes **ME-Upgrade** für den Upgrade-Slot von Traveler's Backpack hinzu. Es hat immer dieselbe Versionsnummer wie Storage Dimension.
+Das Add-on `storagedim-tb-0.8.0.jar` fügt ein echtes **ME-Upgrade** für den Upgrade-Slot von Traveler's Backpack hinzu. Es hat immer dieselbe Versionsnummer wie Storage Dimension.
 
 - **Rezept** (formlos): Leeres Upgrade (Traveler's Backpack), Enderauge, 2× Amethystscherbe, Redstoneblock. Mit dem Add-on ergibt auch das normale ME-Upgrade-Rezept (mit Papier) dieses Upgrade. Es passt in den Upgrade-Slot und macht mit einem Bündel auch einen ME-Rucksack.
 - **ME-Ansicht:** Upgrade in einen Upgrade-Slot legen. Linksklick auf das ME-Symbol zeigt den ME-Speicher direkt im Rucksack-Fenster an Stelle des Rucksack-Inhalts. Crafting und die anderen Upgrades bleiben daneben. Ein zweiter Linksklick zeigt wieder den Rucksack, Rechtsklick nimmt das Upgrade heraus.
@@ -262,7 +263,7 @@ Das Add-on `storagedim-tb-0.7.3.2.jar` fügt ein echtes **ME-Upgrade** für den 
 - Der Rucksack muss nicht in der Hand sein: auf dem Rücken tragen und mit der Rucksack-Taste (Standard **B**) öffnen reicht.
 - **Crafting aus dem ME-Speicher:** Hat der Rucksack zusätzlich das Crafting-Upgrade, holt der „+“-Knopf von JEI fehlende Zutaten auch aus dem ME-Speicher, genauso wie aus Inventar und Rucksack. „+“ ist nur grün, wenn alle Zutaten zusammen vorhanden sind, sonst markiert JEI die fehlenden rot. Shift + „+“ füllt das Raster für so viele Durchgänge wie möglich (bis zu einem Stapel). Was vorher im Raster lag, kommt zurück ins Inventar oder, wenn das voll ist, in den Speicher.
 - Der kleine Schalter neben dem ME-Symbol stellt zwischen *ME als Quelle* (Standard) und *nur Inventar* um.
-- **Installation:** `storagedim-tb-0.7.3.2.jar` und `storage-dimension-0.7.3.2.jar` auf Server und Clients, dazu Traveler's Backpack, [Forge Config API Port](https://modrinth.com/mod/forge-config-api-port) und Fabric API. JEI wird nur für „+“ und die Rezeptanzeige gebraucht, Mod Menu (optional, nur im Client) für die Einstellungen.
+- **Installation:** `storagedim-tb-0.8.0.jar` und `storage-dimension-0.8.0.jar` auf Server und Clients, dazu Traveler's Backpack, [Forge Config API Port](https://modrinth.com/mod/forge-config-api-port) und Fabric API. JEI wird nur für „+“ und die Rezeptanzeige gebraucht, Mod Menu (optional, nur im Client) für die Einstellungen.
 
 ![ME-Ansicht im Rucksack mit Suchleiste, Sortierung und Knöpfen wie im ME-Speicher](docs/screenshots/rucksack-me-suche.png)
 

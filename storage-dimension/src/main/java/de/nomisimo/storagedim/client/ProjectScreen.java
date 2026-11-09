@@ -272,8 +272,8 @@ public class ProjectScreen extends AbstractContainerScreen<ProjectSettingsMenu> 
 					continue;
 				}
 
-				if (entry && data.have().get(row.index) >= data.targets().get(row.index)) {
-					// everything there: the row turns green
+				if (entry && data.have().get(row.index) + data.taken().get(row.index) >= data.targets().get(row.index)) {
+					// everything there (or taken out already): the row turns green
 					graphics.fill(l + 7, y - 2, l + SCROLL_X - 1, y + 18, 0xFF8FCF8F);
 				}
 
@@ -324,14 +324,25 @@ public class ProjectScreen extends AbstractContainerScreen<ProjectSettingsMenu> 
 			graphics.setComponentTooltipForNextFrame(font, lines, mouseX, mouseY);
 		} else if (data != null && hovered < data.items().size()) {
 			long have = data.have().get(hovered);
-			long target = data.targets().get(hovered);
+			long taken = data.taken().get(hovered);
+			long target = Math.max(0, data.targets().get(hovered) - taken);
 			List<Component> lines = new ArrayList<>();
 			lines.add(data.items().get(hovered).getHoverName());
-			lines.add(Component.literal(TerminalCounts.format(have) + " von " + TerminalCounts.format(target) + " da")
-					.withStyle(have >= target ? ChatFormatting.GREEN : ChatFormatting.AQUA));
 
-			if (have < target) {
-				lines.add(Component.literal("Fehlen: " + (target - have)).withStyle(ChatFormatting.RED));
+			if (taken > 0) {
+				lines.add(Component.literal("Entnommen: " + TerminalCounts.format(taken) + " von " + TerminalCounts.format(data.targets().get(hovered)))
+						.withStyle(ChatFormatting.GOLD));
+			}
+
+			if (target <= 0) {
+				lines.add(Component.literal("✔ alles entnommen").withStyle(ChatFormatting.GREEN));
+			} else {
+				lines.add(Component.literal(TerminalCounts.format(have) + " von " + TerminalCounts.format(target) + " da")
+						.withStyle(have >= target ? ChatFormatting.GREEN : ChatFormatting.AQUA));
+
+				if (have < target) {
+					lines.add(Component.literal("Fehlen: " + (target - have)).withStyle(ChatFormatting.RED));
+				}
 			}
 
 			lines.add(Component.literal("Klick mit einem Item: tauschen").withStyle(ChatFormatting.GRAY));

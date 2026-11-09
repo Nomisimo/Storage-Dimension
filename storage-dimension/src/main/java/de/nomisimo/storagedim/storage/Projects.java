@@ -73,6 +73,36 @@ public final class Projects {
 			return entryFor(stack) != null;
 		}
 
+		/** What the project chest still gives out of this item: the amount set minus what was taken already. */
+		public long remaining(ItemStack stack) {
+			Entry entry = entryFor(stack);
+			return entry == null ? 0 : entry.remaining();
+		}
+
+		/** Counts items taken out of the project chest. */
+		public void took(ItemStack stack, long amount) {
+			Entry entry = entryFor(stack);
+
+			if (entry != null && amount > 0) {
+				entry.taken += amount;
+				StorageData.markDirty();
+			}
+		}
+
+		/** Counts items put back into the project chest; returns how many of them were taken before. */
+		public long returned(ItemStack stack, long amount) {
+			Entry entry = entryFor(stack);
+
+			if (entry == null || amount <= 0 || entry.taken <= 0) {
+				return 0;
+			}
+
+			long back = Math.min(amount, entry.taken);
+			entry.taken -= back;
+			StorageData.markDirty();
+			return back;
+		}
+
 		/** Adds the item with this amount, or adds the amount to its entry. Returns the entry. */
 		public Entry add(ItemStack stack, long amount) {
 			Entry entry = entryFor(stack);
@@ -89,15 +119,30 @@ public final class Projects {
 		}
 	}
 
-	/** One item of a project and the amount it needs. */
+	/**
+	 * One item of a project, the amount it needs and how many of it were already taken out of the project chest.
+	 * The project chest only gives out the amount set, so when nothing is left everything was used.
+	 */
 	public static final class Entry {
 		/** Count 1; matched like a filter item, see {@link FilterChests#matches}. */
 		public final ItemStack item;
 		public long target;
+		/** Taken out of the project chest so far, minus what was put back in. */
+		public long taken;
 
 		public Entry(ItemStack item, long target) {
+			this(item, target, 0);
+		}
+
+		public Entry(ItemStack item, long target, long taken) {
 			this.item = item;
 			this.target = target;
+			this.taken = Math.max(0, taken);
+		}
+
+		/** What the project chest still gives out of this item. */
+		public long remaining() {
+			return Math.max(0, target - taken);
 		}
 
 		public boolean matches(ItemStack stack) {
@@ -174,7 +219,7 @@ public final class Projects {
 
 			for (Entry entry : project.entries) {
 				if (entry.matches(prototype)) {
-					reserved += entry.target;
+					reserved += entry.remaining();
 				}
 			}
 		}
@@ -182,9 +227,13 @@ public final class Projects {
 		return reserved;
 	}
 
-	/** What may be taken of a stored item: everything beyond what the blocking projects (other than {@code project}) keep. */
+	/**
+	 * What may be taken of a stored item: everything beyond what the blocking projects (other than {@code project})
+	 * keep. In a project chest ({@code project} not null) at most what the project still needs of it.
+	 */
 	public static long available(StorageNetwork network, StorageNetwork.StoredItem entry, Project project) {
-		return Math.max(0, entry.count - reserved(network, entry.prototype, project));
+		long free = Math.max(0, entry.count - reserved(network, entry.prototype, project));
+		return project == null ? free : Math.min(free, project.remaining(entry.prototype));
 	}
 
 	/** Tooltip lines for an item blocked by projects: which projects keep how many. Empty when nothing is blocked. */
@@ -205,7 +254,7 @@ public final class Projects {
 
 			for (Entry entry : project.entries) {
 				if (entry.matches(prototype)) {
-					amount += entry.target;
+					amount += entry.remaining();
 				}
 			}
 

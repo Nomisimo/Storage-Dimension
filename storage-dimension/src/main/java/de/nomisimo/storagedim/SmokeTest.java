@@ -5,6 +5,7 @@ import java.util.List;
 
 import de.nomisimo.storagedim.storage.Library;
 import de.nomisimo.storagedim.storage.LibraryExtras;
+import de.nomisimo.storagedim.storage.Projects;
 import de.nomisimo.storagedim.storage.Rooms;
 import de.nomisimo.storagedim.storage.StorageNetwork;
 import net.minecraft.core.BlockPos;
@@ -57,8 +58,25 @@ final class SmokeTest {
 			errors.add("Handelshalle hat " + traders + " statt 2 Dorfbewohner");
 		}
 
-		// stall 0 is west of the corridor, its sign is one block west of the middle
-		if (level.getBlockEntity(centre.offset(0, 1, 11)) instanceof net.minecraft.world.level.block.entity.SignBlockEntity sign) {
+		// the villagers live: they walk around (only jobless ones stand still)
+		long standing = level.getEntities((net.minecraft.world.entity.Entity) null, new net.minecraft.world.phys.AABB(centre).inflate(40),
+				e -> e.entityTags().contains(LibraryExtras.TRADER_TAG) && e instanceof net.minecraft.world.entity.Mob mob && mob.isNoAi()).size();
+
+		if (standing != 0) {
+			errors.add(standing + " Dorfbewohner der Handelshalle haben keine KI");
+		}
+
+		// the door is a fence gate, behind the one row of stalls is the village square with its bell
+		if (!(level.getBlockState(centre.offset(1, 1, 9)).getBlock() instanceof net.minecraft.world.level.block.FenceGateBlock)) {
+			errors.add("Tor der Handelshalle fehlt");
+		}
+
+		if (!level.getBlockState(centre.offset(1, 1, 16)).is(Blocks.BELL)) {
+			errors.add("Glocke auf dem Dorfplatz der Handelshalle fehlt");
+		}
+
+		// stall 0 is west of the corridor, its sign hangs on the west wall over the workstation
+		if (level.getBlockEntity(centre.offset(-3, 2, 11)) instanceof net.minecraft.world.level.block.entity.SignBlockEntity sign) {
 			StringBuilder text = new StringBuilder();
 
 			for (int i = 0; i < 4; i++) {
@@ -92,6 +110,32 @@ final class SmokeTest {
 
 		if (traders != 0) {
 			errors.add(traders + " Dorfbewohner stehen noch in der Handelshalle");
+		}
+	}
+
+	/** A project chest gives out only the amount set for an item; what is put back can be taken again. */
+	private static void projectTest(List<String> errors) {
+		StorageNetwork network = new StorageNetwork(java.util.UUID.randomUUID(), 251);
+		network.insert(new ItemStack(Items.DIRT, 100));
+		Projects.Project project = new Projects.Project(java.util.UUID.randomUUID(), java.util.UUID.randomUUID(), "Test", false);
+		project.entries.add(new Projects.Entry(new ItemStack(Items.DIRT), 10));
+		int first = network.extract(new ItemStack(Items.DIRT), 64, project).getCount();
+		int second = network.extract(new ItemStack(Items.DIRT), 64, project).getCount();
+
+		if (first != 10 || second != 0) {
+			errors.add("Projektkiste gibt " + first + " und dann " + second + " statt 10 und 0 Erde heraus");
+		}
+
+		project.returned(new ItemStack(Items.DIRT, 4), 4);
+		int again = network.extract(new ItemStack(Items.DIRT), 64, project).getCount();
+
+		if (again != 4) {
+			errors.add("Projektkiste gibt nach dem Zurücklegen " + again + " statt 4 Erde heraus");
+		}
+
+		// outside the project chest everything is free
+		if (network.extract(new ItemStack(Items.DIRT), 64).getCount() != 64) {
+			errors.add("Erde außerhalb der Projektkiste nicht frei");
 		}
 	}
 
@@ -160,6 +204,7 @@ final class SmokeTest {
 				}
 
 				extrasTest(level, network, errors);
+				projectTest(errors);
 			}
 
 			for (String recipe : List.of("storage_chest", "me_terminal", "me_upgrade", "me_backpack", "filter_chest", "robot")) {

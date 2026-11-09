@@ -973,7 +973,7 @@ public final class Library {
 
 	// ---- chests ----
 
-	/** Right click on a block of the storage dimension. Only the chests, the lecterns and the exit do something. */
+	/** Right click on a block of the storage dimension. Only the chests, the lecterns, the trading hall's gate and the exit do something. */
 	public static InteractionResult use(ServerPlayer player, ServerLevel level, BlockPos pos) {
 		StorageNetwork network = StorageData.get().networkByRoom(roomAt(pos));
 
@@ -986,7 +986,15 @@ public final class Library {
 			return InteractionResult.FAIL;
 		}
 
-		if (level.getBlockState(pos).is(Blocks.LECTERN)) {
+		boolean tradeHall = LibraryExtras.inTradeHall(network, pos.subtract(centre(network.room)));
+
+		if (tradeHall && level.getBlockState(pos).getBlock() instanceof net.minecraft.world.level.block.FenceGateBlock) {
+			// the door of the trading hall
+			return InteractionResult.PASS;
+		}
+
+		// the lecterns of the librarians in the trading hall are only workstations
+		if (level.getBlockState(pos).is(Blocks.LECTERN) && !tradeHall) {
 			CatalogMenu.open(player, network);
 			return InteractionResult.SUCCESS;
 		}

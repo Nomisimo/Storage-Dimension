@@ -421,6 +421,10 @@ public final class StorageData {
 					JsonObject e = new JsonObject();
 					e.add("stack", json);
 					e.addProperty("target", entry.target);
+
+					if (entry.taken > 0) {
+						e.addProperty("taken", entry.taken);
+					}
 					entries.add(e);
 				});
 			}
@@ -609,8 +613,9 @@ public final class StorageData {
 				for (JsonElement e : p.getAsJsonArray("entries")) {
 					JsonObject entry = e.getAsJsonObject();
 					long target = entry.get("target").getAsLong();
+					long taken = entry.has("taken") ? entry.get("taken").getAsLong() : 0;
 					ItemStack.CODEC.parse(ops, entry.get("stack")).resultOrPartial(StorageDimensionMod.LOGGER::warn)
-							.ifPresent(stack -> project.entries.add(new Projects.Entry(stack.copyWithCount(1), target)));
+							.ifPresent(stack -> project.entries.add(new Projects.Entry(stack.copyWithCount(1), target, taken)));
 				}
 
 				projects.put(project.id, project);

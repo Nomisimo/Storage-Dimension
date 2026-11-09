@@ -166,7 +166,8 @@ public class ProjectMenu extends ChestMenu {
 
 		for (Projects.Entry entry : project.entries) {
 			need += entry.target;
-			have += Math.min(entry.target, stored(network, entry));
+			// taken out of the project chest counts as done
+			have += Math.min(entry.target, entry.taken + stored(network, entry));
 		}
 
 		display.setItem(SLOT_INFO, button(Items.ENDER_EYE, project.entries.size() + " Items · " + Projects.format(have) + " / " + Projects.format(need),
@@ -234,9 +235,17 @@ public class ProjectMenu extends ChestMenu {
 		List<Component> lore = new ArrayList<>();
 		lore.add(Component.literal("Benötigt: " + Projects.format(entry.target)).withStyle(ChatFormatting.GOLD));
 		lore.add(Component.literal("Im ME: " + Projects.format(have)).withStyle(ChatFormatting.GRAY));
-		lore.add(have >= entry.target
-				? Component.literal("✔ alles da").withStyle(ChatFormatting.GREEN)
-				: Component.literal("Fehlt: " + Projects.format(entry.target - have)).withStyle(ChatFormatting.RED));
+		long remaining = entry.remaining();
+
+		if (entry.taken > 0) {
+			lore.add(Component.literal("Entnommen: " + Projects.format(entry.taken)).withStyle(ChatFormatting.GOLD));
+		}
+
+		lore.add(remaining <= 0
+				? Component.literal("✔ alles entnommen").withStyle(ChatFormatting.GREEN)
+				: have >= remaining
+						? Component.literal("✔ alles da").withStyle(ChatFormatting.GREEN)
+						: Component.literal("Fehlt: " + Projects.format(remaining - have)).withStyle(ChatFormatting.RED));
 		lore.add(Component.literal("Klick: auswählen").withStyle(ChatFormatting.GRAY));
 		icon.set(DataComponents.LORE, new ItemLore(lore));
 

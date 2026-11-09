@@ -110,6 +110,8 @@ public class RobotEntity extends PathfinderMob {
 	private static final int RECALL_VALID_TICKS = 2400;
 	/** Wanting back to its station without getting any closer for 3 minutes, it teleports there. */
 	private static final int HOME_STUCK_TICKS = 3600;
+	/** Outside its range (followed an item that drifted off, say) and finding no way back: it teleports home after 10 seconds. */
+	private static final int OUT_OF_RANGE_STUCK_TICKS = 200;
 	private static final int RECALL_NONE = 0;
 	private static final int RECALL_RETURNING = 1;
 	private static final int RECALL_WAITING = 2;
@@ -479,7 +481,7 @@ public class RobotEntity extends PathfinderMob {
 	/** Safety net: a station robot that wants home but has not got closer for 3 minutes teleports there. */
 	private void tickHomeStuck() {
 		boolean wantsHome = station != null && recallPhase == RECALL_NONE && !nearHome() && target == null
-				&& getCarried().isEmpty() && getAction() == 0 && !stationMissing();
+				&& (getCarried().isEmpty() || delivery == null) && getAction() == 0 && !stationMissing();
 
 		if (!wantsHome) {
 			homeBest = Double.MAX_VALUE;
@@ -492,7 +494,7 @@ public class RobotEntity extends PathfinderMob {
 		if (distance < homeBest - 0.5) {
 			homeBest = distance;
 			homeStuck = 0;
-		} else if (++homeStuck >= HOME_STUCK_TICKS) {
+		} else if (++homeStuck >= (outOfRange() ? OUT_OF_RANGE_STUCK_TICKS : HOME_STUCK_TICKS)) {
 			teleportHome();
 			homeUnreachableUntil = 0;
 			homeBest = Double.MAX_VALUE;
@@ -947,6 +949,20 @@ public class RobotEntity extends PathfinderMob {
 		return home;
 	}
 
+	/** Clearly outside its range or area (more than a few blocks). */
+	private boolean outOfRange() {
+		Vec3 pos = position();
+
+		if (area != null) {
+			return !area.inflate(4).contains(pos);
+		}
+
+		BlockPos h = home();
+		double dx = pos.x - h.getX();
+		double dz = pos.z - h.getZ();
+		return dx * dx + dz * dz > (range + 4) * (range + 4) || Math.abs(pos.y - h.getY()) > VERTICAL_RANGE + 4;
+	}
+
 	private boolean inRange(Vec3 pos) {
 		if (area != null) {
 			return pos.x >= area.minX && pos.x <= area.maxX && pos.z >= area.minZ && pos.z <= area.maxZ
@@ -979,7 +995,9 @@ public class RobotEntity extends PathfinderMob {
 		ignoredItems.values().removeIf(until -> until < now);
 		List<ItemEntity> items = new ArrayList<>(level().getEntitiesOfClass(ItemEntity.class, area,
 				item -> item.isAlive() && !CLAIMED.contains(item.getUUID()) && !ignoredItems.containsKey(item.getUUID())
-						&& inRange(item.position()) && allows(item.getItem())));
+						&& inRange(item.position()) && allows(item.getItem())
+						// where the game does not move entities (too far from every player) it would stop and stay
+						&& ((ServerLevel) level()).isPositionEntityTicking(item.blockPosition())));
 		// only what a chest next to the station has room for; one check per kind of item
 		Map<ItemVariant, Boolean> fits = new HashMap<>();
 		boolean anyWanted = !items.isEmpty();
@@ -1236,6 +1254,11 @@ public class RobotEntity extends PathfinderMob {
 			if (areaOff) {
 				release();
 				return (!nearHome() || isInWater()) && level().getGameTime() >= homeUnreachableUntil;
+			}
+
+			// an item that drifted out of its range (down a river, say) is not followed any further
+			if (target != null && target.isAlive() && !wants(target)) {
+				release();
 			}
 
 			if ((target == null || !target.isAlive()) && level().getGameTime() >= nextSearch) {

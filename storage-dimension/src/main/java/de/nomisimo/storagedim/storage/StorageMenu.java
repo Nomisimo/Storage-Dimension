@@ -198,15 +198,23 @@ public class StorageMenu extends ChestMenu {
 			Projects.Entry wanted = project.entryFor(entry.prototype);
 
 			if (wanted != null) {
-				if (count >= wanted.target) {
-					extra.add(Component.literal("✔ " + format(wanted.target) + " von " + format(wanted.target) + " da").withStyle(ChatFormatting.GREEN));
+				long remaining = wanted.remaining();
+
+				if (wanted.taken > 0) {
+					extra.add(Component.literal("Entnommen: " + format(wanted.taken) + " von " + format(wanted.target)).withStyle(ChatFormatting.GOLD));
+				}
+
+				if (remaining <= 0) {
+					extra.add(Component.literal("✔ alles entnommen").withStyle(ChatFormatting.GREEN));
+				} else if (count >= remaining) {
+					extra.add(Component.literal("✔ " + format(remaining) + " von " + format(remaining) + " da").withStyle(ChatFormatting.GREEN));
 					// the client draws the amount green
 					CompoundTag tag = icon.getOrDefault(DataComponents.CUSTOM_DATA, CustomData.EMPTY).copyTag();
 					tag.putInt(COLOR_KEY, 0xFF55FF55);
 					icon.set(DataComponents.CUSTOM_DATA, CustomData.of(tag));
 				} else {
-					extra.add(Component.literal(format(count) + " von " + format(wanted.target) + " da").withStyle(ChatFormatting.AQUA));
-					extra.add(Component.literal("Fehlen: " + format(wanted.target - count)).withStyle(ChatFormatting.RED));
+					extra.add(Component.literal(format(count) + " von " + format(remaining) + " da").withStyle(ChatFormatting.AQUA));
+					extra.add(Component.literal("Fehlen: " + format(remaining - count)).withStyle(ChatFormatting.RED));
 				}
 			}
 		} else if (!freeOnly) {
@@ -227,6 +235,15 @@ public class StorageMenu extends ChestMenu {
 		return icon;
 	}
 
+	/** Stores the stack; in a project chest, items put back count as no longer taken for the project. */
+	private void insert(ItemStack stack) {
+		if (project != null) {
+			project.returned(stack, stack.getCount());
+		}
+
+		network.insert(stack);
+	}
+
 	private boolean accepts(ItemStack stack) {
 		return !stack.isEmpty() && (filter == null || filter.test(stack));
 	}
@@ -245,6 +262,15 @@ public class StorageMenu extends ChestMenu {
 		for (StorageNetwork.StoredItem entry : network.items) {
 			if (accepts(entry.prototype) && matchesSearch(entry.prototype) && shownCount(entry) > 0) {
 				list.add(entry);
+			}
+		}
+
+		if (project != null) {
+			// a project chest also shows the project's items that ME storage does not have (any more), with 0
+			for (Projects.Entry wanted : project.entries) {
+				if (matchesSearch(wanted.item) && list.stream().noneMatch(e -> wanted.matches(e.prototype))) {
+					list.add(new StorageNetwork.StoredItem(wanted.item.copyWithCount(1), 0));
+				}
 			}
 		}
 
@@ -334,7 +360,8 @@ public class StorageMenu extends ChestMenu {
 
 		if (max > 1) {
 			icon.set(DataComponents.MAX_STACK_SIZE, ICON_MAX);
-			icon.setCount((int) Math.min(count, ICON_MAX));
+			// at least 1, so an item a project still needs shows with 0
+			icon.setCount((int) Math.max(1, Math.min(count, ICON_MAX)));
 		}
 
 		icon.set(DataComponents.CUSTOM_NAME, Component.empty()
@@ -386,7 +413,7 @@ public class StorageMenu extends ChestMenu {
 			ItemStack stack = slots.get(slotIndex).getItem();
 
 			if (accepts(stack)) {
-				network.insert(stack);
+				insert(stack);
 				slots.get(slotIndex).setChanged();
 			}
 		} else {
@@ -424,7 +451,7 @@ public class StorageMenu extends ChestMenu {
 
 			for (int i = 9; i < 36; i++) {
 				if (accepts(inv.getItem(i))) {
-					network.insert(inv.getItem(i));
+					insert(inv.getItem(i));
 				}
 			}
 
@@ -444,9 +471,9 @@ public class StorageMenu extends ChestMenu {
 			}
 
 			if (button == 1) {
-				network.insert(carried.split(1));
+				insert(carried.split(1));
 			} else {
-				network.insert(carried);
+				insert(carried);
 				setCarried(ItemStack.EMPTY);
 			}
 
@@ -473,7 +500,10 @@ public class StorageMenu extends ChestMenu {
 		}
 
 		if (taken.isEmpty() && (input == ContainerInput.QUICK_MOVE || input == ContainerInput.PICKUP) && player instanceof ServerPlayer serverPlayer) {
-			List<Component> blocked = Projects.blockedLines(network, prototype, project);
+			Projects.Entry wanted = project == null ? null : project.entryFor(prototype);
+			List<Component> blocked = wanted != null && wanted.remaining() <= 0
+					? List.of(Component.literal("✔ Alle " + format(wanted.target) + " für „" + project.name + "“ entnommen").withStyle(ChatFormatting.GREEN))
+					: Projects.blockedLines(network, prototype, project);
 
 			if (!blocked.isEmpty()) {
 				serverPlayer.connection.send(new net.minecraft.network.protocol.game.ClientboundSetActionBarTextPacket(blocked.get(0)));
