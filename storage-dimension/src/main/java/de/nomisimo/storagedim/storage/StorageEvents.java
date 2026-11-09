@@ -75,6 +75,7 @@ public final class StorageEvents {
 		});
 		PlayerBlockBreakEvents.BEFORE.register((level, player, pos, state, blockEntity) -> onBreak(level, player, pos, state));
 		ServerPlayerEvents.JOIN.register(player -> {
+			StorageItems.upgradeInventory(player);
 			StorageData data = StorageData.get();
 
 			if (data != null && data.viewers.containsKey(player.getUUID())) {

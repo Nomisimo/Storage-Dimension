@@ -2,38 +2,11 @@
   "type": "minecraft:crafting_shapeless",
   "category": "misc",
   "ingredients": [
-    {
-      "fabric:type": "fabric:components",
-      "base": "minecraft:chest",
-      "components": {
-        "minecraft:custom_data": {
-          "storagedim_filter": true
-        }
-      }
-    },
+    "storagedim:filter_chest",
     "minecraft:book"
   ],
   "result": {
-    "id": "minecraft:chest",
-    "count": 1,
-    "components": {
-      "minecraft:custom_data": {
-        "storagedim_project": ""
-      },
-      "minecraft:item_name": "Projektkiste",
-      "minecraft:lore": [
-        {
-          "text": "Ein Bauprojekt: Items und Mengen festlegen",
-          "color": "gray",
-          "italic": false
-        },
-        {
-          "text": "Schleichen + Rechtsklick: Projekt einstellen",
-          "color": "gray",
-          "italic": false
-        }
-      ],
-      "minecraft:item_model": "storagedim:project_chest"
-    }
+    "id": "storagedim:project_chest",
+    "count": 1
   }
 }

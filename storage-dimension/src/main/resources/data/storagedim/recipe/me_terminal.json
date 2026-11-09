@@ -12,21 +12,7 @@
     "E": "minecraft:ender_chest"
   },
   "result": {
-    "id": "minecraft:ender_chest",
-    "count": 1,
-    "components": {
-      "minecraft:custom_data": {
-        "storagedim_terminal": true
-      },
-      "minecraft:item_name": "ME-Terminal",
-      "minecraft:lore": [
-        {
-          "text": "Öffnet den ME-Speicher direkt",
-          "color": "gray",
-          "italic": false
-        }
-      ],
-      "minecraft:item_model": "storagedim:me_terminal"
-    }
+    "id": "storagedim:me_terminal",
+    "count": 1
   }
 }

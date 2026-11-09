@@ -63,3 +63,8 @@ jobs:
           git push -f origin "HEAD:refs/heads/$target"
       - name: recipes reach JEI on a separate server
         run: grep -q "STORAGEDIM JEI CHECK external server OK" client.log
+      - name: our items and recipes are in JEI, in singleplayer and on a separate server
+        run: |
+          grep "STORAGEDIM JEI CHECK items" client.log
+          grep -q "STORAGEDIM JEI CHECK items singleplayer OK" client.log
+          grep -q "STORAGEDIM JEI CHECK items external server OK" client.log

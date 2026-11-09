@@ -28,7 +28,7 @@
 		"minecraft": "~26.1.2",
 		"java": ">=25",
 		"fabric-api": "*",
-		"storagedim": "*",
+		"storagedim": ">=0.8.0",
 		"travelersbackpack": ">=11.2.10"
 	},
 	"mixins": [
