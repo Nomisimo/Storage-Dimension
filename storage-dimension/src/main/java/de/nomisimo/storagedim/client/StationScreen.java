@@ -39,6 +39,7 @@ public class StationScreen extends AbstractContainerScreen<StationMenu> {
 	private EditBox robotName;
 	private EditBox areaName;
 	private Button mode;
+	private Button work;
 	private Button color;
 	private Button rangeDown;
 	private Button rangeUp;
@@ -81,8 +82,15 @@ public class StationScreen extends AbstractContainerScreen<StationMenu> {
 		color = addRenderableWidget(Button.builder(Component.empty(), b -> send(StationMenu.ACTION_COLOR, 1, ""))
 				.bounds(l + 106, t + StationMenu.AREA_Y, 62, 14)
 				.tooltip(Tooltip.create(Component.literal("Farbe der Area und ihrer Roboter. Klick: nächste Farbe"))).build());
+		work = addRenderableWidget(Button.builder(Component.empty(), b -> send(StationMenu.ACTION_WORK_MODE, 0, ""))
+				.bounds(l + 90, t + StationMenu.BUTTONS_Y, 78, 14)
+				.tooltip(Tooltip.create(Component.literal("Sammeln: die Roboter bringen herumliegende Items weg. "
+						+ "Abbauen: sie bauen alle Blöcke in ihrer Reichweite (oder der Antennen-Area) von oben nach unten ab, "
+						+ "lassen eine Wendeltreppe zur Station stehen und bringen alles in die Kisten. "
+						+ "Dafür stellt sich neben der Station eine Werkzeugkiste auf: pro Roboter eine Spitzhacke, eine Axt und eine Schaufel hinein.")))
+				.build());
 		addRenderableWidget(Button.builder(Component.literal("Zurückrufen"), b -> send(StationMenu.ACTION_RECALL, 0, ""))
-				.bounds(l + 8, t + StationMenu.BUTTONS_Y, 160, 14)
+				.bounds(l + 8, t + StationMenu.BUTTONS_Y, 78, 14)
 				.tooltip(Tooltip.create(Component.literal("Alle Roboter kommen zur Station und warten dort eine Minute. "
 						+ "Wer keinen Weg zur Station findet, teleportiert sich her.")))
 				.build());
@@ -117,6 +125,9 @@ public class StationScreen extends AbstractContainerScreen<StationMenu> {
 		rangeDown.visible = data.antennas() == 0;
 		rangeUp.visible = data.antennas() == 0;
 
+		work.setMessage(Component.literal(data.mining() ? "Abbauen" : "Sammeln").withStyle(data.mining() ? ChatFormatting.GOLD : ChatFormatting.WHITE));
+		// mining takes everything, the filter only matters for collecting
+		mode.active = !data.mining();
 		mode.setMessage(Component.literal(data.exclude() ? "Sammelt alles AUSSER Filter" : "Sammelt nur den Filter"));
 		String colorName = RobotConfig.colorName(data.color());
 		color.setMessage(Component.literal("■ ").withColor(data.color()).append(Component.literal(colorName.startsWith("Standard") ? "Standard" : colorName)

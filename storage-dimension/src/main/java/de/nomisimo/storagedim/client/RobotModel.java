@@ -31,6 +31,7 @@ public class RobotModel extends EntityModel<RobotRenderState> {
 	private final ModelPart leftFoot;
 	private final ModelPart goggles;
 	private final ModelPart umbrella;
+	private final ModelPart helmet;
 
 	public RobotModel(ModelPart root) {
 		super(root);
@@ -40,6 +41,7 @@ public class RobotModel extends EntityModel<RobotRenderState> {
 		jaw = head.getChild("jaw");
 		goggles = head.getChild("goggles");
 		umbrella = body.getChild("umbrella");
+		helmet = head.getChild("helmet");
 		rightLeg = root.getChild("right_leg");
 		rightShin = rightLeg.getChild("shin");
 		rightFoot = rightShin.getChild("foot");
@@ -71,6 +73,11 @@ public class RobotModel extends EntityModel<RobotRenderState> {
 		// a diving helmet: a glass box around the whole head and beak, only worn under water
 		head.addOrReplaceChild("goggles", CubeListBuilder.create()
 				.texOffs(0, 88).addBox(-4, -6, -7, 8, 7, 11), PartPose.ZERO);
+		// a miner's helmet in the robot's colour (accent texture) with a lamp at the front, worn in mining mode
+		head.addOrReplaceChild("helmet", CubeListBuilder.create()
+				.texOffs(0, 108).addBox(-3.5F, -5.6F, -5.5F, 7, 2, 9)
+				.texOffs(48, 108).addBox(-2, -6, -6.5F, 4, 3, 1)
+				.texOffs(40, 108).addBox(-1, -5.5F, -7.2F, 2, 2, 1), PartPose.ZERO);
 		head.addOrReplaceChild("jaw", CubeListBuilder.create()
 				.texOffs(0, 30).addBox(-3, 0, -6, 6, 1, 7), PartPose.offset(0, -1, 0.5F));
 
@@ -95,6 +102,7 @@ public class RobotModel extends EntityModel<RobotRenderState> {
 		float age = state.ageInTicks * state.idlePace + state.idlePhase;
 		goggles.visible = state.diving;
 		umbrella.visible = state.umbrella;
+		helmet.visible = state.helmet;
 
 		// marching: high knees, feet kept flat, a little waddle and a bobbing head
 		float swing = Mth.cos(pos) * 0.9F * speed;
@@ -160,6 +168,13 @@ public class RobotModel extends EntityModel<RobotRenderState> {
 			leftLeg.xRot -= bow * 0.3F;
 			rightShin.xRot += bow * 0.5F;
 			leftShin.xRot += bow * 0.5F;
+		} else if (state.digging) {
+			// mining: pecks at the block again and again
+			float peck = Math.abs(Mth.sin(state.ageInTicks * 0.55F));
+			body.xRot += 0.2F;
+			neck.xRot += 0.5F + peck * 0.7F;
+			head.xRot += peck * 0.35F;
+			jaw.xRot = peck * 0.25F;
 		} else if (state.carrying) {
 			jaw.xRot = 0.3F;
 		}

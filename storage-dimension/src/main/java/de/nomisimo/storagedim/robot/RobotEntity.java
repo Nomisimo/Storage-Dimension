@@ -26,6 +26,14 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.core.registries.Registries;
+import net.minecraft.resources.ResourceKey;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.tags.ItemTags;
+import net.minecraft.world.Container;
+import net.minecraft.world.entity.ExperienceOrb;
+import net.minecraft.world.item.enchantment.Enchantment;
+import net.minecraft.world.item.enchantment.EnchantmentHelper;
+import net.minecraft.world.item.enchantment.Enchantments;
 import net.minecraft.core.UUIDUtil;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.network.chat.Component;
@@ -129,6 +137,20 @@ public class RobotEntity extends PathfinderMob {
 	private static final EntityDataAccessor<Component> INFO_STATUS = SynchedEntityData.defineId(RobotEntity.class, EntityDataSerializers.COMPONENT);
 	/** It cannot work (station gone, no chest, no way home): its name tag gets error icons. */
 	private static final EntityDataAccessor<Boolean> ERROR = SynchedEntityData.defineId(RobotEntity.class, EntityDataSerializers.BOOLEAN);
+	/** Mining mode: {@link #MINING_LOOK_HELMET} wears its helmet, {@link #MINING_LOOK_DIGGING} digs right now. */
+	private static final EntityDataAccessor<Byte> MINING_LOOK = SynchedEntityData.defineId(RobotEntity.class, EntityDataSerializers.BYTE);
+	public static final int MINING_LOOK_NONE = 0;
+	public static final int MINING_LOOK_HELMET = 1;
+	public static final int MINING_LOOK_DIGGING = 2;
+	/** Stacks a mining robot gathers before it takes them to the chests (besides the one in its beak). */
+	public static final int BAG_SLOTS = 9;
+	/** How far from its eyes a mining robot digs, like a player. */
+	private static final double MINE_REACH = 4.8;
+	/** Its tools, one of each: pickaxe, axe, shovel. */
+	private static final int PICKAXE = 0;
+	private static final int AXE = 1;
+	private static final int SHOVEL = 2;
+	private static final String[] TOOL_NAMES = {"Spitzhacke", "Axt", "Schaufel"};
 	/** The icon on both sides of the name while it has an error. */
 	public static final String ERROR_ICON = "\ue5d0";
 	public static final int MOOD_NONE = 0;
@@ -187,6 +209,28 @@ public class RobotEntity extends PathfinderMob {
 	private int recallStuck;
 	private double homeBest = Double.MAX_VALUE;
 	private int homeStuck;
+	/** Its station is in mining mode (taken from the station). */
+	private boolean mining;
+	/** The chest next to its station with the tools for mining, or null. */
+	private BlockPos toolChest;
+	/** The station's range, for the mining area without antennas (all robots of a station dig the same area). */
+	private int stationRange = RANGE;
+	/** Pickaxe, axe and shovel, taken from the tool chest; empty when it has none (or it broke). */
+	private final ItemStack[] tools = {ItemStack.EMPTY, ItemStack.EMPTY, ItemStack.EMPTY};
+	/** What it dug and has not taken to the chests yet. */
+	private final List<ItemStack> bag = new ArrayList<>();
+	/** The block it is going to dig or digging, and how far along it is. */
+	private BlockPos mineTarget;
+	private int digTicks;
+	private int digTotal;
+	/** 0: nothing, 1: fetching tools, 2: taking them back, 3: digging. */
+	private int minePhase;
+	/** Found nothing it could dig the last time it looked. */
+	private boolean mineIdle;
+	/** Why it cannot dig (no tool chest, tools missing), or null. */
+	private Component mineProblem;
+	/** Nothing is left to dig in its area. */
+	private boolean mineFinished;
 
 	public RobotEntity(EntityType<? extends PathfinderMob> type, Level level) {
 		super(type, level);
@@ -228,10 +272,12 @@ public class RobotEntity extends PathfinderMob {
 		builder.define(INFO_FILTER, Component.empty());
 		builder.define(INFO_STATUS, Component.empty());
 		builder.define(ERROR, false);
+		builder.define(MINING_LOOK, (byte) MINING_LOOK_NONE);
 	}
 
 	@Override
 	protected void registerGoals() {
+		goalSelector.addGoal(0, new MineGoal());
 		goalSelector.addGoal(1, new WorkGoal());
 		goalSelector.addGoal(6, new LookAtPlayerGoal(this, Player.class, 6));
 		goalSelector.addGoal(7, new RandomLookAroundGoal(this));
@@ -250,6 +296,11 @@ public class RobotEntity extends PathfinderMob {
 	/** 0 at the start of a pick-up or hand-in, 1 at its end. */
 	public float getActionProgress() {
 		return getAction() == 0 ? 0 : 1 - entityData.get(ACTION_TIME) / (float) ACTION_TICKS;
+	}
+
+	/** Helmet on, digging, or neither (for the renderer). */
+	public int getMiningLook() {
+		return entityData.get(MINING_LOOK);
 	}
 
 	public boolean isSitting() {
@@ -336,6 +387,7 @@ public class RobotEntity extends PathfinderMob {
 		applyName(name);
 		RobotConfig stationConfig = data.station(dim, station);
 		stationName = stationConfig.stationName();
+		syncMining(stationConfig);
 		syncArea(data.stationArea(dim, station), stationConfig, dim);
 		Long recall = RECALLS.get(dim + "@" + station.asLong());
 
@@ -371,6 +423,32 @@ public class RobotEntity extends PathfinderMob {
 
 		if (box != null) {
 			entityData.set(COLOR, stationConfig.color());
+		}
+	}
+
+	/** Mining mode, tool chest and range come from the station, so all its robots dig the same area together. */
+	private void syncMining(RobotConfig stationConfig) {
+		boolean was = mining;
+		mining = stationConfig.mining();
+		toolChest = stationConfig.toolChest().orElse(null);
+		stationRange = Math.clamp(stationConfig.range(), MIN_RANGE, RANGE);
+
+		if (was != mining) {
+			release();
+			dropMineTarget();
+			mineIdle = false;
+			mineFinished = false;
+			mineProblem = null;
+		}
+
+		updateMiningLook();
+	}
+
+	private void updateMiningLook() {
+		int look = !mining && !hasAnyTool() ? MINING_LOOK_NONE : minePhase == 3 && digTicks > 0 ? MINING_LOOK_DIGGING : MINING_LOOK_HELMET;
+
+		if (getMiningLook() != look) {
+			entityData.set(MINING_LOOK, (byte) look);
 		}
 	}
 
@@ -567,7 +645,7 @@ public class RobotEntity extends PathfinderMob {
 	/** Its own settings (each robot keeps those of the item it was placed from), for the item it turns into when picked up. */
 	public RobotConfig config() {
 		RobotConfig config = new RobotConfig(range, getColor(), getCustomName() == null ? "" : getCustomName().getString(), List.copyOf(filter),
-				Optional.empty(), Optional.empty(), excludeFilter, stationName);
+				Optional.empty(), Optional.empty(), excludeFilter, stationName, false, Optional.empty());
 		return station == null ? config : config.withStation(Rooms.id(level()), station);
 	}
 
@@ -603,6 +681,18 @@ public class RobotEntity extends PathfinderMob {
 			return Component.literal("Holt ").append(target.getItem().getHoverName()).withStyle(ChatFormatting.GREEN);
 		}
 
+		if (minePhase == 3 && mineTarget != null) {
+			return Component.literal("Baut ").append(level().getBlockState(mineTarget).getBlock().getName()).append(" ab").withStyle(ChatFormatting.GREEN);
+		}
+
+		if (minePhase == 1) {
+			return Component.literal("Holt Werkzeug").withStyle(ChatFormatting.GREEN);
+		}
+
+		if (minePhase == 2) {
+			return Component.literal("Bringt Werkzeug zurück").withStyle(ChatFormatting.GREEN);
+		}
+
 		if (noChest) {
 			return Component.literal("Fehler: keine Kiste an der Station").withStyle(ChatFormatting.RED);
 		}
@@ -623,6 +713,18 @@ public class RobotEntity extends PathfinderMob {
 			return Component.literal("Holt ").append(target.getItem().getHoverName()).withStyle(ChatFormatting.GREEN);
 		}
 
+		if (mining && mineProblem != null) {
+			return mineProblem.copy().withStyle(ChatFormatting.RED);
+		}
+
+		if (mining && mineFinished) {
+			return Component.literal("Fertig: alles abgebaut").withStyle(ChatFormatting.GREEN);
+		}
+
+		if (mining && mineIdle) {
+			return Component.literal("Abbau: nichts erreichbar, wartet").withStyle(ChatFormatting.YELLOW);
+		}
+
 		return Component.literal(isSitting() ? "Wartet fröhlich" : "Wartet").withStyle(ChatFormatting.YELLOW);
 	}
 
@@ -634,12 +736,12 @@ public class RobotEntity extends PathfinderMob {
 				.append(RobotConfig.describeFilter(filter, excludeFilter).withStyle(ChatFormatting.WHITE)));
 		entityData.set(INFO_STATUS, status());
 		entityData.set(ERROR, recallPhase == RECALL_NONE && (stationMissing()
-				|| !isBusy() && (noChest || chestsFull || level().getGameTime() < homeUnreachableUntil)));
+				|| !isBusy() && (noChest || chestsFull || level().getGameTime() < homeUnreachableUntil || mining && mineProblem != null)));
 	}
 
 	/** On its way to an item or a chest, or picking up / putting in right now. */
 	private boolean isBusy() {
-		return target != null || delivery != null || getAction() != 0;
+		return target != null || delivery != null || getAction() != 0 || minePhase != 0;
 	}
 
 	public boolean hasError() {
@@ -718,6 +820,11 @@ public class RobotEntity extends PathfinderMob {
 
 		for (Direction side : Direction.values()) {
 			BlockPos pos = centre.relative(side);
+
+			// the tool chest of the mining robots only holds tools
+			if (pos.equals(toolChest)) {
+				continue;
+			}
 
 			if (level().isLoaded(pos) && isContainer(pos, side.getOpposite())) {
 				containers.add(pos);
@@ -1129,6 +1236,11 @@ public class RobotEntity extends PathfinderMob {
 			setLid(openLid, false);
 		}
 
+		// a mining robot hands in what it gathered stack by stack
+		if (getCarried().isEmpty() && !bag.isEmpty()) {
+			setItemSlot(EquipmentSlot.MAINHAND, bag.remove(0));
+		}
+
 		delivery = null;
 		nextSearch = 0;
 	}
@@ -1171,6 +1283,593 @@ public class RobotEntity extends PathfinderMob {
 		if (target != null) {
 			CLAIMED.remove(target.getUUID());
 			target = null;
+		}
+	}
+
+	// ---- mining ----
+
+	public boolean isMining() {
+		return mining;
+	}
+
+	private boolean hasAnyTool() {
+		for (ItemStack tool : tools) {
+			if (!tool.isEmpty()) {
+				return true;
+			}
+		}
+
+		return false;
+	}
+
+	/** Its bag is (nearly) full, or it has nothing more to dig right now: off to the chests with what it gathered. */
+	private boolean needsUnload() {
+		return !bag.isEmpty() && (bag.size() >= BAG_SLOTS - 1 || mineIdle || !mining || recallPhase != RECALL_NONE || areaOff);
+	}
+
+	/** Gives back the block it was going to dig, so another robot may take it. */
+	private void dropMineTarget() {
+		if (mineTarget != null && !level().isClientSide()) {
+			level().destroyBlockProgress(getId(), mineTarget, -1);
+			MiningJob job = miningJob();
+
+			if (job != null) {
+				job.release(mineTarget, getUUID());
+			}
+		}
+
+		mineTarget = null;
+		digTicks = 0;
+		digTotal = 0;
+
+		if (minePhase == 3) {
+			minePhase = 0;
+		}
+	}
+
+	/** What all robots of its station dig together: the antenna area, or a square of the station's range from the station up. */
+	private MiningJob miningJob() {
+		if (station == null) {
+			return null;
+		}
+
+		int minX;
+		int minY;
+		int minZ;
+		int maxX;
+		int maxY;
+		int maxZ;
+
+		if (area != null) {
+			minX = (int) Math.floor(area.minX);
+			minY = (int) Math.floor(area.minY);
+			minZ = (int) Math.floor(area.minZ);
+			maxX = (int) Math.ceil(area.maxX) - 1;
+			maxY = (int) Math.ceil(area.maxY) - 1;
+			maxZ = (int) Math.ceil(area.maxZ) - 1;
+		} else {
+			minX = station.getX() - stationRange;
+			maxX = station.getX() + stationRange;
+			minZ = station.getZ() - stationRange;
+			maxZ = station.getZ() + stationRange;
+			// the station stands at the bottom; the area reaches as high up as the range is wide
+			minY = station.getY();
+			maxY = station.getY() + stationRange - 1;
+		}
+
+		minY = Math.max(minY, level().getMinY());
+		maxY = Math.min(maxY, level().getMaxY());
+		return MiningJob.get(Rooms.id(level()), station, minX, minY, minZ, maxX, maxY, maxZ, level().getGameTime());
+	}
+
+	private boolean toolChestThere() {
+		return toolChest != null && station != null && level() instanceof ServerLevel server && StationMining.isToolChest(server, toolChest, station);
+	}
+
+	private Container toolContainer() {
+		return toolChestThere() && level().getBlockEntity(toolChest) instanceof Container container ? container : null;
+	}
+
+	private static boolean isTool(ItemStack stack, int kind) {
+		return switch (kind) {
+			case PICKAXE -> stack.is(ItemTags.PICKAXES);
+			case AXE -> stack.is(ItemTags.AXES);
+			default -> stack.is(ItemTags.SHOVELS);
+		};
+	}
+
+	/** The tools it lacks that are not in the tool chest either, by name; empty when it has (or can get) all three. */
+	private List<String> unavailableTools(Container chest) {
+		List<String> missing = new ArrayList<>();
+
+		for (int kind = 0; kind < tools.length; kind++) {
+			if (tools[kind].isEmpty() && (chest == null || slotWith(chest, kind) < 0)) {
+				missing.add(TOOL_NAMES[kind]);
+			}
+		}
+
+		return missing;
+	}
+
+	private static int slotWith(Container chest, int kind) {
+		for (int slot = 0; slot < chest.getContainerSize(); slot++) {
+			if (isTool(chest.getItem(slot), kind)) {
+				return slot;
+			}
+		}
+
+		return -1;
+	}
+
+	/** Takes what it lacks from the tool chest, one of each kind. */
+	private void takeTools(Container chest) {
+		for (int kind = 0; kind < tools.length; kind++) {
+			int slot = tools[kind].isEmpty() ? slotWith(chest, kind) : -1;
+
+			if (slot >= 0) {
+				tools[kind] = chest.removeItem(slot, 1);
+			}
+		}
+
+		chest.setChanged();
+		playSound(SoundEvents.ITEM_PICKUP, 0.4F, 1.0F);
+	}
+
+	/** Mining is switched off: its tools go back into the tool chest (what does not fit is dropped next to it). */
+	private void returnTools(Container chest) {
+		for (int kind = 0; kind < tools.length; kind++) {
+			ItemStack tool = tools[kind];
+			tools[kind] = ItemStack.EMPTY;
+
+			if (tool.isEmpty()) {
+				continue;
+			}
+
+			boolean stored = false;
+
+			for (int slot = 0; slot < chest.getContainerSize() && !stored; slot++) {
+				if (chest.getItem(slot).isEmpty()) {
+					chest.setItem(slot, tool);
+					stored = true;
+				}
+			}
+
+			if (!stored) {
+				spawnAtLocation((ServerLevel) level(), tool);
+			}
+		}
+
+		chest.setChanged();
+	}
+
+	/** Of its tools the one that digs this block fastest (empty when none helps, then it digs by beak). */
+	private int bestTool(BlockState state) {
+		int best = -1;
+		float bestSpeed = 1;
+
+		for (int kind = 0; kind < tools.length; kind++) {
+			if (!tools[kind].isEmpty()) {
+				float speed = tools[kind].getDestroySpeed(state);
+
+				if (speed > bestSpeed || best < 0 && tools[kind].isCorrectToolForDrops(state)) {
+					best = kind;
+					bestSpeed = Math.max(bestSpeed, speed);
+				}
+			}
+		}
+
+		return best;
+	}
+
+	private int enchantmentLevel(ResourceKey<Enchantment> key, ItemStack stack) {
+		return level().registryAccess().lookup(Registries.ENCHANTMENT).flatMap(registry -> registry.get(key))
+				.map(holder -> EnchantmentHelper.getItemEnchantmentLevel(holder, stack)).orElse(0);
+	}
+
+	/** Ticks to dig the block, like a player with the same tool: hard blocks take longer, Efficiency makes it quicker. */
+	private int digTime(BlockPos pos, BlockState state) {
+		float hardness = state.getDestroySpeed(level(), pos);
+
+		if (hardness <= 0) {
+			return 3;
+		}
+
+		int kind = bestTool(state);
+		ItemStack tool = kind < 0 ? ItemStack.EMPTY : tools[kind];
+		float speed = tool.isEmpty() ? 1 : tool.getDestroySpeed(state);
+
+		if (speed > 1) {
+			int efficiency = enchantmentLevel(Enchantments.EFFICIENCY, tool);
+
+			if (efficiency > 0) {
+				speed += efficiency * efficiency + 1;
+			}
+		}
+
+		boolean correct = !state.requiresCorrectToolForDrops() || !tool.isEmpty() && tool.isCorrectToolForDrops(state);
+		return Math.max(4, (int) Math.ceil(hardness * (correct ? 30 : 100) / speed));
+	}
+
+	/**
+	 * Breaks the block it dug: the drops (with Fortune, Silk Touch and so on of its tool) go into its bag, the tool
+	 * wears down (Unbreaking counts), and experience from the block repairs tools with Mending.
+	 */
+	private void breakTarget(MiningJob job) {
+		ServerLevel server = (ServerLevel) level();
+		BlockPos pos = mineTarget;
+		BlockState state = server.getBlockState(pos);
+		int kind = bestTool(state);
+		ItemStack tool = kind < 0 ? ItemStack.EMPTY : tools[kind];
+		boolean harvests = !state.requiresCorrectToolForDrops() || !tool.isEmpty() && tool.isCorrectToolForDrops(state);
+		List<ItemStack> drops = harvests ? Block.getDrops(state, server, pos, null, this, tool) : List.of();
+		boolean wears = state.getDestroySpeed(server, pos) > 0;
+		server.destroyBlock(pos, false, this);
+		state.spawnAfterBreak(server, pos, tool, true);
+
+		for (ItemStack drop : drops) {
+			if (!addToBag(drop)) {
+				Block.popResource(server, pos, drop);
+			}
+		}
+
+		if (wears && !tool.isEmpty()) {
+			tool.hurtAndBreak(1, server, (ServerPlayer) null, item -> {
+			});
+
+			if (tool.isEmpty()) {
+				tools[kind] = ItemStack.EMPTY;
+				playSound(SoundEvents.ITEM_PICKUP, 0.6F, 0.5F);
+			}
+		}
+
+		mend(server, pos);
+		server.destroyBlockProgress(getId(), pos, -1);
+		job.dug(server, pos);
+		mineTarget = null;
+		digTicks = 0;
+		digTotal = 0;
+		minePhase = 0;
+	}
+
+	/** Into its bag, onto stacks of the same kind first; false when the bag is full. */
+	private boolean addToBag(ItemStack drop) {
+		for (ItemStack stack : bag) {
+			if (drop.isEmpty()) {
+				return true;
+			}
+
+			if (ItemStack.isSameItemSameComponents(stack, drop) && stack.getCount() < stack.getMaxStackSize()) {
+				int moved = Math.min(drop.getCount(), stack.getMaxStackSize() - stack.getCount());
+				stack.grow(moved);
+				drop.shrink(moved);
+			}
+		}
+
+		if (drop.isEmpty()) {
+			return true;
+		}
+
+		if (bag.size() >= BAG_SLOTS) {
+			return false;
+		}
+
+		bag.add(drop.copy());
+		drop.setCount(0);
+		return true;
+	}
+
+	/** Experience orbs around the block it dug repair its tools with Mending; without such a tool they stay for the players. */
+	private void mend(ServerLevel server, BlockPos pos) {
+		for (ExperienceOrb orb : server.getEntitiesOfClass(ExperienceOrb.class, new AABB(pos).inflate(2))) {
+			for (ItemStack tool : tools) {
+				if (!tool.isEmpty() && tool.isDamaged() && orb.isAlive()) {
+					int repair = EnchantmentHelper.modifyDurabilityToRepairFromXp(server, tool, orb.getValue());
+
+					if (repair > 0) {
+						tool.setDamageValue(Math.max(0, tool.getDamageValue() - repair));
+						orb.discard();
+					}
+				}
+			}
+		}
+	}
+
+	/** For the smoke test: its tools and bag. */
+	public String describeMining() {
+		return "mining=" + mining + " phase=" + minePhase + " target=" + mineTarget + " idle=" + mineIdle + " finished=" + mineFinished
+				+ " problem=" + (mineProblem == null ? "" : mineProblem.getString()) + " tools=" + java.util.Arrays.toString(tools) + " bag=" + bag
+				+ " carried=" + getCarried();
+	}
+
+	/** For the smoke test: nothing in its beak or bag, not digging. */
+	public boolean miningDone() {
+		return getCarried().isEmpty() && bag.isEmpty() && minePhase == 0 && getAction() == 0;
+	}
+
+	public ItemStack tool(int kind) {
+		return tools[kind];
+	}
+
+	/**
+	 * Mining mode: fetches pickaxe, axe and shovel from the tool chest, then digs the blocks the station's job hands
+	 * out, highest first. With a full bag (or nothing to dig) it stops, and the work goal takes what it gathered to the
+	 * chests. When mining is switched off, it takes its tools back to the chest.
+	 */
+	private class MineGoal extends Goal {
+		private int cooldown;
+		private double bestDistance;
+		private int stuckTicks;
+		private Path lastPath;
+		private int lastNode;
+
+		MineGoal() {
+			setFlags(EnumSet.of(Flag.MOVE, Flag.LOOK));
+		}
+
+		/** Free to dig: at a station that is there and switched on, not called back, nothing to hand in. */
+		private boolean ready() {
+			return station != null && recallPhase == RECALL_NONE && !areaOff && !stationMissing() && getCarried().isEmpty()
+					&& getAction() == 0 && !needsUnload() && (mining || hasAnyTool());
+		}
+
+		@Override
+		public boolean canUse() {
+			if (!ready() || cooldown-- > 0) {
+				return false;
+			}
+
+			cooldown = SEARCH_TICKS;
+			return plan();
+		}
+
+		@Override
+		public boolean canContinueToUse() {
+			return minePhase != 0 && station != null && recallPhase == RECALL_NONE && !areaOff && getCarried().isEmpty() && getAction() == 0
+					&& (mining || minePhase == 2);
+		}
+
+		@Override
+		public boolean requiresUpdateEveryTick() {
+			return true;
+		}
+
+		@Override
+		public void start() {
+			setSitting(false);
+			idleTicks = 0;
+			bestDistance = Double.MAX_VALUE;
+			stuckTicks = 0;
+			lastPath = null;
+		}
+
+		@Override
+		public void stop() {
+			getNavigation().stop();
+			dropMineTarget();
+			minePhase = 0;
+			updateMiningLook();
+		}
+
+		/** Works out what to do next; false when there is nothing (then it waits at the station). */
+		private boolean plan() {
+			// a way can only be worked out standing (or swimming); try again on the next search
+			if (!onGround() && !isInLiquid()) {
+				return false;
+			}
+
+			Container chest = toolContainer();
+
+			if (!mining) {
+				if (chest != null && hasAnyTool()) {
+					minePhase = 2;
+					return true;
+				}
+
+				return false;
+			}
+
+			List<String> missing = unavailableTools(chest);
+
+			if (!missing.isEmpty()) {
+				// with all three tools it digs on without the chest; it needs the chest only for new ones
+				mineProblem = Component.literal(chest == null ? "Fehler: Werkzeugkiste fehlt" : "Fehler: Werkzeug fehlt: " + String.join(", ", missing));
+				mineIdle = true;
+				return false;
+			}
+
+			if (tools[PICKAXE].isEmpty() || tools[AXE].isEmpty() || tools[SHOVEL].isEmpty()) {
+				mineProblem = null;
+				minePhase = 1;
+				return true;
+			}
+
+			mineProblem = null;
+			MiningJob job = miningJob();
+			long now = level().getGameTime();
+			List<BlockPos> candidates = job.candidates((ServerLevel) level(), blockPosition(), getUUID(), PATH_CHECKS, now);
+			candidates.addAll(job.nearby((ServerLevel) level(), blockPosition(), getUUID(), PATH_CHECKS, now));
+
+			for (BlockPos pos : candidates) {
+				if (getEyePosition().distanceTo(Vec3.atCenterOf(pos)) <= MINE_REACH) {
+					plannedPath = null;
+					return startDigging(job, pos);
+				}
+
+				Path path = getNavigation().createPath(pos, 4);
+
+				if (path != null && path.canReach()) {
+					plannedPath = path;
+					return startDigging(job, pos);
+				}
+
+				job.skip(pos, now);
+			}
+
+			mineIdle = true;
+			mineFinished = job.finished();
+			return false;
+		}
+
+		private boolean startDigging(MiningJob job, BlockPos pos) {
+			job.claim(pos, getUUID());
+			mineTarget = pos.immutable();
+			digTicks = 0;
+			digTotal = 0;
+			minePhase = 3;
+			mineIdle = false;
+			mineFinished = false;
+			return true;
+		}
+
+		/** Not getting any closer for a while (and not along its way either): gives up on it. */
+		private boolean stuck(double distance) {
+			if (distance < bestDistance - 0.5) {
+				bestDistance = distance;
+				stuckTicks = 0;
+				return false;
+			}
+
+			Path path = getNavigation().getPath();
+
+			if (path != lastPath) {
+				lastPath = path;
+				lastNode = path == null ? 0 : path.getNextNodeIndex();
+			} else if (path != null && path.getNextNodeIndex() > lastNode) {
+				lastNode = path.getNextNodeIndex();
+				stuckTicks = 0;
+				return false;
+			}
+
+			return ++stuckTicks >= STUCK_TICKS;
+		}
+
+		@Override
+		public void tick() {
+			if (minePhase == 1 || minePhase == 2) {
+				tickToolChest();
+			} else if (minePhase == 3) {
+				tickDigging();
+			}
+
+			updateMiningLook();
+		}
+
+		private void tickToolChest() {
+			Container chest = toolContainer();
+
+			if (chest == null) {
+				minePhase = 0;
+				return;
+			}
+
+			Vec3 goal = Vec3.atCenterOf(toolChest);
+			getLookControl().setLookAt(goal.x, goal.y, goal.z);
+			double distance = position().distanceTo(goal);
+
+			if (distance <= 2.2 || canReachChest(goal) && seesChest(toolChest)) {
+				getNavigation().stop();
+
+				if (minePhase == 1) {
+					takeTools(chest);
+				} else {
+					returnTools(chest);
+				}
+
+				minePhase = 0;
+				cooldown = 0;
+				return;
+			}
+
+			if (stuck(distance)) {
+				mineProblem = Component.literal("Fehler: Werkzeugkiste nicht erreichbar");
+				minePhase = 0;
+				cooldown = RETRY_HOME_TICKS / 2;
+				return;
+			}
+
+			if (getNavigation().isDone()) {
+				Path path = getNavigation().createPath(toolChest, 1);
+
+				if (path != null) {
+					getNavigation().moveTo(path, 1.0);
+				} else {
+					getMoveControl().setWantedPosition(goal.x, goal.y, goal.z, 1.0);
+				}
+			}
+		}
+
+		private void tickDigging() {
+			MiningJob job = miningJob();
+			ServerLevel server = (ServerLevel) level();
+
+			if (job == null || mineTarget == null) {
+				minePhase = 0;
+				return;
+			}
+
+			if (!job.wanted(server, mineTarget)) {
+				// gone already (dug by someone else, fallen, ...)
+				server.destroyBlockProgress(getId(), mineTarget, -1);
+				job.dug(server, mineTarget);
+				mineTarget = null;
+				minePhase = 0;
+				cooldown = 0;
+				return;
+			}
+
+			Vec3 centre = Vec3.atCenterOf(mineTarget);
+			getLookControl().setLookAt(centre.x, centre.y, centre.z);
+			double distance = getEyePosition().distanceTo(centre);
+
+			if (distance <= MINE_REACH && (getNavigation().isDone() || distance <= 3)) {
+				getNavigation().stop();
+				BlockState state = server.getBlockState(mineTarget);
+
+				if (digTotal == 0) {
+					digTotal = digTime(mineTarget, state);
+				}
+
+				digTicks++;
+				server.destroyBlockProgress(getId(), mineTarget, Math.min(9, digTicks * 10 / digTotal));
+
+				if (digTicks % 4 == 1) {
+					var sound = state.getSoundType();
+					level().playSound(null, mineTarget, sound.getHitSound(), net.minecraft.sounds.SoundSource.BLOCKS, sound.getVolume() * 0.25F,
+							sound.getPitch() * 0.5F);
+				}
+
+				if (digTicks >= digTotal) {
+					breakTarget(job);
+					cooldown = 0;
+				}
+
+				return;
+			}
+
+			if (digTicks > 0) {
+				// pushed away while digging: starts again once back
+				digTicks = 0;
+				server.destroyBlockProgress(getId(), mineTarget, -1);
+			}
+
+			if (stuck(distance)) {
+				job.skip(mineTarget, level().getGameTime());
+				dropMineTarget();
+				return;
+			}
+
+			if (plannedPath != null) {
+				getNavigation().moveTo(plannedPath, 1.0);
+				plannedPath = null;
+			} else if (getNavigation().isDone()) {
+				Path path = getNavigation().createPath(mineTarget, 4);
+
+				if (path != null && path.canReach()) {
+					getNavigation().moveTo(path, 1.0);
+				} else {
+					getMoveControl().setWantedPosition(centre.x, centre.y, centre.z, 1.0);
+				}
+			}
 		}
 	}
 
@@ -1236,6 +1935,20 @@ public class RobotEntity extends PathfinderMob {
 			if (areaOff) {
 				release();
 				return (!nearHome() || isInWater()) && level().getGameTime() >= homeUnreachableUntil;
+			}
+
+			// mining robots do not collect: they take what they dug to the chests, or wait at the station
+			if (mining || hasAnyTool()) {
+				release();
+
+				if (needsUnload()) {
+					setItemSlot(EquipmentSlot.MAINHAND, bag.remove(0));
+					delivery = null;
+					nextSearch = 0;
+					return true;
+				}
+
+				return (mineIdle || !mining) && (!nearHome() || isInWater()) && level().getGameTime() >= homeUnreachableUntil;
 			}
 
 			if ((target == null || !target.isAlive()) && level().getGameTime() >= nextSearch) {
@@ -1767,13 +2480,14 @@ public class RobotEntity extends PathfinderMob {
 		// Sits down when there is nothing to do: happily looking around at its station, sadly staring at the ground
 		// when it cannot work (no chest in range, station broken or out of reach).
 		boolean idle = getAction() == 0 && getNavigation().isDone()
-				&& (recallPhase == RECALL_WAITING || (getCarried().isEmpty() || delivery == null) && target == null);
+				&& (recallPhase == RECALL_WAITING || (getCarried().isEmpty() || delivery == null) && target == null && minePhase == 0);
 
 		if (nearHome()) {
 			homeUnreachableUntil = 0;
 		}
 
-		boolean sad = recallPhase == RECALL_NONE && (noChest || chestsFull || stationMissing() || level().getGameTime() < homeUnreachableUntil);
+		boolean sad = recallPhase == RECALL_NONE && (noChest || chestsFull || stationMissing() || level().getGameTime() < homeUnreachableUntil
+				|| mining && mineProblem != null);
 
 		// never sits down in water: it waits on solid ground
 		if (idle && !isInWater() && (sad || nearHome())) {
@@ -1879,13 +2593,11 @@ public class RobotEntity extends PathfinderMob {
 					spawnAtLocation((ServerLevel) level(), item);
 				}
 
-				ItemStack carried = getCarried();
+				for (ItemStack stack : belongings()) {
+					player.getInventory().add(stack);
 
-				if (!carried.isEmpty()) {
-					player.getInventory().add(carried);
-
-					if (!carried.isEmpty()) {
-						spawnAtLocation((ServerLevel) level(), carried);
+					if (!stack.isEmpty()) {
+						spawnAtLocation((ServerLevel) level(), stack);
 					}
 				}
 
@@ -1914,14 +2626,37 @@ public class RobotEntity extends PathfinderMob {
 		super.dropCustomDeathLoot(level, source, recentlyHit);
 		spawnAtLocation(level, toItem());
 
-		if (!getCarried().isEmpty()) {
-			spawnAtLocation(level, getCarried().copy());
+		for (ItemStack stack : belongings()) {
+			spawnAtLocation(level, stack);
 		}
+	}
+
+	/** What it carries in its beak, its bag and its tools, taken out of it (picked up or killed). */
+	private List<ItemStack> belongings() {
+		List<ItemStack> all = new ArrayList<>();
+
+		if (!getCarried().isEmpty()) {
+			all.add(getCarried().copy());
+			setItemSlot(EquipmentSlot.MAINHAND, ItemStack.EMPTY);
+		}
+
+		all.addAll(bag);
+		bag.clear();
+
+		for (int i = 0; i < tools.length; i++) {
+			if (!tools[i].isEmpty()) {
+				all.add(tools[i]);
+				tools[i] = ItemStack.EMPTY;
+			}
+		}
+
+		return all;
 	}
 
 	@Override
 	public void remove(RemovalReason reason) {
 		release();
+		dropMineTarget();
 
 		// picked up or killed: off its station's list (unloading keeps it there)
 		if (reason.shouldDestroy() && !level().isClientSide() && station != null) {
@@ -1945,6 +2680,8 @@ public class RobotEntity extends PathfinderMob {
 		output.storeNullable("Station", BlockPos.CODEC, station);
 		output.store("Filter", ItemStack.CODEC.listOf(), List.copyOf(filter));
 		output.putBoolean("FilterExclude", excludeFilter);
+		output.store("Tools", ItemStack.OPTIONAL_CODEC.listOf(), List.of(tools));
+		output.store("Bag", ItemStack.CODEC.listOf(), List.copyOf(bag));
 	}
 
 	@Override
@@ -1959,5 +2696,13 @@ public class RobotEntity extends PathfinderMob {
 		filter.clear();
 		filter.addAll(input.read("Filter", ItemStack.CODEC.listOf()).orElse(List.of()));
 		excludeFilter = input.getBooleanOr("FilterExclude", false);
+		List<ItemStack> savedTools = input.read("Tools", ItemStack.OPTIONAL_CODEC.listOf()).orElse(List.of());
+
+		for (int i = 0; i < tools.length; i++) {
+			tools[i] = i < savedTools.size() ? savedTools.get(i) : ItemStack.EMPTY;
+		}
+
+		bag.clear();
+		bag.addAll(input.read("Bag", ItemStack.CODEC.listOf()).orElse(List.of()));
 	}
 }

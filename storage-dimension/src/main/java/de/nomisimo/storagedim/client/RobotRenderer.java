@@ -19,12 +19,16 @@ import net.minecraft.tags.BlockTags;
 public class RobotRenderer extends MobRenderer<RobotEntity, RobotRenderState, RobotModel> {
 	private static final Identifier TEXTURE = StorageDimensionMod.id("textures/entity/robot.png");
 	private static final Identifier ACCENT = StorageDimensionMod.id("textures/entity/robot_accent.png");
+	/** Only the helmet lamp, drawn at full brightness so it glows in the dark. */
+	private static final Identifier LAMP = StorageDimensionMod.id("textures/entity/robot_lamp.png");
+	private static final int FULL_BRIGHT = 0xF000F0;
 	private static final float SCALE = 0.55F;
 
 	public RobotRenderer(EntityRendererProvider.Context context) {
 		super(context, new RobotModel(context.bakeLayer(RobotModel.LAYER)), 0.3F);
 		addLayer(new AccentLayer(this));
 		addLayer(new BeakItemLayer(this));
+		addLayer(new LampLayer(this));
 	}
 
 	@Override
@@ -48,6 +52,8 @@ public class RobotRenderer extends MobRenderer<RobotEntity, RobotRenderState, Ro
 		state.diving = robot.isUnderWater();
 		state.umbrella = !robot.isInWater() && robot.level().isRainingAt(robot.blockPosition().above());
 		state.postDrop = onPost(robot) ? 0.5F : 0;
+		state.helmet = robot.getMiningLook() != RobotEntity.MINING_LOOK_NONE;
+		state.digging = robot.getMiningLook() == RobotEntity.MINING_LOOK_DIGGING;
 		state.y -= state.postDrop;
 	}
 
@@ -105,6 +111,20 @@ public class RobotRenderer extends MobRenderer<RobotEntity, RobotRenderState, Ro
 		@Override
 		public void submit(PoseStack poseStack, SubmitNodeCollector collector, int light, RobotRenderState state, float yRot, float xRot) {
 			renderColoredCutoutModel(getParentModel(), ACCENT, poseStack, collector, light, state, 0xFF000000 | state.color, 1);
+		}
+	}
+
+	/** The lamp on the mining helmet, glowing at full brightness. */
+	private static class LampLayer extends RenderLayer<RobotRenderState, RobotModel> {
+		LampLayer(RenderLayerParent<RobotRenderState, RobotModel> parent) {
+			super(parent);
+		}
+
+		@Override
+		public void submit(PoseStack poseStack, SubmitNodeCollector collector, int light, RobotRenderState state, float yRot, float xRot) {
+			if (state.helmet) {
+				renderColoredCutoutModel(getParentModel(), LAMP, poseStack, collector, FULL_BRIGHT, state, 0xFFFFFFFF, 2);
+			}
 		}
 	}
 
