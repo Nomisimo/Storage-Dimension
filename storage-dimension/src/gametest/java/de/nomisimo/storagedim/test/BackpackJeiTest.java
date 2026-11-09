@@ -561,12 +561,6 @@ public class BackpackJeiTest implements FabricClientGameTest {
 		context.waitTicks(3);
 	}
 
-			TestJeiPlugin.runtime.getIngredientFilter().setFilterText("");
-		});
-		context.getInput().pressKey(GLFW.GLFW_KEY_ESCAPE);
-		context.waitTicks(3);
-	}
-
 	private static void reopenBackpack(ClientGameTestContext context, TestSingleplayerContext world, String label) {
 		world.getServer().runOnServer(server -> {
 			ServerPlayer player = server.getPlayerList().getPlayers().get(0);
