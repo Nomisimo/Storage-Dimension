@@ -397,7 +397,8 @@ public final class MiningJob {
 		}
 
 		// the highest first, within those the closest; a little height counts like a little distance
-		found.sort(Comparator.comparingDouble(pos -> pos.distSqr(from) - (pos.getY() - (firstLayer == null ? 0 : firstLayer)) * 6.0));
+		int base = firstLayer == null ? 0 : firstLayer;
+		found.sort(Comparator.comparingDouble(pos -> pos.distSqr(from) - (pos.getY() - base) * 6.0));
 		return found.size() > count ? new ArrayList<>(found.subList(0, count)) : found;
 	}
 

@@ -46,11 +46,13 @@ public final class StationMining {
 						.withStyle(ChatFormatting.RED));
 			}
 
-			Direction facing = Direction.fromDelta(chest.getX() - station.getX(), 0, chest.getZ() - station.getZ());
 			BlockState state = Blocks.CHEST.defaultBlockState();
 
-			if (facing != null) {
-				state = state.setValue(ChestBlock.FACING, facing);
+			// its front faces away from the station
+			for (Direction side : Direction.Plane.HORIZONTAL) {
+				if (station.relative(side).equals(chest)) {
+					state = state.setValue(ChestBlock.FACING, side);
+				}
 			}
 
 			level.setBlockAndUpdate(chest, state);
