@@ -151,6 +151,27 @@ public class BackpackJeiTest implements FabricClientGameTest {
 							|| StorageItems.variant(stack) != null)
 					.map(stack -> stack.getHoverName().getString()).sorted().toList();
 			log("items " + where + ": " + items.size() + " " + items);
+
+			// every one of our items must be a JEI ingredient of its own, with its recipe
+			List<String> ids = TestJeiPlugin.runtime.getIngredientManager().getAllItemStacks().stream()
+					.map(stack -> BuiltInRegistries.ITEM.getKey(stack.getItem()).toString()).distinct().toList();
+			List<String> missing = new java.util.ArrayList<>();
+
+			for (String item : List.of("dimension_chest", "filter_chest", "project_chest", "me_terminal", "me_backpack", "robot",
+					"robot_station", "robot_barrier", "antenna", "remote")) {
+				if (!ids.contains("storagedim:" + item)) {
+					missing.add("item " + item);
+				}
+			}
+
+			for (String recipe : List.of("storage_chest", "filter_chest", "project_chest", "me_terminal", "me_backpack", "robot",
+					"robot_station", "robot_barrier", "antenna", "remote")) {
+				if (!own.contains("storagedim:" + recipe)) {
+					missing.add("recipe " + recipe);
+				}
+			}
+
+			log("CHECK items " + where + (missing.isEmpty() ? " OK" : " FEHLT " + missing));
 		});
 	}
 

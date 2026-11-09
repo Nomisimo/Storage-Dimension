@@ -22,6 +22,7 @@ public class StorageDimensionMod implements ModInitializer {
 	@Override
 	public void onInitialize() {
 		StorageConfig.load();
+		de.nomisimo.storagedim.storage.StorageItems.register();
 		Robots.register();
 		de.nomisimo.storagedim.robot.RobotBarrierBlock.register();
 		de.nomisimo.storagedim.robot.RobotStationBlock.register();

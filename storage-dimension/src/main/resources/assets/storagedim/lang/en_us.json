@@ -10,5 +10,11 @@
 	"block.storagedim.antenna": "Antenna",
 	"item.storagedim.antenna": "Antenna",
 	"item.storagedim.remote": "Remote",
-	"itemGroup.storagedim.items": "Storage Dimension"
+	"itemGroup.storagedim.items": "Storage Dimension",
+	"item.storagedim.dimension_chest": "Dimension Chest",
+	"item.storagedim.filter_chest": "Filter Chest",
+	"item.storagedim.project_chest": "Project Chest",
+	"item.storagedim.me_terminal": "ME Terminal",
+	"item.storagedim.me_upgrade": "ME Upgrade",
+	"item.storagedim.me_backpack": "ME Backpack"
 }

@@ -3,33 +3,10 @@
   "category": "misc",
   "ingredients": [
     "#minecraft:bundles",
-    {
-      "fabric:type": "fabric:components",
-      "base": "minecraft:paper",
-      "components": {
-        "minecraft:custom_data": {
-          "storagedim_upgrade": true
-        }
-      }
-    }
+    "storagedim:me_upgrade"
   ],
   "result": {
-    "id": "minecraft:bundle",
-    "count": 1,
-    "components": {
-      "minecraft:custom_data": {
-        "storagedim_backpack": true
-      },
-      "minecraft:item_name": "ME-Rucksack",
-      "minecraft:enchantment_glint_override": true,
-      "minecraft:lore": [
-        {
-          "text": "Rechtsklick öffnet den ME-Speicher, überall",
-          "color": "gray",
-          "italic": false
-        }
-      ],
-      "minecraft:item_model": "storagedim:me_backpack"
-    }
+    "id": "storagedim:me_backpack",
+    "count": 1
   }
 }

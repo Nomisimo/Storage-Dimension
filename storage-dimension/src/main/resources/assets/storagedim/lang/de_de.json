@@ -10,5 +10,11 @@
 	"block.storagedim.antenna": "Antenne",
 	"item.storagedim.antenna": "Antenne",
 	"item.storagedim.remote": "Fernbedienung",
-	"itemGroup.storagedim.items": "Storage Dimension"
+	"itemGroup.storagedim.items": "Storage Dimension",
+	"item.storagedim.dimension_chest": "Dimensionskiste",
+	"item.storagedim.filter_chest": "Filterkiste",
+	"item.storagedim.project_chest": "Projektkiste",
+	"item.storagedim.me_terminal": "ME-Terminal",
+	"item.storagedim.me_upgrade": "ME-Upgrade",
+	"item.storagedim.me_backpack": "ME-Rucksack"
 }
