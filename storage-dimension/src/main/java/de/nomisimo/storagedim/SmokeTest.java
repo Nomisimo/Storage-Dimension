@@ -184,6 +184,16 @@ final class SmokeTest {
 					if (!level.getBlockState(centre.offset(first.dx(), first.dy(), first.dz())).is(Blocks.CHEST)) {
 						errors.add("Kiste fehlt in der Bibliothek");
 					}
+
+					// the kind is shown in a fixed item frame on the chest front
+					BlockPos front = centre.offset(first.dx(), first.dy(), first.dz()).relative(first.facing());
+					List<net.minecraft.world.entity.decoration.ItemFrame> frames = level.getEntitiesOfClass(
+							net.minecraft.world.entity.decoration.ItemFrame.class, new net.minecraft.world.phys.AABB(front),
+							f -> f.getDirection() == first.facing() && ItemStack.isSameItemSameComponents(f.getItem(), first.key()));
+
+					if (frames.size() != 1) {
+						errors.add(frames.size() + " statt 1 Itemrahmen an der ersten Kiste");
+					}
 				}
 
 				network.insert(new ItemStack(Items.COBBLESTONE, 64 * 27 * 3));

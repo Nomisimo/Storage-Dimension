@@ -55,6 +55,7 @@ public final class StorageEvents {
 		MeChestStorage.register();
 		ChestMarks.register();
 		LibraryExtras.register();
+		Library.register();
 		UseBlockCallback.EVENT.register((player, level, hand, hit) -> {
 			if (level.isClientSide() || hand != InteractionHand.MAIN_HAND || !(player instanceof ServerPlayer serverPlayer)) {
 				return InteractionResult.PASS;
