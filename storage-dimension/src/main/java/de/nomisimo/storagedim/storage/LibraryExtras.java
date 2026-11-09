@@ -52,9 +52,12 @@ import net.minecraft.world.phys.AABB;
  * <ul>
  * <li>The dragon egg altar in the middle of the hall, with the egg floating over it.</li>
  * <li>The trading hall behind the south wall of the hall: every villager stored in a bucket (any mod that keeps the
- * villager's data on the item, e.g. "Villager In A Bucket") stands at its own stall, with a wooden sign naming its
- * most valuable trade. The villagers can be traded with; they keep their state as long as their bucket stays in ME
- * storage and restock now and then.</li>
+ * villager's data on the item, e.g. "Villager In A Bucket") lives there. Each has its own open stall with its
+ * workstation and a wooden sign naming its most valuable trade; at the back is a village square with a bell. The
+ * villagers walk around, work, meet and gossip like in a village, but cannot leave the hall (a fence gate closes the
+ * door). Standing at a workstation calls every villager of that profession, the highest level first, like a market.
+ * They can be traded with; they keep their state as long as their bucket stays in ME storage and restock now and
+ * then. Jobless villagers stand still, so they cannot take someone else's workstation.</li>
  * </ul>
  */
 public final class LibraryExtras {
@@ -72,6 +75,10 @@ public final class LibraryExtras {
 	private static final int TRADE_Z = 10;
 	private static final int HALF_WIDTH = 5;
 	private static final int CEILING = 6;
+	/** The village square behind the last stalls, in rows. */
+	private static final int SQUARE = 6;
+	/** How close a player stands to a workstation to call its villagers. */
+	private static final double CALL_DISTANCE = 2.5;
 	/** How often the villagers restock, in ticks. */
 	private static final long RESTOCK_EVERY = 12_000;
 
@@ -134,7 +141,7 @@ public final class LibraryExtras {
 				continue;
 			}
 
-			String profession = data.getCompound("VillagerData").flatMap(d -> d.getString("profession")).orElse("minecraft:none");
+			String profession = profession(data.getCompound("VillagerData").flatMap(d -> d.getString("profession")).orElse("minecraft:none"));
 			int villagerLevel = data.getCompound("VillagerData").flatMap(d -> d.getInt("level")).orElse(1);
 			String key = data.toString();
 
@@ -157,6 +164,15 @@ public final class LibraryExtras {
 		}
 
 		return new State(egg, placed);
+	}
+
+	/** The profession with its namespace, as the villager reports it ("librarian" becomes "minecraft:librarian"). */
+	private static String profession(String saved) {
+		try {
+			return Identifier.parse(saved).toString();
+		} catch (RuntimeException e) {
+			return "minecraft:none";
+		}
 	}
 
 	/**
@@ -212,8 +228,26 @@ public final class LibraryExtras {
 
 	// ---- geometry ----
 
+	/** The back wall of the trading hall. */
 	private static int tradeEnd(int rows) {
-		return TRADE_Z + 2 * rows + 1;
+		return stallsEnd(rows) + SQUARE + 1;
+	}
+
+	/** The last divider row of the stalls; the village square starts behind it. */
+	private static int stallsEnd(int rows) {
+		return TRADE_Z + 2 * rows;
+	}
+
+	/** Where the bell of the village square stands. */
+	private static BlockPos bellPos(int rows) {
+		return new BlockPos(TRADE_X, 1, stallsEnd(rows) + SQUARE / 2 + 1);
+	}
+
+	/** True when the block (relative to the library centre) is inside the trading hall, walls included. */
+	static boolean inTradeHall(StorageNetwork network, BlockPos relative) {
+		int rows = network.tradeHallRows;
+		return rows > 0 && Math.abs(relative.getX() - TRADE_X) <= HALF_WIDTH && relative.getZ() >= TRADE_Z - 1
+				&& relative.getZ() <= tradeEnd(rows) && relative.getY() >= 0 && relative.getY() <= CEILING;
 	}
 
 	/** The southernmost z of the library, relative to its centre, for the given network. */
@@ -225,12 +259,17 @@ public final class LibraryExtras {
 		return stall % 2 == 0 ? -1 : 1;
 	}
 
+	private static BlockPos workstationPos(int stall) {
+		return new BlockPos(TRADE_X + side(stall) * 4, 1, stallZ(stall));
+	}
+
 	private static int stallZ(int stall) {
 		return TRADE_Z + 1 + 2 * (stall / 2);
 	}
 
+	/** The sign hangs on the outer wall, over the workstation. */
 	private static BlockPos signPos(int stall) {
-		return new BlockPos(TRADE_X + side(stall), 1, stallZ(stall));
+		return new BlockPos(TRADE_X + side(stall) * 4, 2, stallZ(stall));
 	}
 
 	// ---- blocks ----
@@ -283,18 +322,19 @@ public final class LibraryExtras {
 		BlockState wall = Blocks.SPRUCE_PLANKS.defaultBlockState();
 		BlockState pillar = Blocks.STRIPPED_SPRUCE_LOG.defaultBlockState().setValue(RotatedPillarBlock.AXIS, Direction.Axis.Y);
 		BlockState fence = Blocks.SPRUCE_FENCE.defaultBlockState();
-		BlockState counter = Blocks.STRIPPED_SPRUCE_LOG.defaultBlockState().setValue(RotatedPillarBlock.AXIS, Direction.Axis.Z);
 		BlockState lantern = Blocks.LANTERN.defaultBlockState();
 		BlockState hanging = Blocks.LANTERN.defaultBlockState().setValue(BlockStateProperties.HANGING, true);
 		BlockState carpet = Blocks.GREEN_CARPET.defaultBlockState();
 		int end = tradeEnd(rows);
+		int stallsEnd = stallsEnd(rows);
 
-		// the door in the south wall of the hall
-		plan.put(new BlockPos(TRADE_X, 1, TRADE_Z - 1), Blocks.AIR.defaultBlockState());
+		// the door in the south wall of the hall: a fence gate, players open it, villagers cannot
+		plan.put(new BlockPos(TRADE_X, 1, TRADE_Z - 1), Blocks.SPRUCE_FENCE_GATE.defaultBlockState()
+				.setValue(BlockStateProperties.HORIZONTAL_FACING, Direction.SOUTH));
 		plan.put(new BlockPos(TRADE_X, 2, TRADE_Z - 1), Blocks.AIR.defaultBlockState());
 
 		for (int dz = TRADE_Z; dz <= end; dz++) {
-			boolean divider = (dz - TRADE_Z) % 2 == 0;
+			boolean divider = (dz - TRADE_Z) % 2 == 0 && dz <= stallsEnd;
 
 			for (int dx = TRADE_X - HALF_WIDTH; dx <= TRADE_X + HALF_WIDTH; dx++) {
 				int off = Math.abs(dx - TRADE_X);
@@ -318,7 +358,7 @@ public final class LibraryExtras {
 				}
 			}
 
-			if (dz < end) {
+			if (dz <= stallsEnd) {
 				plan.put(new BlockPos(TRADE_X, 1, dz), carpet);
 
 				if (divider) {
@@ -327,18 +367,28 @@ public final class LibraryExtras {
 			}
 		}
 
-		// the stalls: a counter, behind it the villager in front of its workstation, the sign on the counter
-		for (int stall = 0; stall < rows * 2; stall++) {
-			int side = side(stall);
-			int dz = stallZ(stall);
-			plan.put(new BlockPos(TRADE_X + side * 2, 1, dz), counter);
+		// the village square: the bell is the villagers' meeting point, with benches and flowers around it
+		BlockPos bell = bellPos(rows);
+		plan.put(bell, Blocks.BELL.defaultBlockState());
+		plan.put(bell.above(CEILING - 2), hanging);
+
+		for (int dx = -3; dx <= 3; dx += 6) {
+			Direction facing = dx < 0 ? Direction.WEST : Direction.EAST;
+			plan.put(bell.offset(dx, 0, -1), Blocks.SPRUCE_STAIRS.defaultBlockState().setValue(BlockStateProperties.HORIZONTAL_FACING, facing));
+			plan.put(bell.offset(dx, 0, 1), Blocks.SPRUCE_STAIRS.defaultBlockState().setValue(BlockStateProperties.HORIZONTAL_FACING, facing));
 		}
 
+		for (int dx = -(HALF_WIDTH - 1); dx <= HALF_WIDTH - 1; dx += 2 * (HALF_WIDTH - 1)) {
+			plan.put(new BlockPos(TRADE_X + dx, 1, end - 1), Blocks.POTTED_POPPY.defaultBlockState());
+			plan.put(new BlockPos(TRADE_X + dx, 1, stallsEnd + 1), Blocks.POTTED_CORNFLOWER.defaultBlockState());
+		}
+
+		// the stalls are open to the corridor: the villager in front of its workstation, the sign on the wall above it
 		for (Trader trader : state.traders()) {
 			int side = side(trader.stall());
 			int dz = stallZ(trader.stall());
 			Direction towardsCorridor = side < 0 ? Direction.EAST : Direction.WEST;
-			plan.put(new BlockPos(TRADE_X + side * 4, 1, dz), workstation(trader.profession(), towardsCorridor));
+			plan.put(workstationPos(trader.stall()), workstation(trader.profession(), towardsCorridor));
 			plan.put(signPos(trader.stall()), Blocks.SPRUCE_WALL_SIGN.defaultBlockState().setValue(WallSignBlock.FACING, towardsCorridor));
 		}
 	}
@@ -354,8 +404,8 @@ public final class LibraryExtras {
 			case "fisherman" -> Blocks.BARREL;
 			case "fletcher" -> Blocks.FLETCHING_TABLE;
 			case "leatherworker" -> Blocks.CAULDRON;
-			// not the lectern: lecterns in the library open the catalogue
-			case "librarian" -> Blocks.CHISELED_BOOKSHELF;
+			// a real lectern, so the librarian keeps its job; the ones in the trading hall do not open the catalogue
+			case "librarian" -> Blocks.LECTERN;
 			case "mason" -> Blocks.STONECUTTER;
 			case "shepherd" -> Blocks.LOOM;
 			case "toolsmith" -> Blocks.SMITHING_TABLE;
@@ -383,7 +433,9 @@ public final class LibraryExtras {
 	static boolean isBuilt(ServerLevel level, StorageNetwork network, State state) {
 		BlockPos centre = Library.centre(network.room);
 		boolean altar = level.getBlockState(centre.offset(ALTAR_DX, 1, ALTAR_DZ)).is(Blocks.CRYING_OBSIDIAN);
-		return altar == state.egg() && network.tradeHallRows == state.rows();
+		// an older trading hall without the village square is rebuilt
+		boolean square = state.rows() == 0 || level.getBlockState(centre.offset(bellPos(state.rows()))).is(Blocks.BELL);
+		return altar == state.egg() && network.tradeHallRows == state.rows() && square;
 	}
 
 	// ---- entities ----
@@ -423,6 +475,8 @@ public final class LibraryExtras {
 
 		Set<UUID> wanted = new HashSet<>();
 		boolean restock = level.getGameTime() % RESTOCK_EVERY < 20;
+		Map<String, List<net.minecraft.server.level.ServerPlayer>> calls = calls(level, network, state);
+		Map<String, Integer> called = new java.util.HashMap<>();
 
 		for (Trader trader : state.traders()) {
 			wanted.add(trader.id());
@@ -434,9 +488,16 @@ public final class LibraryExtras {
 			float yaw = side < 0 ? -90f : 90f;
 			Entity entity = level.getEntity(trader.id());
 
+			if (entity instanceof net.minecraft.world.entity.npc.villager.Villager v && !trader.profession().equals(v.getVillagerData().profession().getRegisteredName())) {
+				// it lost or changed its job in the hall: it comes back as it is in the bucket
+				entity.discard();
+				entity = null;
+			}
+
 			if (entity == null) {
 				entity = spawnVillager(level, trader, x, y, z, yaw);
-			} else if (entity.distanceToSqr(x, y, z) > 0.25) {
+			} else if (!inTradeHall(network, entity.blockPosition().subtract(centre))) {
+				// it got out of the hall (or fell): back to its stall
 				entity.teleportTo(x, y, z);
 				turn(entity, yaw);
 			}
@@ -444,6 +505,18 @@ public final class LibraryExtras {
 			if (entity instanceof net.minecraft.world.entity.npc.villager.AbstractVillager villager) {
 				if (restock && villager instanceof net.minecraft.world.entity.npc.villager.Villager v) {
 					v.restock();
+				}
+
+				List<net.minecraft.server.level.ServerPlayer> callers = calls.get(trader.profession());
+
+				if (callers != null && villager instanceof net.minecraft.world.entity.npc.villager.Villager v && !villager.isNoAi()) {
+					// the market: the best (first in the list) come closest
+					int place = called.merge(trader.profession(), 1, Integer::sum);
+					net.minecraft.server.level.ServerPlayer caller = callers.get(0);
+					v.getBrain().setMemoryWithExpiry(net.minecraft.world.entity.ai.memory.MemoryModuleType.WALK_TARGET,
+							new net.minecraft.world.entity.ai.memory.WalkTarget(caller, 0.6f, 1 + place), 40L);
+					v.getBrain().setMemoryWithExpiry(net.minecraft.world.entity.ai.memory.MemoryModuleType.LOOK_TARGET,
+							new net.minecraft.world.entity.ai.behavior.EntityTracker(caller, true), 40L);
 				}
 
 				writeSign(level, centre.offset(signPos(trader.stall())), villager);
@@ -454,11 +527,39 @@ public final class LibraryExtras {
 		BlockPos max = centre.offset(TRADE_X + HALF_WIDTH + 2, CEILING + 4, tradeEnd(MAX_TRADERS / 2) + 4);
 
 		for (Entity entity : level.getEntities((Entity) null, new AABB(min.getX(), min.getY(), min.getZ(), max.getX() + 1, max.getY() + 1, max.getZ() + 1),
-				e -> e.entityTags().contains(TRADER_TAG))) {
-			if (!wanted.contains(entity.getUUID())) {
+				e -> e.entityTags().contains(TRADER_TAG) || e instanceof net.minecraft.world.entity.npc.villager.AbstractVillager)) {
+			// villagers that are not from a bucket (e.g. a baby) would be copies: they go
+			if (!entity.entityTags().contains(TRADER_TAG) && inTradeHall(network, entity.blockPosition().subtract(centre))
+					|| entity.entityTags().contains(TRADER_TAG) && !wanted.contains(entity.getUUID())) {
 				entity.discard();
 			}
 		}
+	}
+
+	/**
+	 * The professions called right now: a player in the trading hall standing at the workstation of a stall calls
+	 * every villager of that profession.
+	 */
+	private static Map<String, List<net.minecraft.server.level.ServerPlayer>> calls(ServerLevel level, StorageNetwork network, State state) {
+		Map<String, List<net.minecraft.server.level.ServerPlayer>> calls = new java.util.HashMap<>();
+		BlockPos centre = Library.centre(network.room);
+
+		for (net.minecraft.server.level.ServerPlayer player : level.players()) {
+			if (player.isSpectator() || !inTradeHall(network, player.blockPosition().subtract(centre))) {
+				continue;
+			}
+
+			for (Trader trader : state.traders()) {
+				BlockPos station = centre.offset(workstationPos(trader.stall()));
+
+				if (player.distanceToSqr(station.getX() + 0.5, station.getY() + 0.5, station.getZ() + 0.5) <= CALL_DISTANCE * CALL_DISTANCE) {
+					calls.computeIfAbsent(trader.profession(), p -> new ArrayList<>()).add(player);
+					break;
+				}
+			}
+		}
+
+		return calls;
 	}
 
 	private static void label(Entity entity, Component name) {
@@ -502,9 +603,9 @@ public final class LibraryExtras {
 		villager.setUUID(trader.id());
 		villager.setPos(x, y, z);
 		turn(villager, yaw);
-		villager.setNoAi(true);
+		// they live in the hall; jobless ones stand still so they cannot take someone else's workstation
+		villager.setNoAi(trader.profession().endsWith(":none"));
 		villager.setInvulnerable(true);
-		villager.setSilent(true);
 		villager.setPersistenceRequired();
 		villager.addTag(TRADER_TAG);
 		villager.addTag(Library.TAG);

@@ -58,8 +58,25 @@ final class SmokeTest {
 			errors.add("Handelshalle hat " + traders + " statt 2 Dorfbewohner");
 		}
 
-		// stall 0 is west of the corridor, its sign is one block west of the middle
-		if (level.getBlockEntity(centre.offset(0, 1, 11)) instanceof net.minecraft.world.level.block.entity.SignBlockEntity sign) {
+		// the villagers live: they walk around (only jobless ones stand still)
+		long standing = level.getEntities((net.minecraft.world.entity.Entity) null, new net.minecraft.world.phys.AABB(centre).inflate(40),
+				e -> e.entityTags().contains(LibraryExtras.TRADER_TAG) && e instanceof net.minecraft.world.entity.Mob mob && mob.isNoAi()).size();
+
+		if (standing != 0) {
+			errors.add(standing + " Dorfbewohner der Handelshalle haben keine KI");
+		}
+
+		// the door is a fence gate, behind the one row of stalls is the village square with its bell
+		if (!(level.getBlockState(centre.offset(1, 1, 9)).getBlock() instanceof net.minecraft.world.level.block.FenceGateBlock)) {
+			errors.add("Tor der Handelshalle fehlt");
+		}
+
+		if (!level.getBlockState(centre.offset(1, 1, 16)).is(Blocks.BELL)) {
+			errors.add("Glocke auf dem Dorfplatz der Handelshalle fehlt");
+		}
+
+		// stall 0 is west of the corridor, its sign hangs on the west wall over the workstation
+		if (level.getBlockEntity(centre.offset(-3, 2, 11)) instanceof net.minecraft.world.level.block.entity.SignBlockEntity sign) {
 			StringBuilder text = new StringBuilder();
 
 			for (int i = 0; i < 4; i++) {

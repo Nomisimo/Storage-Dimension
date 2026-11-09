@@ -808,7 +808,7 @@ public class ClientScreenshots implements FabricClientGameTest {
 
 	/**
 	 * The dragon egg altar (the egg went into ME storage at the end of the library test) and the trading hall with
-	 * villagers from buckets, their stalls and the signs with their best trade.
+	 * villagers from buckets living there, their stalls and the signs with their best trade.
 	 */
 	private static void extrasTest(ClientGameTestContext context, TestSingleplayerContext world) {
 		world.getServer().runOnServer(server -> {
@@ -836,7 +836,7 @@ public class ClientScreenshots implements FabricClientGameTest {
 							new net.minecraft.world.phys.AABB(centre).inflate(60), e -> e.entityTags().contains(de.nomisimo.storagedim.storage.LibraryExtras.TRADER_TAG)).size());
 
 			for (int stall = 0; stall < 6; stall++) {
-				BlockPos sign = centre.offset(1 + (stall % 2 == 0 ? -1 : 1), 1, 11 + 2 * (stall / 2));
+				BlockPos sign = centre.offset(1 + (stall % 2 == 0 ? -4 : 4), 2, 11 + 2 * (stall / 2));
 
 				if (level.getBlockEntity(sign) instanceof net.minecraft.world.level.block.entity.SignBlockEntity entity) {
 					StringBuilder text = new StringBuilder();
@@ -849,8 +849,8 @@ public class ClientScreenshots implements FabricClientGameTest {
 				}
 			}
 
-			// in the door of the trading hall, looking down the corridor
-			player.teleportTo(level, centre.getX() + 1.5, centre.getY() + 1, centre.getZ() + 9.5, java.util.Set.of(), 0, 12, true);
+			// just behind the gate of the trading hall, looking down the corridor
+			player.teleportTo(level, centre.getX() + 1.5, centre.getY() + 1, centre.getZ() + 10.2, java.util.Set.of(), 0, 12, true);
 		});
 		context.waitTicks(40);
 		context.takeScreenshot("trading-hall");
