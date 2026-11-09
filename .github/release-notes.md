@@ -1,5 +1,7 @@
 Storage Dimension für **Minecraft 26.1.2** (Fabric).
 
+**Neu in 0.8.0:** Die Dorfbewohner der Handelshalle leben jetzt: Sie laufen herum, arbeiten an ihren Arbeitsblöcken, treffen sich auf dem neuen Dorfplatz mit Glocke hinter den Ständen und tratschen wie im Dorf. Die Stände sind offen, das Schild mit dem wertvollsten Handel hängt an der Wand über dem Arbeitsblock, Bibliothekare haben ein echtes Lesepult. **Markt:** Wer sich an einen Arbeitsblock stellt, zu dem kommen alle Dorfbewohner dieses Berufs, die mit der höchsten Stufe am nächsten. Die Stände sind nach Beruf und innerhalb eines Berufs nach Stufe sortiert, Meister vorne an der Tür. Die Tür ist ein Zauntor, das nur Spieler öffnen; Babys und fremde Dorfbewohner verschwinden, damit keine Kopien entstehen; Arbeitslose stehen still. Alte Handelshallen werden beim nächsten Betreten umgebaut. **Projektkisten** geben von jedem Item nur noch die eingestellte Menge heraus und zählen mit, wie viel schon entnommen ist („Entnommen: 40 von 64“); ist alles draußen, ist das Item verbaut und verschwindet aus der Kiste. Zurückgelegtes zählt wieder als nicht entnommen, Entnommenes wird nicht mehr im ME geblockt. Die Kisten der Bibliothek zeigen ihr Item jetzt in einem festen Leucht-Itemrahmen an der Kistenfront statt schwebend davor; Rechtsklick auf den Rahmen öffnet die Kiste. Server und alle Spieler brauchen 0.8.0.
+
 **Neu in 0.7.3.2:** Tippen in JEIs Suchleiste löst keine Tastenkürzel mehr aus: Ein „o“ blendete JEI aus (sein Kürzel Strg+O), weil unser eigenes Suchfeld (ME-Terminal, Rucksack, Station, Projekt) den Fokus behielt. Jetzt hat immer nur ein Suchfeld die Tastatur. Das Roboter-Icon auf Xaero's Minimap hat jetzt Kopfgröße statt vierfach zu groß zu sein.
 
 **Neu in 0.7.3.1:** JEI und Kreativ-Tab neu gebaut. Dimensionskiste, Filterkiste, Projektkiste, ME-Terminal, ME-Upgrade und ME-Rucksack sind jetzt eigene Items (`storagedim:dimension_chest` usw.) statt normaler Truhen, Endertruhen, Papier und Bündel mit Daten. Ihre Rezepte sind ganz normale Rezepte, JEI zeigt sie dadurch wie bei jeder anderen Mod, ohne Sonderlösung und mit jeder JEI-Version. Die Kisten und das Terminal stehen zusätzlich im Kreativ-Tab „Funktionsblöcke“. Alte Kisten, Terminals, Upgrades und Rucksäcke im Inventar werden beim Einloggen automatisch gegen die neuen Items getauscht, Projektkisten behalten ihr Projekt; schon aufgestellte Kisten bleiben, wie sie sind. Server und alle Spieler brauchen 0.7.3.1, das Traveler's-Backpack-Add-on braucht mindestens 0.7.3.1.
@@ -26,18 +28,18 @@ Storage Dimension für **Minecraft 26.1.2** (Fabric).
 
 **Neu in 0.4.1:** Im ME-Speicher (auch über das Rucksack-Upgrade) und im Filter-Fenster lassen sich Items im eigenen Inventar wieder ziehen und verteilen sowie per Doppelklick sammeln; vorher sprangen sie zurück in die Hand.
 
-**Neu in 0.4.0:** Sammelroboter, eigene Texturen für Dimensionskiste, Filterkiste, ME-Terminal und die ME-Items, Rezepte in JEI, Anbindung an Maschinen (z. B. Tech Reborn), doppelte Filterkisten mit 14 Filtern. Ab dieser Version brauchen **alle Spieler** `storage-dimension-0.7.3.2.jar`.
+**Neu in 0.4.0:** Sammelroboter, eigene Texturen für Dimensionskiste, Filterkiste, ME-Terminal und die ME-Items, Rezepte in JEI, Anbindung an Maschinen (z. B. Tech Reborn), doppelte Filterkisten mit 14 Filtern. Ab dieser Version brauchen **alle Spieler** `storage-dimension-0.8.0.jar`.
 
 ## Server, in den Ordner `mods`
 
-- `storage-dimension-0.7.3.2.jar`
-- `storagedim-tb-0.7.3.2.jar`
+- `storage-dimension-0.8.0.jar`
+- `storagedim-tb-0.8.0.jar`
 - dazu [Fabric API](https://modrinth.com/mod/fabric-api), [Traveler's Backpack](https://modrinth.com/mod/travelersbackpack) und [Forge Config API Port](https://modrinth.com/mod/forge-config-api-port), alle für 26.1.2
 
 ## Jeder Spieler, in den Ordner `mods`
 
-- `storage-dimension-0.7.3.2.jar`
-- `storagedim-tb-0.7.3.2.jar`
+- `storage-dimension-0.8.0.jar`
+- `storagedim-tb-0.8.0.jar`
 - dazu [Fabric API](https://modrinth.com/mod/fabric-api), [Traveler's Backpack](https://modrinth.com/mod/travelersbackpack), [Forge Config API Port](https://modrinth.com/mod/forge-config-api-port) und [JEI](https://modrinth.com/mod/jei), alle für 26.1.2
 
 ## Nur Storage Dimension, ohne Traveler's Backpack
