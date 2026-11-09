@@ -1,0 +1,20 @@
+{
+	"item.storagedim.robot": "Sammelroboter",
+	"entity.storagedim.robot": "Sammelroboter",
+	"block.storagedim.robot_barrier": "Roboter-Barriere",
+	"item.storagedim.robot_barrier": "Roboter-Barriere",
+	"block.storagedim.robot_station": "Roboter-Station",
+	"item.storagedim.robot_station": "Roboter-Station",
+	"config.jade.plugin_storagedim.robot": "Roboter",
+	"config.jade.plugin_storagedim.robot_station": "Roboter-Station",
+	"block.storagedim.antenna": "Antenne",
+	"item.storagedim.antenna": "Antenne",
+	"item.storagedim.remote": "Fernbedienung",
+	"itemGroup.storagedim.items": "Storage Dimension",
+	"item.storagedim.dimension_chest": "Dimensionskiste",
+	"item.storagedim.filter_chest": "Filterkiste",
+	"item.storagedim.project_chest": "Projektkiste",
+	"item.storagedim.me_terminal": "ME-Terminal",
+	"item.storagedim.me_upgrade": "ME-Upgrade",
+	"item.storagedim.me_backpack": "ME-Rucksack"
+}

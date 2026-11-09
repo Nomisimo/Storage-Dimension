@@ -1,0 +1,2 @@
+/tmp/server-project/src/main/java/de/nomisimo/storagedim/client/StorageJeiPlugin.java:81: warning: [removal] <V>createTypedIngredient(IIngredientType<V>,V) in IIngredientManager has been deprecated and marked for removal
+[19:46:07] [main/INFO] (storagedim) Rezepte für JEI: 21 Rezepttypen werden an die Clients gesendet
