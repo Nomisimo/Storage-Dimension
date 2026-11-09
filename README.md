@@ -10,7 +10,7 @@ Ein Fabric-Mod für **Minecraft 26.1.2**: eine Bibliothek voller Kisten in einer
 
 - [Installation](#installation)
 - [Speicher](#speicher): Dimensionskiste und Bibliothek, ME-Speicher, ME-Terminal, ME-Speicher im Browser, Filterkiste, Projektkiste, Trichter und Maschinen
-- [Sammelroboter](#sammelroboter): Roboter, Roboter-Station, Rückruf, Roboter-Barriere, Antennen und Fernbedienung
+- [Sammelroboter](#sammelroboter): Roboter, Roboter-Station, Rückruf, Abbau-Modus, Roboter-Barriere, Antennen und Fernbedienung
 - [ME-Rucksack und Traveler's Backpack](#me-rucksack-und-travelers-backpack)
 - [Rezepte](#rezepte)
 - [Befehle](#befehle)
@@ -148,6 +148,7 @@ Rechtsklick auf die Station öffnet ihr Fenster:
 - **Reichweite** mit − und +: 1 bis 10 Chunks, gemessen ab der Station. Mit [Antennen](#antennen-und-fernbedienung) steht hier stattdessen „Antenne verbunden“ und die Größe des Bereichs.
 - **Area-Name und Farbe:** Name der Antennen-Area (so steht sie in der Fernbedienung) und ihre Farbe. Klick auf die Farbe schaltet weiter. Ohne Antennen ist es die Farbe der nächsten eingestellten Roboter, mit Antennen tragen alle Roboter der Station sofort die Area-Farbe.
 - **Zurückrufen:** siehe unten.
+- **Sammeln / Abbauen:** schaltet alle Roboter der Station zwischen Items sammeln und Blöcke abbauen um, siehe [Abbau-Modus](#abbau-modus).
 - **Robotername:** für die nächsten Roboter, die eingestellt werden. Bekommen mehrere Roboter einer Station denselben Namen, werden sie durchnummeriert (Quak1, Quak2 …). Das Benennen kostet keine Level.
 - **Roboter einstellen:** Roboter links in den Eingang legen, er kommt rechts eingestellt wieder heraus. Genauso werden Antennen mit der Station gepaart. Die Einstellungen stehen im Tooltip des Roboter-Items.
 - **Roboterliste** rechts daneben: alle Roboter der Station (höchstens 32) mit Entfernung und dem, was jeder gerade tut. Das Mausrad blättert.
@@ -188,7 +189,8 @@ Die Roboter lagern nur in Speicher, der **direkt an der Station** steht, also an
 - **Schwarm:** Mehrere Roboter stimmen sich ab. Jeder holt ein anderes Item, es rennen nie alle zum selben.
 - **Wege:** Bevor ein Roboter losläuft, plant er den ganzen Weg. Gibt es keinen (eingemauert, hinter einer Roboter-Barriere, über Lava), lässt er das Item eine Minute in Ruhe und nimmt das nächste. Bleibt er unterwegs hängen, gibt er nach 5 Sekunden auf. Neu fallengelassene Items bemerkt er nach spätestens einer halben Sekunde.
 - **Klettern:** Er hüpft bis zu zwei Blöcke hoch, auch über Zäune und Mauern, und stellt sich zum Aufheben direkt auf das Item. Liegt ein Item in einer Zaunecke, wo er sich nicht draufstellen kann, greift er vom Zaun darüber oder vom Feld daneben zu. Kisten erreicht er bis etwa drei Blöcke über dem Boden. Aus Booten und Loren steigt er sofort wieder aus.
-- **Zurück zur Station:** Ohne Arbeit läuft er zu seiner Station. Kommt er dabei 3 Minuten lang nicht näher, teleportiert er sich hin.
+- **Zurück zur Station:** Ohne Arbeit läuft er zu seiner Station. Kommt er dabei 3 Minuten lang nicht näher, teleportiert er sich hin. Steht er außerhalb seiner Reichweite, schon nach 10 Sekunden.
+- **In der Reichweite bleiben:** Treibt ein Item aus der Reichweite (zum Beispiel einen Fluss hinunter), läuft er ihm nicht weiter hinterher. Items, die so weit von allen Spielern weg liegen, dass das Spiel dort nichts bewegt, holt er nicht, sonst bliebe er dort stehen.
 - **Warten:** An der Station setzt er sich hin und schaut sich fröhlich um, jeder Roboter in seinem eigenen Takt.
 - **Fehler:** Erreicht ein Roboter seine Station nicht, fehlt die Station, steht keine Kiste an der Station oder sind alle Kisten voll, setzt er sich hin, schaut auf den Boden, und links und rechts von seinem Namen steht ein rotes 🚫. Den Grund zeigen Jade und die Stationsliste („Fehler: Weg versperrt“, „Fehler: keine Kiste an der Station“, „Fehler: Kisten voll“, „Fehler: Station fehlt“).
 - **Wasser:** Roboter tauchen. Unter Wasser laufen sie am Grund entlang und tragen einen Glashelm um den ganzen Kopf. Im Wasser sind sie so schnell wie an Land, ziehen unter Wasser Blasen und an der Oberfläche Spritzer und eine Bugwelle hinter sich her. Items im Wasser schnappen sie, sobald sie in Reichweite ihres Schnabels sind, auch tief am Grund eines Beckens oder treibend an der Oberfläche (z. B. Seetang): Sie springen vom Rand hinein, tauchen hinunter oder schwimmen hinauf und bringen es danach zur Kiste. Ertrinken können sie nicht.
@@ -202,6 +204,21 @@ Die Roboter lagern nur in Speicher, der **direkt an der Station** steht, also an
 ![Ein Roboter taucht mit Glashelm](docs/screenshots/roboter-tauchen.png)
 
 ![Bei Regen spannen die Roboter ihren Schirm auf](docs/screenshots/roboter-regenschirm.png)
+
+### Abbau-Modus
+
+Mit dem Knopf **Sammeln / Abbauen** in der Station werden alle Roboter der Station zu Bergleuten. Sie bauen jeden Block in ihrem Bereich ab und bringen alles in die Kisten an der Station. So lassen sich Wüsten, Hügel und Höhlen abtragen.
+
+- **Werkzeugkiste:** Beim Einschalten stellt sich an einer freien Seite der Station eine Kiste auf. Ist keine Seite frei, bleibt der Modus aus und es kommt eine Fehlermeldung. In die Kiste gehört **für jeden Roboter eine Spitzhacke, eine Axt und eine Schaufel**. Jeder Roboter holt sich zuerst ein Werkzeug von jeder Sorte. Fehlt etwas, sitzt er traurig an der Station („Fehler: Werkzeug fehlt: Axt“). Geht ein Werkzeug kaputt, holt er sich ein neues aus der Kiste. In die Werkzeugkiste lagern die Roboter nie etwas ein, die Beute kommt in die anderen Kisten an der Station.
+- **Bereich:** Mit [Antennen](#antennen-und-fernbedienung) die Antennen-Box. Ohne Antennen ein Quadrat in der Reichweite der Station, das von der Station aus genauso hoch nach oben reicht, wie die Reichweite ist (also nicht der ganze Chunk bis zum Himmel). Die Station steht dabei unten.
+- **Von oben nach unten:** Die Roboter bauen immer die obersten Schichten zuerst ab, jeder den Block, der ihm am nächsten ist. Bis zu 32 Roboter teilen sich die Arbeit, und jeder Block wird nur einem Roboter gegeben. Ist der Bereich überdacht (die Station steht zum Beispiel unten in einer Höhle), graben sie sich zuerst rund um sich frei und arbeiten sich über die Treppe nach oben.
+- **Treppe zur Station:** Um eine Säule an der Station bleibt eine Wendeltreppe stehen, mit einer Stufe pro Block Höhe. So kommt man immer zur Station hinunter. Liegt Sand oder Kies auf einer Stufe, bleibt der Block darunter auch stehen. Die Treppe besteht aus den Blöcken, die dort schon waren: Wo vorher Luft war, fehlt eine Stufe.
+- **Was stehen bleibt:** die Station, Antennen, Roboter-Barrieren, alle Blöcke mit Inhalt (Kisten, Öfen, Spawner …), Wasser und Lava, unzerstörbare Blöcke wie Grundgestein.
+- **Abbauzeit wie beim Spieler:** Harte Blöcke dauern länger, mit dem falschen Werkzeug noch länger. Effizienz macht schneller. Man sieht die Risse im Block, und der Roboter pickt mit dem Schnabel daran herum.
+- **Verzauberungen:** Glück (Fortune), Behutsamkeit (Silk Touch) und die anderen wirken wie beim Spieler, Haltbarkeit (Unbreaking) schont das Werkzeug. **Reparatur (Mending)** repariert das Werkzeug mit den Erfahrungskugeln aus dem abgebauten Block. Ohne Mending-Werkzeug bleiben die Kugeln für die Spieler liegen. Mit einer zu schwachen Spitzhacke gibt ein Block (z. B. Diamanterz mit einer Steinspitzhacke) wie beim Spieler nichts.
+- **Beute:** Jeder Roboter sammelt bis zu 9 Stapel, dann bringt er sie Stapel für Stapel in die Kisten an der Station.
+- **Helm:** Im Abbau-Modus tragen die Roboter einen Bergmannshelm in ihrer Farbe mit einer leuchtenden Lampe vorne.
+- **Ausschalten:** Zurück auf **Sammeln** bringen die Roboter ihr Werkzeug in die Werkzeugkiste zurück und sammeln wieder Items.
 
 ### Jade und Xaero's Minimap
 
