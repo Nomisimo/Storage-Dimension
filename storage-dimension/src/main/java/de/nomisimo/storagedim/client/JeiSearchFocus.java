@@ -43,14 +43,19 @@ final class JeiSearchFocus {
 		}
 
 		for (EditBox box : editBoxes(screen.children())) {
-			if (box.isFocused()) {
+			if (box.isFocused() && !isJei(box)) {
 				box.setFocused(false);
 			}
 		}
 
-		if (screen.getFocused() instanceof EditBox) {
+		if (screen.getFocused() instanceof EditBox box && !isJei(box)) {
 			screen.setFocused(null);
 		}
+	}
+
+	/** JEI's own search field can sit among the screen's children too; it keeps the focus it just got. */
+	private static boolean isJei(GuiEventListener listener) {
+		return listener.getClass().getName().startsWith("mezz.jei.");
 	}
 
 	private static List<EditBox> editBoxes(List<? extends GuiEventListener> children) {
