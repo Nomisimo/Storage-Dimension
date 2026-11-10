@@ -213,6 +213,8 @@ public class RobotEntity extends PathfinderMob {
 	private int homeStuck;
 	/** Its station is in mining mode (taken from the station). */
 	private boolean mining;
+	/** Mining as ore search: staircase and tunnels down to the ores below the station, only ores kept. */
+	private boolean oreSearch;
 	/** The chest next to its station with the tools for mining, or null. */
 	private BlockPos toolChest;
 	/** The station's range, for the mining area without antennas (all robots of a station dig the same area). */
@@ -431,11 +433,17 @@ public class RobotEntity extends PathfinderMob {
 	/** Mining mode, tool chest and range come from the station, so all its robots dig the same area together. */
 	private void syncMining(RobotConfig stationConfig) {
 		boolean was = mining;
+		boolean wasOres = oreSearch;
 		mining = stationConfig.mining();
+		oreSearch = mining && stationConfig.oreSearch();
 		toolChest = stationConfig.toolChest().orElse(null);
 		stationRange = Math.clamp(stationConfig.range(), MIN_RANGE, RANGE);
 
-		if (was != mining) {
+		if (wasOres != oreSearch) {
+			applyRange();
+		}
+
+		if (was != mining || wasOres != oreSearch) {
 			release();
 			dropMineTarget();
 			mineIdle = false;
@@ -647,7 +655,7 @@ public class RobotEntity extends PathfinderMob {
 	/** Its own settings (each robot keeps those of the item it was placed from), for the item it turns into when picked up. */
 	public RobotConfig config() {
 		RobotConfig config = new RobotConfig(range, getColor(), getCustomName() == null ? "" : getCustomName().getString(), List.copyOf(filter),
-				Optional.empty(), Optional.empty(), excludeFilter, stationName, false, Optional.empty());
+				Optional.empty(), Optional.empty(), excludeFilter, stationName, false, Optional.empty(), false);
 		return station == null ? config : config.withStation(Rooms.id(level()), station);
 	}
 
@@ -720,11 +728,11 @@ public class RobotEntity extends PathfinderMob {
 		}
 
 		if (mining && mineFinished) {
-			return Component.literal("Fertig: alles abgebaut").withStyle(ChatFormatting.GREEN);
+			return Component.literal(oreSearch ? "Fertig: keine Erze mehr" : "Fertig: alles abgebaut").withStyle(ChatFormatting.GREEN);
 		}
 
 		if (mining && mineIdle) {
-			return Component.literal("Abbau: nichts erreichbar, wartet").withStyle(ChatFormatting.YELLOW);
+			return Component.literal(oreSearch ? "Erzsuche: kein Erz erreichbar, wartet" : "Abbau: nichts erreichbar, wartet").withStyle(ChatFormatting.YELLOW);
 		}
 
 		return Component.literal(isSitting() ? "Wartet fröhlich" : "Wartet").withStyle(ChatFormatting.YELLOW);
@@ -1060,14 +1068,18 @@ public class RobotEntity extends PathfinderMob {
 	private boolean outOfRange() {
 		Vec3 pos = position();
 
+		// in the ore search the ground below the station belongs to its range
+		boolean below = oreSearch && station != null && pos.y < station.getY();
+
 		if (area != null) {
-			return !area.inflate(4).contains(pos);
+			AABB box = area.inflate(4);
+			return !(below ? new AABB(box.minX, level().getMinY(), box.minZ, box.maxX, box.maxY, box.maxZ) : box).contains(pos);
 		}
 
 		BlockPos h = home();
 		double dx = pos.x - h.getX();
 		double dz = pos.z - h.getZ();
-		return dx * dx + dz * dz > (range + 4) * (range + 4) || Math.abs(pos.y - h.getY()) > VERTICAL_RANGE + 4;
+		return dx * dx + dz * dz > (range + 4) * (range + 4) || !below && Math.abs(pos.y - h.getY()) > VERTICAL_RANGE + 4;
 	}
 
 	private boolean inRange(Vec3 pos) {
@@ -1329,7 +1341,7 @@ public class RobotEntity extends PathfinderMob {
 	private void dropMineTarget() {
 		if (mineTarget != null && !level().isClientSide()) {
 			level().destroyBlockProgress(getId(), mineTarget, -1);
-			MiningJob job = miningJob();
+			DigJob job = miningJob();
 
 			if (job != null) {
 				job.release(mineTarget, getUUID());
@@ -1345,8 +1357,11 @@ public class RobotEntity extends PathfinderMob {
 		}
 	}
 
-	/** What all robots of its station dig together: the antenna area, or a square of the station's range from the station up. */
-	private MiningJob miningJob() {
+	/**
+	 * What all robots of its station dig together: the antenna area, or a square of the station's range from the
+	 * station up; in the ore search the ores below that footprint, down to the bottom of the world.
+	 */
+	private DigJob miningJob() {
 		if (station == null) {
 			return null;
 		}
@@ -1373,6 +1388,10 @@ public class RobotEntity extends PathfinderMob {
 			// the station stands at the bottom; the area reaches as high up as the range is wide
 			minY = station.getY();
 			maxY = station.getY() + stationRange - 1;
+		}
+
+		if (oreSearch) {
+			return OreJob.get(Rooms.id(level()), station, minX, minZ, maxX, maxZ, level().getMinY(), level().getGameTime());
 		}
 
 		minY = Math.max(minY, level().getMinY());
@@ -1512,14 +1531,14 @@ public class RobotEntity extends PathfinderMob {
 	 * Breaks the block it dug: the drops (with Fortune, Silk Touch and so on of its tool) go into its bag, the tool
 	 * wears down (Unbreaking counts), and experience from the block repairs tools with Mending.
 	 */
-	private void breakTarget(MiningJob job) {
+	private void breakTarget(DigJob job) {
 		ServerLevel server = (ServerLevel) level();
 		BlockPos pos = mineTarget;
 		BlockState state = server.getBlockState(pos);
 		int kind = bestTool(state);
 		ItemStack tool = kind < 0 ? ItemStack.EMPTY : tools[kind];
 		boolean harvests = !state.requiresCorrectToolForDrops() || !tool.isEmpty() && tool.isCorrectToolForDrops(state);
-		List<ItemStack> drops = harvests ? Block.getDrops(state, server, pos, null, this, tool) : List.of();
+		List<ItemStack> drops = harvests && job.keepsDrops(state) ? Block.getDrops(state, server, pos, null, this, tool) : List.of();
 		boolean wears = state.getDestroySpeed(server, pos) > 0;
 		server.destroyBlock(pos, false, this);
 		state.spawnAfterBreak(server, pos, tool, true);
@@ -1702,7 +1721,7 @@ public class RobotEntity extends PathfinderMob {
 			}
 
 			mineProblem = null;
-			MiningJob job = miningJob();
+			DigJob job = miningJob();
 			long now = level().getGameTime();
 			List<BlockPos> candidates = job.candidates((ServerLevel) level(), blockPosition(), getUUID(), PATH_CHECKS, now);
 			candidates.addAll(job.nearby((ServerLevel) level(), blockPosition(), getUUID(), PATH_CHECKS, now));
@@ -1728,7 +1747,7 @@ public class RobotEntity extends PathfinderMob {
 			return false;
 		}
 
-		private boolean startDigging(MiningJob job, BlockPos pos) {
+		private boolean startDigging(DigJob job, BlockPos pos) {
 			job.claim(pos, getUUID());
 			mineTarget = pos.immutable();
 			digTicks = 0;
@@ -1817,7 +1836,7 @@ public class RobotEntity extends PathfinderMob {
 		}
 
 		private void tickDigging() {
-			MiningJob job = miningJob();
+			DigJob job = miningJob();
 			ServerLevel server = (ServerLevel) level();
 
 			if (job == null || mineTarget == null) {
@@ -2325,9 +2344,13 @@ public class RobotEntity extends PathfinderMob {
 				&& level.getBlockState(pos.above()).getCollisionShape(level, pos.above()).isEmpty();
 	}
 
-	/** Paths may be as long as its range, so it can work out the whole way to anything in range. */
+	/**
+	 * Paths may be as long as its range, so it can work out the whole way to anything in range; in the ore search
+	 * also all the way down the staircase.
+	 */
 	private void applyRange() {
-		getAttribute(Attributes.FOLLOW_RANGE).setBaseValue((area != null ? areaReach : range) + 16);
+		int depth = oreSearch && station != null ? Math.max(0, station.getY() - level().getMinY()) : 0;
+		getAttribute(Attributes.FOLLOW_RANGE).setBaseValue((area != null ? areaReach : range) + 16 + depth);
 		getNavigation().updatePathfinderMaxVisitedNodes();
 	}
 

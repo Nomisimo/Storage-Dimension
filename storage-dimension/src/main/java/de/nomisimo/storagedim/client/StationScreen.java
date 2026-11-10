@@ -87,7 +87,9 @@ public class StationScreen extends AbstractContainerScreen<StationMenu> {
 				.tooltip(Tooltip.create(Component.literal("Sammeln: die Roboter bringen herumliegende Items weg. "
 						+ "Abbauen: sie bauen alle Blöcke in ihrer Reichweite (oder der Antennen-Area) von oben nach unten ab, "
 						+ "lassen eine Wendeltreppe zur Station stehen und bringen alles in die Kisten. "
-						+ "Dafür stellt sich neben der Station eine Werkzeugkiste auf: pro Roboter eine Spitzhacke, eine Axt und eine Schaufel hinein.")))
+						+ "Dafür stellt sich neben der Station eine Werkzeugkiste auf: pro Roboter eine Spitzhacke, eine Axt und eine Schaufel hinein. "
+						+ "Erzsuche: sie spüren die Erze unter der Station auf, graben eine Wendeltreppe nach unten und Gänge zu den Erzen, "
+						+ "folgen jeder Ader und bringen nur die Erze heim. Klick: nächster Modus")))
 				.build());
 		addRenderableWidget(Button.builder(Component.literal("Zurückrufen"), b -> send(StationMenu.ACTION_RECALL, 0, ""))
 				.bounds(l + 8, t + StationMenu.BUTTONS_Y, 78, 14)
@@ -125,7 +127,8 @@ public class StationScreen extends AbstractContainerScreen<StationMenu> {
 		rangeDown.visible = data.antennas() == 0;
 		rangeUp.visible = data.antennas() == 0;
 
-		work.setMessage(Component.literal(data.mining() ? "Abbauen" : "Sammeln").withStyle(data.mining() ? ChatFormatting.GOLD : ChatFormatting.WHITE));
+		work.setMessage(data.oreSearch() ? Component.literal("Erzsuche").withStyle(ChatFormatting.AQUA)
+				: Component.literal(data.mining() ? "Abbauen" : "Sammeln").withStyle(data.mining() ? ChatFormatting.GOLD : ChatFormatting.WHITE));
 		// mining takes everything, the filter only matters for collecting
 		mode.active = !data.mining();
 		mode.setMessage(Component.literal(data.exclude() ? "Sammelt alles AUSSER Filter" : "Sammelt nur den Filter"));

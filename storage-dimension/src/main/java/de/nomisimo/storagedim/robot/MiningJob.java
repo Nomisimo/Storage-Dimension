@@ -36,9 +36,9 @@ import net.minecraft.world.level.block.state.BlockState;
  * before. Sand or gravel under a step keeps the block it rests on. Blocks with contents (chests, furnaces, ...),
  * the station, antennas, robot barriers, liquids and unbreakable blocks are never dug.
  */
-public final class MiningJob {
+public final class MiningJob implements DigJob {
 	/** The eight columns around the pillar, in walking order; corners are even, so no step sits right on a chest beside the station. */
-	private static final int[][] RING = {{-1, -1}, {0, -1}, {1, -1}, {1, 0}, {1, 1}, {0, 1}, {-1, 1}, {-1, 0}};
+	static final int[][] RING = {{-1, -1}, {0, -1}, {1, -1}, {1, 0}, {1, 1}, {0, 1}, {-1, 1}, {-1, 0}};
 	/** How long a block no robot found a way to is left out (ticks). */
 	private static final int SKIP_TICKS = 1200;
 	/** A job nobody asked for in this long is forgotten. */
@@ -143,6 +143,7 @@ public final class MiningJob {
 	}
 
 	/** Every column has been looked at and none has anything left to dig. */
+	@Override
 	public boolean finished() {
 		return scanned >= order.length && layers.isEmpty();
 	}
@@ -217,6 +218,7 @@ public final class MiningJob {
 				&& !state.is(Blocks.BUBBLE_COLUMN) && state.getDestroySpeed(level, pos) >= 0;
 	}
 
+	@Override
 	public boolean wanted(ServerLevel level, BlockPos pos) {
 		BlockState state = level.getBlockState(pos);
 		return contains(pos) && diggable(level, pos, state) && !isProtected(level, pos, state);
@@ -320,6 +322,7 @@ public final class MiningJob {
 	}
 
 	/** A block was dug (or turned out to be gone): its column looks further down. */
+	@Override
 	public void dug(ServerLevel level, BlockPos pos) {
 		long column = column(pos.getX(), pos.getZ());
 		Integer top = tops.get(column);
@@ -341,6 +344,7 @@ public final class MiningJob {
 	 * Blocks for a robot standing at {@code from}, best first: from the highest layers that still have blocks to
 	 * dig, those closest to the robot. Blocks another robot took or none could get to are left out.
 	 */
+	@Override
 	public List<BlockPos> candidates(ServerLevel level, BlockPos from, UUID robot, int count, long now) {
 		scan(level);
 		skipped.values().removeIf(until -> until < now);
@@ -407,6 +411,7 @@ public final class MiningJob {
 	 * with the station down below): from its floor up as far as it reaches, the highest first. Digging these opens the
 	 * staircase upwards step by step.
 	 */
+	@Override
 	public List<BlockPos> nearby(ServerLevel level, BlockPos from, UUID robot, int count, long now) {
 		skipped.values().removeIf(until -> until < now);
 		List<BlockPos> found = new ArrayList<>();
@@ -425,15 +430,18 @@ public final class MiningJob {
 		return found.size() > count ? new ArrayList<>(found.subList(0, count)) : found;
 	}
 
+	@Override
 	public void claim(BlockPos pos, UUID robot) {
 		claimed.put(pos.asLong(), robot);
 	}
 
+	@Override
 	public void release(BlockPos pos, UUID robot) {
 		claimed.remove(pos.asLong(), robot);
 	}
 
 	/** No robot found a way there: left out for a minute, so the others go on below. */
+	@Override
 	public void skip(BlockPos pos, long now) {
 		skipped.put(pos.asLong(), now + SKIP_TICKS);
 		claimed.remove(pos.asLong());

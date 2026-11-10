@@ -243,7 +243,20 @@ final class SmokeTest {
 
 		// the mining robots need a few minutes of game time; the result comes later
 		try {
-			de.nomisimo.storagedim.robot.MiningSmokeTest.start(server, miningErrors -> report(server, miningErrors));
+			de.nomisimo.storagedim.robot.MiningSmokeTest.start(server, miningErrors -> {
+				if (!miningErrors.isEmpty()) {
+					report(server, miningErrors);
+					return;
+				}
+
+				// then the ore search, also a few minutes
+				try {
+					de.nomisimo.storagedim.robot.OreSmokeTest.start(server, oreErrors -> report(server, oreErrors));
+				} catch (Throwable t) {
+					StorageDimensionMod.LOGGER.error("SMOKETEST Ausnahme", t);
+					report(server, List.of(t.toString()));
+				}
+			});
 		} catch (Throwable t) {
 			StorageDimensionMod.LOGGER.error("SMOKETEST Ausnahme", t);
 			report(server, List.of(t.toString()));
