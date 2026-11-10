@@ -215,6 +215,8 @@ public class RobotEntity extends PathfinderMob {
 	private boolean mining;
 	/** Mining as ore search: staircase and tunnels down to the ores below the station, only ores kept. */
 	private boolean oreSearch;
+	/** Ore search: done with a vein, it takes the ores home before it digs on to the next one. */
+	private boolean oreDelivery;
 	/** The chest next to its station with the tools for mining, or null. */
 	private BlockPos toolChest;
 	/** The station's range, for the mining area without antennas (all robots of a station dig the same area). */
@@ -1334,7 +1336,7 @@ public class RobotEntity extends PathfinderMob {
 
 	/** Its bag is (nearly) full, or it has nothing more to dig right now: off to the chests with what it gathered. */
 	private boolean needsUnload() {
-		return !bag.isEmpty() && (bag.size() >= BAG_SLOTS - 1 || mineIdle || !mining || recallPhase != RECALL_NONE || areaOff);
+		return !bag.isEmpty() && (bag.size() >= BAG_SLOTS - 1 || mineIdle || oreDelivery || !mining || recallPhase != RECALL_NONE || areaOff);
 	}
 
 	/** Gives back the block it was going to dig, so another robot may take it. */
@@ -1723,6 +1725,15 @@ public class RobotEntity extends PathfinderMob {
 			mineProblem = null;
 			DigJob job = miningJob();
 			long now = level().getGameTime();
+
+			if (bag.isEmpty()) {
+				oreDelivery = false;
+			} else if (job instanceof OreJob ores && ores.veinDone((ServerLevel) level(), getUUID(), blockPosition())) {
+				// like an ore golem: each vein goes home before the next one
+				oreDelivery = true;
+				return false;
+			}
+
 			List<BlockPos> candidates = job.candidates((ServerLevel) level(), blockPosition(), getUUID(), PATH_CHECKS, now);
 			candidates.addAll(job.nearby((ServerLevel) level(), blockPosition(), getUUID(), PATH_CHECKS, now));
 

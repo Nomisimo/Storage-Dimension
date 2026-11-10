@@ -229,7 +229,7 @@ Ein Klick nach **Abbauen** kommt **Erzsuche**. Statt alles abzutragen, spüren d
 - **Wendeltreppe nach unten:** Um die Säule unter der Station graben die Roboter eine Wendeltreppe in die Tiefe, nur so weit, wie das nächste Erz es braucht. Fehlt eine Stufe (Höhle), setzen sie Bruchstein hin.
 - **Gänge zu den Erzen:** Von der Stufe auf der Höhe des Erzes (oder knapp darüber) graben sie einen 2 Blöcke hohen Gang zum Erz, auch schräg nach unten. Über Höhlen legen sie einen Boden aus Bruchstein. Jeder Roboter hat seinen eigenen Gang, bis zu 32 arbeiten gleichzeitig.
 - **Reihenfolge:** das nächste Erz zuerst, seltene Erze zählen als näher: Diamant, Smaragd und antiker Schrott vierfach, Gold, Redstone und Lapis doppelt.
-- **Adern:** Ist ein Roboter an einem Erz, baut er die ganze Ader drumherum ab, bevor er weitergräbt.
+- **Adern:** Ist ein Roboter an einem Erz, baut er die ganze Ader drumherum ab und bringt sie heim, bevor er zum nächsten Erz gräbt.
 - **Nur Erze heim:** Was die Erze droppen (mit Glück entsprechend mehr), kommt in die Kisten. Der Stein aus Treppe und Gängen bleibt nicht übrig.
 - **Was zählt als Erz:** alle Erze des Spiels (auch Tiefenschiefer-, Nether-Gold- und Quarzerz, antiker Schrott) und die Erze anderer Mods mit dem üblichen Erz-Tag.
 - **Lava:** Neben Lava graben die Roboter nicht. Ein Erz, an das man nur durch Lava, Grundgestein oder Kisten käme, lassen sie liegen.

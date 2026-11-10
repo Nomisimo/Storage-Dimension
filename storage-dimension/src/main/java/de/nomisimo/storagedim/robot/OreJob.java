@@ -418,6 +418,25 @@ public final class OreJob implements DigJob {
 		return found;
 	}
 
+	/**
+	 * The robot got the ore its tunnel led to, and none of the vein is left around it: time to take the ores home
+	 * (the next call hands it a new tunnel).
+	 */
+	public boolean veinDone(ServerLevel level, UUID robot, BlockPos from) {
+		Tunnel tunnel = tunnels.get(robot);
+
+		if (tunnel == null || !level.isLoaded(tunnel.ore) || isOre(level.getBlockState(tunnel.ore)) && !bad.contains(tunnel.ore.asLong())) {
+			return false;
+		}
+
+		if (!vein(level, from).isEmpty()) {
+			return false;
+		}
+
+		tunnels.remove(robot);
+		return true;
+	}
+
 	/** The robot's tunnel, or a new one to the best ore no other robot goes for; null when there is none. */
 	private Tunnel tunnel(ServerLevel level, UUID robot) {
 		Tunnel tunnel = tunnels.get(robot);

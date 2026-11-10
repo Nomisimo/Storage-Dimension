@@ -41,6 +41,8 @@ jobs:
         run: |
           mkdir -p run
           echo "eula=true" > run/eula.txt
+          # the robot tests run for minutes without a player; a dedicated server would pause after 60 seconds
+          echo "pause-when-empty-seconds=0" > run/server.properties
           timeout 900 ./gradlew runServer --args="nogui" 2>&1 | tee server.log
           grep -q "SMOKETEST OK" server.log
       - name: build modrinth pack
