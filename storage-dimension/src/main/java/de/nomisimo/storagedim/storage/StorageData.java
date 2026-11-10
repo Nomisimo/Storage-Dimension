@@ -65,6 +65,10 @@ public final class StorageData {
 	public final Map<String, Map<Long, Map<UUID, String>>> stationRobots = new HashMap<>();
 	/** The antenna area of each robot station per dimension (antennas, area name, switched on or off). */
 	public final Map<String, Map<Long, de.nomisimo.storagedim.robot.StationArea>> stationAreas = new HashMap<>();
+	/** Robot stations per dimension that keep their work area loaded (switched on at the station). */
+	public final Map<String, Set<Long>> loadedStations = new HashMap<>();
+	/** Chunks per dimension this mod force-loads for those stations, so only these are released again. */
+	public final Map<String, Set<Long>> forcedChunks = new HashMap<>();
 	/** Where to send a player back to when they leave the library. */
 	public final Map<UUID, SavedPos> returns = new HashMap<>();
 	/**
@@ -259,6 +263,26 @@ public final class StorageData {
 	public void setStationArea(String dimension, BlockPos pos, de.nomisimo.storagedim.robot.StationArea area) {
 		stationAreas.computeIfAbsent(dimension, d -> new HashMap<>()).put(pos.asLong(), area);
 		markDirty();
+	}
+
+	private static JsonObject writeLongSets(Map<String, Set<Long>> sets) {
+		JsonObject obj = new JsonObject();
+		sets.forEach((dim, set) -> {
+			JsonArray arr = new JsonArray();
+			set.forEach(arr::add);
+			obj.add(dim, arr);
+		});
+		return obj;
+	}
+
+	private static void readLongSets(JsonObject root, String key, Map<String, Set<Long>> sets) {
+		if (root.has(key)) {
+			root.getAsJsonObject(key).entrySet().forEach(dim -> {
+				Set<Long> set = new HashSet<>();
+				dim.getValue().getAsJsonArray().forEach(e -> set.add(e.getAsLong()));
+				sets.put(dim.getKey(), set);
+			});
+		}
 	}
 
 	/** The robots placed for the station at {@code pos} (id to name); changes must be followed by {@link #markDirty()}. */
@@ -474,6 +498,8 @@ public final class StorageData {
 			areaObj.add(dim, d);
 		});
 		root.add("stationAreas", areaObj);
+		root.add("loadedStations", writeLongSets(loadedStations));
+		root.add("forcedChunks", writeLongSets(forcedChunks));
 
 		JsonObject stationRobotObj = new JsonObject();
 		stationRobots.forEach((dim, map) -> {
@@ -665,6 +691,9 @@ public final class StorageData {
 				stationAreas.put(dim.getKey(), map);
 			});
 		}
+
+		readLongSets(root, "loadedStations", loadedStations);
+		readLongSets(root, "forcedChunks", forcedChunks);
 
 		if (root.has("stationRobots")) {
 			root.getAsJsonObject("stationRobots").entrySet().forEach(dim -> {

@@ -40,6 +40,7 @@ public class StationScreen extends AbstractContainerScreen<StationMenu> {
 	private EditBox areaName;
 	private Button mode;
 	private Button work;
+	private Button chunks;
 	private Button color;
 	private Button rangeDown;
 	private Button rangeUp;
@@ -94,6 +95,12 @@ public class StationScreen extends AbstractContainerScreen<StationMenu> {
 				.tooltip(Tooltip.create(Component.literal("Alle Roboter kommen zur Station und warten dort eine Minute. "
 						+ "Wer keinen Weg zur Station findet, teleportiert sich her.")))
 				.build());
+		chunks = addRenderableWidget(Button.builder(Component.empty(), b -> send(StationMenu.ACTION_CHUNKS, 0, ""))
+				.bounds(l + 8, t + StationMenu.CHUNKS_Y, 160, 14)
+				.tooltip(Tooltip.create(Component.literal("Hält den ganzen Arbeitsbereich der Roboter geladen (Reichweite oder Antennen-Area), "
+						+ "wie mit /forceload. Dann arbeiten die Roboter weiter, auch wenn kein Spieler in der Nähe ist. "
+						+ "Viele geladene Chunks kosten Leistung. Abschalten oder Station abbauen gibt sie wieder frei.")))
+				.build());
 		robotName = addRenderableWidget(new NameBox(font, l + 8, t + StationMenu.IO_Y, 84, 16, "Robotername …"));
 		robotName.setResponder(text -> send(StationMenu.ACTION_ROBOT_NAME, 0, text));
 		update();
@@ -126,6 +133,9 @@ public class StationScreen extends AbstractContainerScreen<StationMenu> {
 		rangeUp.visible = data.antennas() == 0;
 
 		work.setMessage(Component.literal(data.mining() ? "Abbauen" : "Sammeln").withStyle(data.mining() ? ChatFormatting.GOLD : ChatFormatting.WHITE));
+		chunks.setMessage(data.loadedChunks() > 0
+				? Component.literal("Bereich geladen: " + data.loadedChunks() + (data.loadedChunks() == 1 ? " Chunk" : " Chunks")).withStyle(ChatFormatting.GREEN)
+				: Component.literal("Bereich geladen halten: aus"));
 		// mining takes everything, the filter only matters for collecting
 		mode.active = !data.mining();
 		mode.setMessage(Component.literal(data.exclude() ? "Sammelt alles AUSSER Filter" : "Sammelt nur den Filter"));

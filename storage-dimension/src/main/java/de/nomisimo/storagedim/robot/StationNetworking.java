@@ -36,7 +36,8 @@ public final class StationNetworking {
 
 	/** Server to client: the station's settings and its robots (names and what each is doing). */
 	public record SyncPayload(int containerId, String stationName, String robotName, int range, int color, boolean exclude,
-			int antennas, String areaName, String areaSize, String areaState, List<Component> names, List<Component> states, boolean mining) implements CustomPacketPayload {
+			int antennas, String areaName, String areaSize, String areaState, List<Component> names, List<Component> states, boolean mining,
+			int loadedChunks) implements CustomPacketPayload {
 		public static final Type<SyncPayload> TYPE = new Type<>(StorageDimensionMod.id("station_sync"));
 		public static final StreamCodec<RegistryFriendlyByteBuf, SyncPayload> CODEC = StreamCodec.of((buf, payload) -> {
 			buf.writeVarInt(payload.containerId);
@@ -57,6 +58,7 @@ public final class StationNetworking {
 			}
 
 			buf.writeBoolean(payload.mining);
+			buf.writeVarInt(payload.loadedChunks);
 		}, buf -> {
 			int containerId = buf.readVarInt();
 			String stationName = buf.readUtf();
@@ -78,7 +80,9 @@ public final class StationNetworking {
 			}
 
 			boolean mining = buf.readBoolean();
-			return new SyncPayload(containerId, stationName, robotName, range, color, exclude, antennas, areaName, areaSize, areaState, names, states, mining);
+			int loadedChunks = buf.readVarInt();
+			return new SyncPayload(containerId, stationName, robotName, range, color, exclude, antennas, areaName, areaSize, areaState, names, states, mining,
+					loadedChunks);
 		});
 
 		@Override
@@ -90,6 +94,7 @@ public final class StationNetworking {
 	public static void register() {
 		StationMenu.register();
 		Areas.register();
+		StationChunks.register();
 		PayloadTypeRegistry.serverboundPlay().register(ActionPayload.TYPE, ActionPayload.CODEC);
 		PayloadTypeRegistry.clientboundPlay().register(SyncPayload.TYPE, SyncPayload.CODEC);
 		ServerPlayNetworking.registerGlobalReceiver(ActionPayload.TYPE, (payload, context) -> {

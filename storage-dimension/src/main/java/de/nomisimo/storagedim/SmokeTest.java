@@ -207,6 +207,8 @@ final class SmokeTest {
 				projectTest(errors);
 			}
 
+			de.nomisimo.storagedim.robot.StationChunks.smokeTest(server.overworld(), errors);
+
 			for (String recipe : List.of("storage_chest", "me_terminal", "me_upgrade", "me_backpack", "filter_chest", "robot")) {
 				if (server.getRecipeManager().byKey(ResourceKey.create(Registries.RECIPE, StorageDimensionMod.id(recipe))).isEmpty()) {
 					errors.add("Rezept fehlt: " + recipe);
