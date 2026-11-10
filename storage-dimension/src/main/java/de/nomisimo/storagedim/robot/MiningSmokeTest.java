@@ -230,7 +230,14 @@ public final class MiningSmokeTest {
 				return;
 			}
 
-			// switched back to collecting: the robots bring their tools back
+			// switched back to collecting (the button goes through the ore search): the robots bring their tools back
+			StationMining.toggle(level, dim, station);
+
+			if (!StorageData.get().station(dim, station).oreSearch()) {
+				finish(List.of("Nach dem Abbauen kommt nicht die Erzsuche"));
+				return;
+			}
+
 			StationMining.toggle(level, dim, station);
 			stage = 1;
 		} else if (stage == 1 && robots.stream().allMatch(r -> r.getMiningLook() == RobotEntity.MINING_LOOK_NONE)) {

@@ -11,7 +11,7 @@ import net.minecraft.world.level.block.ChestBlock;
 import net.minecraft.world.level.block.state.BlockState;
 
 /**
- * Switching a station between collecting and mining. Mining needs a tool chest: it is set up right next to the
+ * Switching a station between collecting, mining (everything in the area) and the ore search (only the ores below it). Mining needs a tool chest: it is set up right next to the
  * station when mining is switched on (or the one from before is used again), and each robot takes a pickaxe, an axe
  * and a shovel from it.
  */
@@ -23,16 +23,24 @@ public final class StationMining {
 	public record Result(boolean ok, Component message) {
 	}
 
-	/** Switches the station's robots to mining (with a tool chest next to it) or back to collecting. */
+	/** The work mode button: collecting, then mining (with a tool chest next to the station), then the ore search, then collecting again. */
 	public static Result toggle(ServerLevel level, String dim, BlockPos station) {
 		StorageData data = StorageData.get();
 		RobotConfig config = data.station(dim, station);
 
-		if (config.mining()) {
-			data.setStation(dim, station, config.withMining(false));
+		if (config.mining() && config.oreSearch()) {
+			data.setStation(dim, station, config.withMining(false).withOreSearch(false));
 			MiningJob.reset(dim, station);
+			OreJob.reset(dim, station);
 			return new Result(true, Component.literal("Die Roboter sammeln wieder. Ihr Werkzeug bringen sie in die Werkzeugkiste zurück.")
 					.withStyle(ChatFormatting.YELLOW));
+		}
+
+		if (config.mining()) {
+			data.setStation(dim, station, config.withOreSearch(true));
+			OreJob.reset(dim, station);
+			return new Result(true, Component.literal("Erzsuche: Die Roboter spüren die Erze unter der Station auf, graben eine Wendeltreppe "
+					+ "nach unten und Gänge zu den Erzen. Nur die Erze kommen in die Kisten.").withStyle(ChatFormatting.AQUA));
 		}
 
 		BlockPos chest = config.toolChest().filter(pos -> isToolChest(level, pos, station)).orElse(null);
@@ -59,7 +67,7 @@ public final class StationMining {
 			placed = true;
 		}
 
-		data.setStation(dim, station, config.withMining(true).withToolChest(chest));
+		data.setStation(dim, station, config.withMining(true).withOreSearch(false).withToolChest(chest));
 		MiningJob.reset(dim, station);
 		String side = sideName(station, chest);
 		return new Result(true, Component.literal((placed ? "Werkzeugkiste " + side + " der Station aufgestellt. " : "Werkzeugkiste " + side + " der Station. ")

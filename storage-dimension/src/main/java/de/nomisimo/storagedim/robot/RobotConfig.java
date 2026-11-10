@@ -28,9 +28,9 @@ import net.minecraft.world.item.component.ItemLore;
  * Stored on the station, copied onto robot items and from there onto the placed robot.
  */
 public record RobotConfig(int range, int color, String name, List<ItemStack> filter, Optional<String> stationDim, Optional<BlockPos> station,
-		boolean exclude, String stationName, boolean mining, Optional<BlockPos> toolChest) {
+		boolean exclude, String stationName, boolean mining, Optional<BlockPos> toolChest, boolean oreSearch) {
 	public static final RobotConfig DEFAULT = new RobotConfig(RobotEntity.RANGE, RobotEntity.DEFAULT_COLOR, "", List.of(), Optional.empty(), Optional.empty(), false, "",
-			false, Optional.empty());
+			false, Optional.empty(), false);
 	public static final Codec<RobotConfig> CODEC = RecordCodecBuilder.create(i -> i.group(
 			Codec.INT.optionalFieldOf("range", RobotEntity.RANGE).forGetter(RobotConfig::range),
 			Codec.INT.optionalFieldOf("color", RobotEntity.DEFAULT_COLOR).forGetter(RobotConfig::color),
@@ -41,7 +41,8 @@ public record RobotConfig(int range, int color, String name, List<ItemStack> fil
 			Codec.BOOL.optionalFieldOf("exclude", false).forGetter(RobotConfig::exclude),
 			Codec.STRING.optionalFieldOf("stationName", "").forGetter(RobotConfig::stationName),
 			Codec.BOOL.optionalFieldOf("mining", false).forGetter(RobotConfig::mining),
-			BlockPos.CODEC.optionalFieldOf("toolChest").forGetter(RobotConfig::toolChest)
+			BlockPos.CODEC.optionalFieldOf("toolChest").forGetter(RobotConfig::toolChest),
+			Codec.BOOL.optionalFieldOf("oreSearch", false).forGetter(RobotConfig::oreSearch)
 	).apply(i, RobotConfig::new));
 	private static final String KEY = "storagedim_robot";
 	private static final Map<String, String> COLOR_NAMES = Map.ofEntries(
@@ -53,43 +54,51 @@ public record RobotConfig(int range, int color, String name, List<ItemStack> fil
 			Map.entry("black", "Schwarz"));
 
 	public RobotConfig withRange(int range) {
-		return new RobotConfig(range, color, name, filter, stationDim, station, exclude, stationName, mining, toolChest);
+		return new RobotConfig(range, color, name, filter, stationDim, station, exclude, stationName, mining, toolChest, oreSearch);
 	}
 
 	public RobotConfig withColor(int color) {
-		return new RobotConfig(range, color, name, filter, stationDim, station, exclude, stationName, mining, toolChest);
+		return new RobotConfig(range, color, name, filter, stationDim, station, exclude, stationName, mining, toolChest, oreSearch);
 	}
 
 	public RobotConfig withName(String name) {
-		return new RobotConfig(range, color, name, filter, stationDim, station, exclude, stationName, mining, toolChest);
+		return new RobotConfig(range, color, name, filter, stationDim, station, exclude, stationName, mining, toolChest, oreSearch);
 	}
 
 	public RobotConfig withFilter(List<ItemStack> filter) {
-		return new RobotConfig(range, color, name, List.copyOf(filter), stationDim, station, exclude, stationName, mining, toolChest);
+		return new RobotConfig(range, color, name, List.copyOf(filter), stationDim, station, exclude, stationName, mining, toolChest, oreSearch);
 	}
 
 	/** true: the filter lists what the robots leave lying; false: the only things they collect. */
 	public RobotConfig withExclude(boolean exclude) {
-		return new RobotConfig(range, color, name, filter, stationDim, station, exclude, stationName, mining, toolChest);
+		return new RobotConfig(range, color, name, filter, stationDim, station, exclude, stationName, mining, toolChest, oreSearch);
 	}
 
 	/** The station's own name, shown in its screen and in the look-at tooltip of its robots. */
 	public RobotConfig withStationName(String stationName) {
-		return new RobotConfig(range, color, name, filter, stationDim, station, exclude, stationName, mining, toolChest);
+		return new RobotConfig(range, color, name, filter, stationDim, station, exclude, stationName, mining, toolChest, oreSearch);
 	}
 
 	/** The station's robots mine the blocks of their range or area instead of collecting items (set only at the station). */
 	public RobotConfig withMining(boolean mining) {
-		return new RobotConfig(range, color, name, filter, stationDim, station, exclude, stationName, mining, toolChest);
+		return new RobotConfig(range, color, name, filter, stationDim, station, exclude, stationName, mining, toolChest, oreSearch);
+	}
+
+	/**
+	 * Mining as ore search (only with mining on): the robots leave the ground standing, dig a spiral staircase down
+	 * below the station and tunnels to the ores they sense, and bring home only the ores.
+	 */
+	public RobotConfig withOreSearch(boolean oreSearch) {
+		return new RobotConfig(range, color, name, filter, stationDim, station, exclude, stationName, mining, toolChest, oreSearch);
 	}
 
 	/** The chest next to the station the mining robots take their tools from. */
 	public RobotConfig withToolChest(BlockPos toolChest) {
-		return new RobotConfig(range, color, name, filter, stationDim, station, exclude, stationName, mining, Optional.ofNullable(toolChest));
+		return new RobotConfig(range, color, name, filter, stationDim, station, exclude, stationName, mining, Optional.ofNullable(toolChest), oreSearch);
 	}
 
 	public RobotConfig withStation(String dim, BlockPos pos) {
-		return new RobotConfig(range, color, name, filter, Optional.of(dim), Optional.of(pos), exclude, stationName, mining, toolChest);
+		return new RobotConfig(range, color, name, filter, Optional.of(dim), Optional.of(pos), exclude, stationName, mining, toolChest, oreSearch);
 	}
 
 	/** The config written on a robot item, or null for a plain one. */

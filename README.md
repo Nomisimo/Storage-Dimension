@@ -10,7 +10,7 @@ Ein Fabric-Mod für **Minecraft 26.1.2**: eine Bibliothek voller Kisten in einer
 
 - [Installation](#installation)
 - [Speicher](#speicher): Dimensionskiste und Bibliothek, ME-Speicher, ME-Terminal, ME-Speicher im Browser, Filterkiste, Projektkiste, Trichter und Maschinen
-- [Sammelroboter](#sammelroboter): Roboter, Roboter-Station, Rückruf, Abbau-Modus, Roboter-Barriere, Antennen und Fernbedienung
+- [Sammelroboter](#sammelroboter): Roboter, Roboter-Station, Rückruf, Abbau-Modus, Erzsuche, Roboter-Barriere, Antennen und Fernbedienung
 - [ME-Rucksack und Traveler's Backpack](#me-rucksack-und-travelers-backpack)
 - [Rezepte](#rezepte)
 - [Befehle](#befehle)
@@ -149,7 +149,7 @@ Rechtsklick auf die Station öffnet ihr Fenster:
 - **Reichweite** mit − und +: 1 bis 10 Chunks, gemessen ab der Station. Mit [Antennen](#antennen-und-fernbedienung) steht hier stattdessen „Antenne verbunden“ und die Größe des Bereichs.
 - **Area-Name und Farbe:** Name der Antennen-Area (so steht sie in der Fernbedienung) und ihre Farbe. Klick auf die Farbe schaltet weiter. Ohne Antennen ist es die Farbe der nächsten eingestellten Roboter, mit Antennen tragen alle Roboter der Station sofort die Area-Farbe.
 - **Zurückrufen:** siehe unten.
-- **Sammeln / Abbauen:** schaltet alle Roboter der Station zwischen Items sammeln und Blöcke abbauen um, siehe [Abbau-Modus](#abbau-modus).
+- **Sammeln / Abbauen / Erzsuche:** schaltet alle Roboter der Station weiter: Items sammeln, alle Blöcke abbauen ([Abbau-Modus](#abbau-modus)) oder nur Erze unter der Station holen ([Erzsuche](#erzsuche)).
 - **Robotername:** für die nächsten Roboter, die eingestellt werden. Bekommen mehrere Roboter einer Station denselben Namen, werden sie durchnummeriert (Quak1, Quak2 …). Das Benennen kostet keine Level.
 - **Roboter einstellen:** Roboter links in den Eingang legen, er kommt rechts eingestellt wieder heraus. Genauso werden Antennen mit der Station gepaart. Die Einstellungen stehen im Tooltip des Roboter-Items.
 - **Roboterliste** rechts daneben: alle Roboter der Station (höchstens 32) mit Entfernung und dem, was jeder gerade tut. Das Mausrad blättert.
@@ -219,7 +219,21 @@ Mit dem Knopf **Sammeln / Abbauen** in der Station werden alle Roboter der Stati
 - **Verzauberungen:** Glück (Fortune), Behutsamkeit (Silk Touch) und die anderen wirken wie beim Spieler, Haltbarkeit (Unbreaking) schont das Werkzeug. **Reparatur (Mending)** repariert das Werkzeug mit den Erfahrungskugeln aus dem abgebauten Block. Ohne Mending-Werkzeug bleiben die Kugeln für die Spieler liegen. Mit einer zu schwachen Spitzhacke gibt ein Block (z. B. Diamanterz mit einer Steinspitzhacke) wie beim Spieler nichts.
 - **Beute:** Jeder Roboter sammelt bis zu 9 Stapel, dann bringt er sie Stapel für Stapel in die Kisten an der Station.
 - **Helm:** Im Abbau-Modus tragen die Roboter einen Bergmannshelm in ihrer Farbe mit einer leuchtenden Lampe vorne.
-- **Ausschalten:** Zurück auf **Sammeln** bringen die Roboter ihr Werkzeug in die Werkzeugkiste zurück und sammeln wieder Items.
+- **Ausschalten:** Ein Klick weiter kommt die [Erzsuche](#erzsuche), noch einer zurück auf **Sammeln**: Dann bringen die Roboter ihr Werkzeug in die Werkzeugkiste zurück und sammeln wieder Items.
+
+### Erzsuche
+
+Ein Klick nach **Abbauen** kommt **Erzsuche**. Statt alles abzutragen, spüren die Roboter die Erze im Boden unter der Station auf und holen nur die. Die Oberfläche bleibt stehen.
+
+- **Bereich:** dasselbe Quadrat (oder die Antennen-Box) wie beim Abbauen, aber von der Station **nach unten bis zum Grund der Welt**.
+- **Wendeltreppe nach unten:** Um die Säule unter der Station graben die Roboter eine Wendeltreppe in die Tiefe, nur so weit, wie das nächste Erz es braucht. Fehlt eine Stufe (Höhle), setzen sie Bruchstein hin.
+- **Gänge zu den Erzen:** Von der Stufe auf der Höhe des Erzes (oder knapp darüber) graben sie einen 2 Blöcke hohen Gang zum Erz, auch schräg nach unten. Über Höhlen legen sie einen Boden aus Bruchstein. Jeder Roboter hat seinen eigenen Gang, bis zu 32 arbeiten gleichzeitig.
+- **Reihenfolge:** das nächste Erz zuerst, seltene Erze zählen als näher: Diamant, Smaragd und antiker Schrott vierfach, Gold, Redstone und Lapis doppelt.
+- **Adern:** Ist ein Roboter an einem Erz, baut er die ganze Ader drumherum ab und bringt sie heim, bevor er zum nächsten Erz gräbt.
+- **Nur Erze heim:** Was die Erze droppen (mit Glück entsprechend mehr), kommt in die Kisten. Der Stein aus Treppe und Gängen bleibt nicht übrig.
+- **Was zählt als Erz:** alle Erze des Spiels (auch Tiefenschiefer-, Nether-Gold- und Quarzerz, antiker Schrott) und die Erze anderer Mods mit dem üblichen Erz-Tag.
+- **Lava:** Neben Lava graben die Roboter nicht. Ein Erz, an das man nur durch Lava, Grundgestein oder Kisten käme, lassen sie liegen.
+- Werkzeugkiste, Helm, Abbauzeit, Verzauberungen und Beutesack wie im [Abbau-Modus](#abbau-modus).
 
 ### Jade und Xaero's Minimap
 
