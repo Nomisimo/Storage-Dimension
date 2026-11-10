@@ -152,6 +152,7 @@ Rechtsklick auf die Station öffnet ihr Fenster:
 - **Sammeln / Abbauen / Erzsuche:** schaltet alle Roboter der Station weiter: Items sammeln, alle Blöcke abbauen ([Abbau-Modus](#abbau-modus)) oder nur Erze unter der Station holen ([Erzsuche](#erzsuche)).
 - **Robotername:** für die nächsten Roboter, die eingestellt werden. Bekommen mehrere Roboter einer Station denselben Namen, werden sie durchnummeriert (Quak1, Quak2 …). Das Benennen kostet keine Level.
 - **Roboter einstellen:** Roboter links in den Eingang legen, er kommt rechts eingestellt wieder heraus. Genauso werden Antennen mit der Station gepaart. Die Einstellungen stehen im Tooltip des Roboter-Items.
+- **Bereich geladen halten** (standardmäßig aus): hält den ganzen Arbeitsbereich der Station geladen, also alle Chunks ihrer Reichweite oder ihrer Antennen-Area (plus ein paar Blöcke Rand), wie mit `/forceload`. Dann sammeln und bauen die Roboter weiter, auch wenn kein Spieler in der Nähe oder online ist. Der Knopf zeigt, wie viele Chunks geladen sind. Ausschalten oder die Station abbauen gibt die Chunks wieder frei. Chunks, die schon vorher von Hand geladen waren, bleiben unberührt. Viele Chunks kosten Server-Leistung, also lieber eine kleine Reichweite oder eine Antennen-Area nehmen.
 - **Roboterliste** rechts daneben: alle Roboter der Station (höchstens 32) mit Entfernung und dem, was jeder gerade tut. Das Mausrad blättert.
 
 ![Fenster der Roboter-Station mit Roboterliste](docs/screenshots/roboter-station-menu.png)

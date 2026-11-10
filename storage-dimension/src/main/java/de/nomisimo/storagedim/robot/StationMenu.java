@@ -53,17 +53,18 @@ public class StationMenu extends AbstractContainerMenu {
 
 	// layout, shared with the screen (item positions inside the window)
 	public static final int WIDTH = 176;
-	public static final int HEIGHT = 232;
+	public static final int HEIGHT = 248;
 	public static final int FILTER_X = 8;
 	public static final int FILTER_Y = 30;
 	public static final int MODE_Y = 50;
 	public static final int RANGE_Y = 66;
 	public static final int AREA_Y = 82;
 	public static final int BUTTONS_Y = 98;
+	public static final int CHUNKS_Y = 114;
 	public static final int INPUT_X = 100;
 	public static final int OUTPUT_X = 140;
-	public static final int IO_Y = 124;
-	public static final int INVENTORY_Y = 150;
+	public static final int IO_Y = 140;
+	public static final int INVENTORY_Y = 166;
 
 	// actions the screen sends
 	public static final int ACTION_RANGE = 0;
@@ -74,6 +75,7 @@ public class StationMenu extends AbstractContainerMenu {
 	public static final int ACTION_ROBOT_NAME = 5;
 	public static final int ACTION_AREA_NAME = 6;
 	public static final int ACTION_WORK_MODE = 7;
+	public static final int ACTION_CHUNKS = 8;
 
 	private final Container filterSlots;
 	private final Container io;
@@ -175,6 +177,7 @@ public class StationMenu extends AbstractContainerMenu {
 				viewer.sendSystemMessage(result.message());
 				config = StorageData.get().station(dim, pos);
 			}
+			case ACTION_CHUNKS -> viewer.sendSystemMessage(StationChunks.toggle((ServerLevel) viewer.level(), dim, pos));
 			case ACTION_AREA_NAME -> {
 				StorageData data = StorageData.get();
 				data.setStationArea(dim, pos, data.stationArea(dim, pos).withName(clean(text)));
@@ -348,7 +351,7 @@ public class StationMenu extends AbstractContainerMenu {
 		String areaState = area.connected() ? (area.enabled() ? Areas.autoPaused(dim, pos) ? "pausiert (Auto)" : "an" : "aus") : "";
 		StationNetworking.SyncPayload payload = new StationNetworking.SyncPayload(containerId, config.stationName(), config.name(),
 				config.range(), config.color(), config.exclude(), antennas, area.name(), area.connected() ? area.sizeText(pos) : "", areaState,
-				names, states, config.mining(), config.mining() && config.oreSearch());
+				names, states, config.mining(), config.mining() && config.oreSearch(), StationChunks.loaded(dim, pos));
 
 		if (force || !Objects.equals(payload, lastSync)) {
 			lastSync = payload;
