@@ -439,9 +439,10 @@ public class RobotEntity extends PathfinderMob {
 		mining = stationConfig.mining();
 		oreSearch = mining && stationConfig.oreSearch();
 		toolChest = stationConfig.toolChest().orElse(null);
+		int wasRange = workRange();
 		stationRange = Math.clamp(stationConfig.range(), MIN_RANGE, RANGE);
 
-		if (wasOres != oreSearch) {
+		if (wasOres != oreSearch || was != mining || wasRange != workRange()) {
 			applyRange();
 		}
 
@@ -834,7 +835,7 @@ public class RobotEntity extends PathfinderMob {
 			BlockPos pos = centre.relative(side);
 
 			// the tool chest of the mining robots only holds tools
-			if (pos.equals(toolChest)) {
+			if (pos.equals(toolChest) || pos.equals(toolSpot())) {
 				continue;
 			}
 
@@ -1081,7 +1082,8 @@ public class RobotEntity extends PathfinderMob {
 		BlockPos h = home();
 		double dx = pos.x - h.getX();
 		double dz = pos.z - h.getZ();
-		return dx * dx + dz * dz > (range + 4) * (range + 4) || !below && Math.abs(pos.y - h.getY()) > VERTICAL_RANGE + 4;
+		int reach = workRange();
+		return dx * dx + dz * dz > (reach + 4) * (reach + 4) || !below && Math.abs(pos.y - h.getY()) > VERTICAL_RANGE + 4;
 	}
 
 	private boolean inRange(Vec3 pos) {
@@ -1401,12 +1403,102 @@ public class RobotEntity extends PathfinderMob {
 		return MiningJob.get(Rooms.id(level()), station, minX, minY, minZ, maxX, maxY, maxZ, level().getGameTime());
 	}
 
-	private boolean toolChestThere() {
-		return toolChest != null && station != null && level() instanceof ServerLevel server && StationMining.isToolChest(server, toolChest, station);
+	/**
+	 * Where it gets its tools: a filter chest right next to its station (placed there by the player; it hands out
+	 * the pickaxes of the ME storage it is set to), otherwise the tool chest. Null when there is neither.
+	 */
+	private BlockPos toolSpot() {
+		if (station == null || !(level() instanceof ServerLevel server)) {
+			return null;
+		}
+
+		BlockPos filter = StationMining.filterChestBeside(server, Rooms.id(server), station);
+
+		if (filter != null) {
+			return filter;
+		}
+
+		return toolChest != null && StationMining.isToolChest(server, toolChest, station) ? toolChest : null;
 	}
 
-	private Container toolContainer() {
-		return toolChestThere() && level().getBlockEntity(toolChest) instanceof Container container ? container : null;
+	/** Its tool chest or filter chest, to take tools from and bring them back to; null when there is none. */
+	private ToolSource toolContainer() {
+		BlockPos pos = toolSpot();
+
+		if (pos == null) {
+			return null;
+		}
+
+		StorageData data = StorageData.get();
+		FilterChests.FilterChest filter = data == null ? null : data.filterChest(Rooms.id(level()), pos);
+
+		if (filter != null) {
+			return new ToolSource(pos, null, data.networkFor(filter.owner()), filter.filters());
+		}
+
+		return level().getBlockEntity(pos) instanceof Container container ? new ToolSource(pos, container, null, List.of()) : null;
+	}
+
+	/**
+	 * A chest with tools in it, or a filter chest that hands out the tools of its ME storage: only those its filters
+	 * let through (all tools while it has no filters set).
+	 */
+	private record ToolSource(BlockPos pos, Container chest, StorageNetwork network, List<ItemStack> filters) {
+		boolean has(int kind) {
+			return chest != null ? slotWith(chest, kind) >= 0 : stored(kind) != null;
+		}
+
+		ItemStack take(int kind) {
+			if (chest != null) {
+				int slot = slotWith(chest, kind);
+				return slot < 0 ? ItemStack.EMPTY : chest.removeItem(slot, 1);
+			}
+
+			ItemStack prototype = stored(kind);
+			ItemStack taken = prototype == null ? ItemStack.EMPTY : network.extract(prototype, 1);
+
+			if (!taken.isEmpty()) {
+				StorageMenu.refreshAll(network);
+			}
+
+			return taken;
+		}
+
+		/** Puts a tool back; false when there is no room (then it is dropped). */
+		boolean put(ItemStack tool) {
+			if (chest == null) {
+				network.insert(tool.copy());
+				StorageMenu.refreshAll(network);
+				return true;
+			}
+
+			for (int slot = 0; slot < chest.getContainerSize(); slot++) {
+				if (chest.getItem(slot).isEmpty()) {
+					chest.setItem(slot, tool);
+					return true;
+				}
+			}
+
+			return false;
+		}
+
+		void changed() {
+			if (chest != null) {
+				chest.setChanged();
+			}
+		}
+
+		private ItemStack stored(int kind) {
+			boolean any = filters.stream().allMatch(ItemStack::isEmpty);
+
+			for (StorageNetwork.StoredItem entry : network.entries()) {
+				if (isTool(entry.prototype, kind) && (any || FilterChests.matches(filters, entry.prototype)) && network.available(entry.prototype) > 0) {
+					return entry.prototype;
+				}
+			}
+
+			return null;
+		}
 	}
 
 	private static boolean isTool(ItemStack stack, int kind) {
@@ -1417,17 +1509,23 @@ public class RobotEntity extends PathfinderMob {
 		};
 	}
 
-	/** The tools it lacks that are not in the tool chest either, by name; empty when it has (or can get) all three. */
-	private List<String> unavailableTools(Container chest) {
-		List<String> missing = new ArrayList<>();
+	/**
+	 * What it lacks to dig at all and cannot get either, by name: only the pickaxe is needed (it digs everything,
+	 * if more slowly); axe and shovel are taken along when there are some.
+	 */
+	private List<String> unavailableTools(ToolSource source) {
+		return tools[PICKAXE].isEmpty() && (source == null || !source.has(PICKAXE)) ? List.of(TOOL_NAMES[PICKAXE]) : List.of();
+	}
 
+	/** A tool it has not got and could fetch: the pickaxe, or an axe or shovel that is there. */
+	private boolean wantsTools(ToolSource source) {
 		for (int kind = 0; kind < tools.length; kind++) {
-			if (tools[kind].isEmpty() && (chest == null || slotWith(chest, kind) < 0)) {
-				missing.add(TOOL_NAMES[kind]);
+			if (tools[kind].isEmpty() && source != null && source.has(kind)) {
+				return true;
 			}
 		}
 
-		return missing;
+		return false;
 	}
 
 	private static int slotWith(Container chest, int kind) {
@@ -1441,44 +1539,29 @@ public class RobotEntity extends PathfinderMob {
 	}
 
 	/** Takes what it lacks from the tool chest, one of each kind. */
-	private void takeTools(Container chest) {
+	private void takeTools(ToolSource source) {
 		for (int kind = 0; kind < tools.length; kind++) {
-			int slot = tools[kind].isEmpty() ? slotWith(chest, kind) : -1;
-
-			if (slot >= 0) {
-				tools[kind] = chest.removeItem(slot, 1);
+			if (tools[kind].isEmpty()) {
+				tools[kind] = source.take(kind);
 			}
 		}
 
-		chest.setChanged();
+		source.changed();
 		playSound(SoundEvents.ITEM_PICKUP, 0.4F, 1.0F);
 	}
 
 	/** Mining is switched off: its tools go back into the tool chest (what does not fit is dropped next to it). */
-	private void returnTools(Container chest) {
+	private void returnTools(ToolSource source) {
 		for (int kind = 0; kind < tools.length; kind++) {
 			ItemStack tool = tools[kind];
 			tools[kind] = ItemStack.EMPTY;
 
-			if (tool.isEmpty()) {
-				continue;
-			}
-
-			boolean stored = false;
-
-			for (int slot = 0; slot < chest.getContainerSize() && !stored; slot++) {
-				if (chest.getItem(slot).isEmpty()) {
-					chest.setItem(slot, tool);
-					stored = true;
-				}
-			}
-
-			if (!stored) {
+			if (!tool.isEmpty() && !source.put(tool)) {
 				spawnAtLocation((ServerLevel) level(), tool);
 			}
 		}
 
-		chest.setChanged();
+		source.changed();
 	}
 
 	/** Of its tools the one that digs this block fastest (empty when none helps, then it digs by beak). */
@@ -1507,6 +1590,11 @@ public class RobotEntity extends PathfinderMob {
 
 	/** Ticks to dig the block, like a player with the same tool: hard blocks take longer, Efficiency makes it quicker. */
 	private int digTime(BlockPos pos, BlockState state) {
+		if (MiningJob.isWater(state)) {
+			// pumped away
+			return 4;
+		}
+
 		float hardness = state.getDestroySpeed(level(), pos);
 
 		if (hardness <= 0) {
@@ -1537,6 +1625,25 @@ public class RobotEntity extends PathfinderMob {
 		ServerLevel server = (ServerLevel) level();
 		BlockPos pos = mineTarget;
 		BlockState state = server.getBlockState(pos);
+
+		if (MiningJob.isWater(state)) {
+			// water is not broken (that would leave it where it is) but taken away; it wears no tool
+			server.setBlockAndUpdate(pos, Blocks.AIR.defaultBlockState());
+			playSound(SoundEvents.BUCKET_FILL, 0.4F, 1.2F);
+			server.destroyBlockProgress(getId(), pos, -1);
+
+			if (job instanceof MiningJob area) {
+				area.pumped(pos);
+			}
+
+			job.dug(server, pos);
+			mineTarget = null;
+			digTicks = 0;
+			digTotal = 0;
+			minePhase = 0;
+			return;
+		}
+
 		int kind = bestTool(state);
 		ItemStack tool = kind < 0 ? ItemStack.EMPTY : tools[kind];
 		boolean harvests = !state.requiresCorrectToolForDrops() || !tool.isEmpty() && tool.isCorrectToolForDrops(state);
@@ -1696,7 +1803,7 @@ public class RobotEntity extends PathfinderMob {
 				return false;
 			}
 
-			Container chest = toolContainer();
+			ToolSource chest = toolContainer();
 
 			if (!mining) {
 				if (chest != null && hasAnyTool()) {
@@ -1710,13 +1817,13 @@ public class RobotEntity extends PathfinderMob {
 			List<String> missing = unavailableTools(chest);
 
 			if (!missing.isEmpty()) {
-				// with all three tools it digs on without the chest; it needs the chest only for new ones
+				// with a pickaxe it digs on without the chest; it needs the chest only for new tools
 				mineProblem = Component.literal(chest == null ? "Fehler: Werkzeugkiste fehlt" : "Fehler: Werkzeug fehlt: " + String.join(", ", missing));
 				mineIdle = true;
 				return false;
 			}
 
-			if (tools[PICKAXE].isEmpty() || tools[AXE].isEmpty() || tools[SHOVEL].isEmpty()) {
+			if (wantsTools(chest)) {
 				mineProblem = null;
 				minePhase = 1;
 				return true;
@@ -1743,7 +1850,7 @@ public class RobotEntity extends PathfinderMob {
 					return startDigging(job, pos);
 				}
 
-				Path path = getNavigation().createPath(pos, 4);
+				Path path = digPath(pos);
 
 				if (path != null && path.canReach()) {
 					plannedPath = path;
@@ -1756,6 +1863,15 @@ public class RobotEntity extends PathfinderMob {
 			mineIdle = true;
 			mineFinished = job.finished();
 			return false;
+		}
+
+		/**
+		 * A way to where it can reach a block to dig. Asked for the block itself, the game would aim for the first
+		 * open block above it instead, which for a block deep in the rock (the next one of a tunnel) is a cave or the
+		 * surface far above, so no way would ever get there and the robots gave up on every tunnel after a few blocks.
+		 */
+		private Path digPath(BlockPos pos) {
+			return getNavigation().createPath(Set.of(pos.immutable()), 4);
 		}
 
 		private boolean startDigging(DigJob job, BlockPos pos) {
@@ -1803,18 +1919,18 @@ public class RobotEntity extends PathfinderMob {
 		}
 
 		private void tickToolChest() {
-			Container chest = toolContainer();
+			ToolSource chest = toolContainer();
 
 			if (chest == null) {
 				minePhase = 0;
 				return;
 			}
 
-			Vec3 goal = Vec3.atCenterOf(toolChest);
+			Vec3 goal = Vec3.atCenterOf(chest.pos());
 			getLookControl().setLookAt(goal.x, goal.y, goal.z);
 			double distance = position().distanceTo(goal);
 
-			if (distance <= 2.2 || canReachChest(goal) && seesChest(toolChest)) {
+			if (distance <= 2.2 || canReachChest(goal) && seesChest(chest.pos())) {
 				getNavigation().stop();
 
 				if (minePhase == 1) {
@@ -1836,7 +1952,7 @@ public class RobotEntity extends PathfinderMob {
 			}
 
 			if (getNavigation().isDone()) {
-				Path path = getNavigation().createPath(toolChest, 1);
+				Path path = getNavigation().createPath(chest.pos(), 1);
 
 				if (path != null) {
 					getNavigation().moveTo(path, 1.0);
@@ -1910,7 +2026,7 @@ public class RobotEntity extends PathfinderMob {
 				getNavigation().moveTo(plannedPath, 1.0);
 				plannedPath = null;
 			} else if (getNavigation().isDone()) {
-				Path path = getNavigation().createPath(mineTarget, 4);
+				Path path = digPath(mineTarget);
 
 				if (path != null && path.canReach()) {
 					getNavigation().moveTo(path, 1.0);
@@ -2355,13 +2471,18 @@ public class RobotEntity extends PathfinderMob {
 				&& level.getBlockState(pos.above()).getCollisionShape(level, pos.above()).isEmpty();
 	}
 
+	/** How far from its station it works: its own range, while mining at least the station's (the area all its robots dig). */
+	private int workRange() {
+		return mining ? Math.max(range, stationRange) : range;
+	}
+
 	/**
 	 * Paths may be as long as its range, so it can work out the whole way to anything in range; in the ore search
 	 * also all the way down the staircase.
 	 */
 	private void applyRange() {
 		int depth = oreSearch && station != null ? Math.max(0, station.getY() - level().getMinY()) : 0;
-		getAttribute(Attributes.FOLLOW_RANGE).setBaseValue((area != null ? areaReach : range) + 16 + depth);
+		getAttribute(Attributes.FOLLOW_RANGE).setBaseValue((area != null ? areaReach : workRange()) + 16 + depth);
 		getNavigation().updatePathfinderMaxVisitedNodes();
 	}
 

@@ -11,9 +11,10 @@ import net.minecraft.world.level.block.ChestBlock;
 import net.minecraft.world.level.block.state.BlockState;
 
 /**
- * Switching a station between collecting, mining (everything in the area) and the ore search (only the ores below it). Mining needs a tool chest: it is set up right next to the
- * station when mining is switched on (or the one from before is used again), and each robot takes a pickaxe, an axe
- * and a shovel from it.
+ * Switching a station between collecting, mining (everything in the area) and the ore search (only the ores below it).
+ * Mining needs pickaxes: from a filter chest the player put right next to the station (it hands out the pickaxes of
+ * its ME storage), or else from a tool chest that is set up next to the station when mining is switched on (or the
+ * one from before is used again). Axes and shovels are taken along when there are some, but not needed.
  */
 public final class StationMining {
 	private StationMining() {
@@ -41,6 +42,16 @@ public final class StationMining {
 			OreJob.reset(dim, station);
 			return new Result(true, Component.literal("Erzsuche: Die Roboter spüren die Erze unter der Station auf, graben eine Wendeltreppe "
 					+ "nach unten und Gänge zu den Erzen. Nur die Erze kommen in die Kisten.").withStyle(ChatFormatting.AQUA));
+		}
+
+		BlockPos filter = filterChestBeside(level, dim, station);
+
+		if (filter != null) {
+			data.setStation(dim, station, config.withMining(true).withOreSearch(false).withToolChest(filter));
+			MiningJob.reset(dim, station);
+			return new Result(true, Component.literal("Die Roboter holen ihre Spitzhacken aus der Filterkiste " + sideName(station, filter)
+					+ " der Station, also aus dem ME-Speicher. Stell dort eine Spitzhacke als Filter ein. Äxte und Schaufeln nehmen sie mit, wenn welche da sind.")
+					.withStyle(ChatFormatting.GREEN));
 		}
 
 		BlockPos chest = config.toolChest().filter(pos -> isToolChest(level, pos, station)).orElse(null);
@@ -71,12 +82,35 @@ public final class StationMining {
 		MiningJob.reset(dim, station);
 		String side = sideName(station, chest);
 		return new Result(true, Component.literal((placed ? "Werkzeugkiste " + side + " der Station aufgestellt. " : "Werkzeugkiste " + side + " der Station. ")
-				+ "Leg für jeden Roboter eine Spitzhacke, eine Axt und eine Schaufel hinein.").withStyle(ChatFormatting.GREEN));
+				+ "Leg für jeden Roboter eine Spitzhacke hinein (Axt und Schaufel gehen schneller, sind aber nicht nötig). "
+				+ "Oder stell eine Filterkiste mit Spitzhacken-Filter neben die Station.").withStyle(ChatFormatting.GREEN));
 	}
 
 	/** The tool chest is still there, right next to the station. */
 	public static boolean isToolChest(ServerLevel level, BlockPos pos, BlockPos station) {
 		return pos.distManhattan(station) == 1 && level.isLoaded(pos) && level.getBlockState(pos).getBlock() instanceof ChestBlock;
+	}
+
+	/**
+	 * A filter chest right next to the station (on one of its six sides), placed there by a player: the robots take
+	 * their tools from it, out of its ME storage. Null when there is none.
+	 */
+	public static BlockPos filterChestBeside(ServerLevel level, String dim, BlockPos station) {
+		StorageData data = StorageData.get();
+
+		if (data == null) {
+			return null;
+		}
+
+		for (Direction side : Direction.values()) {
+			BlockPos pos = station.relative(side);
+
+			if (data.filterChest(dim, pos) != null && level.isLoaded(pos) && level.getBlockState(pos).getBlock() instanceof ChestBlock) {
+				return pos;
+			}
+		}
+
+		return null;
 	}
 
 	/** A side of the station (north, east, south, west) with room for a chest: nothing there but air, grass or the like. */
@@ -105,6 +139,10 @@ public final class StationMining {
 	}
 
 	static String sideName(BlockPos station, BlockPos pos) {
+		if (pos.getY() != station.getY()) {
+			return pos.getY() > station.getY() ? "über" : "unter";
+		}
+
 		if (pos.getX() > station.getX()) {
 			return "östlich";
 		}
