@@ -25,7 +25,7 @@ import net.minecraft.world.level.block.state.BlockState;
 /**
  * Smoke test of the mining mode (CI, -Dstoragedim.smoketest=true): high above the overworld a station with a chest,
  * two robots and a few blocks around it. Mining is switched on (the tool chest has to appear), the robots fetch their
- * tools, dig everything except the staircase, a worn-out pickaxe breaks and is replaced from the tool chest, all
+ * tools, dig everything except the staircase and pump a pond dry, a worn-out pickaxe breaks and is replaced from the tool chest, all
  * drops end up in the chest; switched off, the tools go back into the tool chest.
  */
 public final class MiningSmokeTest {
@@ -83,6 +83,19 @@ public final class MiningSmokeTest {
 		put(station.offset(-4, 0, 3), Blocks.COBBLESTONE);
 		put(station.offset(-4, 1, 3), Blocks.SAND);
 		put(station.offset(-4, 2, 3), Blocks.SAND);
+
+		// a pond in a stone rim: the robots pump its water away
+		for (int dx = -7; dx <= -4; dx++) {
+			for (int dz = -7; dz <= -4; dz++) {
+				BlockPos pos = station.offset(dx, 0, dz);
+
+				if (dx == -7 || dx == -4 || dz == -7 || dz == -4) {
+					put(pos, Blocks.STONE);
+				} else {
+					put(pos, Blocks.WATER);
+				}
+			}
+		}
 
 		// the staircase: two rings of stone around the station and one block on top of it
 		for (int dy = 1; dy <= 2; dy++) {

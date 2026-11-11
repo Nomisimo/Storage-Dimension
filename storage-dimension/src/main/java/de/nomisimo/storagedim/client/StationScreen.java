@@ -88,7 +88,8 @@ public class StationScreen extends AbstractContainerScreen<StationMenu> {
 				.tooltip(Tooltip.create(Component.literal("Sammeln: die Roboter bringen herumliegende Items weg. "
 						+ "Abbauen: sie bauen alle Blöcke in ihrer Reichweite (oder der Antennen-Area) von oben nach unten ab, "
 						+ "lassen eine Wendeltreppe zur Station stehen und bringen alles in die Kisten. "
-						+ "Dafür stellt sich neben der Station eine Werkzeugkiste auf: pro Roboter eine Spitzhacke, eine Axt und eine Schaufel hinein. "
+						+ "Wasser pumpen sie dabei ab. Pro Roboter braucht es eine Spitzhacke (Axt und Schaufel gehen schneller): aus einer Filterkiste "
+						+ "neben der Station (aus dem ME-Speicher) oder aus der Werkzeugkiste, die sich sonst neben der Station aufstellt. "
 						+ "Erzsuche: sie spüren die Erze unter der Station auf, graben eine Wendeltreppe nach unten und Gänge zu den Erzen, "
 						+ "folgen jeder Ader und bringen nur die Erze heim. Klick: nächster Modus")))
 				.build());

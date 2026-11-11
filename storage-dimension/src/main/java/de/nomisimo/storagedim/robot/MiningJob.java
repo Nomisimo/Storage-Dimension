@@ -35,7 +35,8 @@ import net.minecraft.world.level.block.state.BlockState;
  * of the station (or, when the station sits at a corner of its antenna box, the column diagonally inside the box),
  * and of the eight columns around it each keeps one block every eight blocks of height, one higher than the one
  * before. Sand or gravel under a step keeps the block it rests on. Blocks with contents (chests, furnaces, ...),
- * the station, antennas, robot barriers, liquids and unbreakable blocks are never dug.
+ * the station, antennas, robot barriers, lava and unbreakable blocks are never dug. Water is pumped away (the robot
+ * takes it out like a block, in no time), so lakes and flooded caves in the area are emptied too.
  */
 public final class MiningJob implements DigJob {
 	/** The eight columns around the pillar, in walking order; corners are even, so no step sits right on a chest beside the station. */
@@ -49,6 +50,8 @@ public final class MiningJob implements DigJob {
 	/** Layers below the highest one that robots may already take blocks from. */
 	private static final int LAYER_BAND = 2;
 	private static final int CLEARED = Integer.MIN_VALUE;
+	/** Water that is back this often after being pumped away is left where it is. */
+	private static final int MAX_PUMPS = 3;
 
 	private static final Map<String, MiningJob> JOBS = new HashMap<>();
 
@@ -73,6 +76,8 @@ public final class MiningJob implements DigJob {
 	/** Blocks a robot is on its way to or digging (packed position to robot). */
 	private final Map<Long, UUID> claimed = new HashMap<>();
 	private final Map<Long, Long> skipped = new HashMap<>();
+	/** How often the water at a place was pumped away: water that keeps coming back (from a sea beside the area) is left. */
+	private final Map<Long, Integer> pumped = new HashMap<>();
 	private long lastUsed;
 
 	private MiningJob(BlockPos station, int minX, int minY, int minZ, int maxX, int maxY, int maxZ) {
@@ -221,10 +226,23 @@ public final class MiningJob implements DigJob {
 				&& !state.is(Blocks.BUBBLE_COLUMN) && state.getDestroySpeed(level, pos) >= 0;
 	}
 
+	/**
+	 * Water the robots pump away: water source blocks and bubble columns. Flowing water runs dry by itself once its
+	 * sources are gone. (Waterlogged blocks and plants under water are dug like any other block; the water they
+	 * leave is pumped away after them.)
+	 */
+	public static boolean isWater(BlockState state) {
+		return state.is(Blocks.WATER) && state.getFluidState().isSource() || state.is(Blocks.BUBBLE_COLUMN);
+	}
+
+	/** To dig or pump away: a block that may be dug, or water anywhere in the area (even where a step goes). */
+	private boolean toClear(ServerLevel level, BlockPos pos, BlockState state) {
+		return isWater(state) ? pumped.getOrDefault(pos.asLong(), 0) < MAX_PUMPS : diggable(level, pos, state) && !isProtected(level, pos, state);
+	}
+
 	@Override
 	public boolean wanted(ServerLevel level, BlockPos pos) {
-		BlockState state = level.getBlockState(pos);
-		return contains(pos) && diggable(level, pos, state) && !isProtected(level, pos, state);
+		return contains(pos) && toClear(level, pos, level.getBlockState(pos));
 	}
 
 	/** A robot can get at it: one of its sides is open (air, water or a block without collision). */
@@ -270,7 +288,7 @@ public final class MiningJob implements DigJob {
 			budget[0]++;
 			BlockState state = level.getBlockState(pos);
 
-			if (diggable(level, pos, state) && !isProtected(level, pos, state)) {
+			if (toClear(level, pos, state)) {
 				return y;
 			}
 		}
@@ -334,6 +352,11 @@ public final class MiningJob implements DigJob {
 	}
 
 	/** A block was dug (or turned out to be gone): its column looks further down. */
+	/** Water was pumped away there. */
+	public void pumped(BlockPos pos) {
+		pumped.merge(pos.asLong(), 1, Integer::sum);
+	}
+
 	@Override
 	public void dug(ServerLevel level, BlockPos pos) {
 		long column = column(pos.getX(), pos.getZ());

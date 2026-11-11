@@ -2,11 +2,14 @@ package de.nomisimo.storagedim.robot;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 import java.util.function.Consumer;
 
 import de.nomisimo.storagedim.StorageDimensionMod;
+import de.nomisimo.storagedim.storage.FilterChests;
 import de.nomisimo.storagedim.storage.Rooms;
 import de.nomisimo.storagedim.storage.StorageData;
+import de.nomisimo.storagedim.storage.StorageNetwork;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.MinecraftServer;
@@ -25,7 +28,8 @@ import net.minecraft.world.level.block.ChestBlock;
  * with a few ores inside it. The robots have to dig down the staircase and tunnels to the iron, the diamond and both
  * coal ores (a vein of two) and to an iron ore further out and deep below (the way there runs through the rock, so a
  * robot must find a path to blocks with rock above them), bring home only the ores (no stone), and leave the gold ore
- * next to a pocket of lava alone. Switched back to collecting, the tools go back into the tool chest.
+ * next to a pocket of lava alone. Their only tools are two pickaxes, taken from a filter chest west of the station
+ * (out of its ME storage). Switched back to collecting, the pickaxes go back into the ME storage.
  * <p>
  * A probe checks that the search goes on past chunks that are not loaded: an ore in a loaded chunk behind unloaded
  * ones must still be found.
@@ -36,6 +40,7 @@ public final class OreSmokeTest {
 	private static final BlockPos PROBE = new BlockPos(2008, 100, 2008);
 	private static final BlockPos PROBE_ORE = PROBE.offset(48, -30, 0);
 	private static boolean probeDone;
+	private static StorageNetwork network;
 	private static final int Y = 290;
 
 	private static ServerLevel level;
@@ -90,6 +95,16 @@ public final class OreSmokeTest {
 		level.setBlockAndUpdate(station.east(), Blocks.CHEST.defaultBlockState().setValue(ChestBlock.FACING, net.minecraft.core.Direction.EAST));
 
 		StorageData data = StorageData.get();
+		// the player's filter chest for pickaxes behind the station, with two of them in the ME storage
+		UUID player = UUID.randomUUID();
+		BlockPos filterPos = station.west();
+		level.setBlockAndUpdate(filterPos, Blocks.CHEST.defaultBlockState().setValue(ChestBlock.FACING, net.minecraft.core.Direction.WEST));
+		FilterChests.FilterChest filterChest = FilterChests.FilterChest.empty(player);
+		filterChest.filters().set(0, new ItemStack(Items.IRON_PICKAXE));
+		data.setFilterChest(dim, filterPos, filterChest);
+		network = data.networkFor(player);
+		network.insert(new ItemStack(Items.IRON_PICKAXE));
+		network.insert(new ItemStack(Items.IRON_PICKAXE));
 		data.setStation(dim, station, data.station(dim, station).withRange(16).withName("Erzi").withStationName("Erzgrube"));
 		List<String> errors = new ArrayList<>();
 		// collecting, then mining (the tool chest is set up), then the ore search
@@ -104,15 +119,11 @@ public final class OreSmokeTest {
 			return;
 		}
 
-		Container tools = (Container) level.getBlockEntity(config.toolChest().get());
-
-		for (int i = 0; i < 2; i++) {
-			tools.setItem(i * 3, new ItemStack(Items.IRON_PICKAXE));
-			tools.setItem(i * 3 + 1, new ItemStack(Items.IRON_AXE));
-			tools.setItem(i * 3 + 2, new ItemStack(Items.IRON_SHOVEL));
+		if (!config.toolChest().get().equals(filterPos)) {
+			errors.add("Die Filterkiste hinter der Station wird nicht als Werkzeugkiste benutzt: " + config.toolChest().get());
+			done.accept(errors);
+			return;
 		}
-
-		tools.setChanged();
 
 		for (int i = 0; i < 2; i++) {
 			RobotEntity robot = Robots.ROBOT.create(level, EntitySpawnReason.SPAWN_ITEM_USE);
@@ -172,6 +183,11 @@ public final class OreSmokeTest {
 			}
 		}
 
+		if (stage == 0 && ticks == 400 && robots.stream().anyMatch(r -> r.tool(0).isEmpty())) {
+			finish(List.of("Roboter haben keine Spitzhacke aus der Filterkiste geholt: " + robots.get(0).describeMining()));
+			return;
+		}
+
 		if (stage == 0 && probeDone && dug() && count(loot, Items.RAW_IRON) > 0 && count(loot, Items.DIAMOND) > 0 && count(loot, Items.COAL) > 0) {
 			for (Item spoil : List.of(Items.COBBLESTONE, Items.STONE)) {
 				if (count(loot, spoil) > 0) {
@@ -202,15 +218,14 @@ public final class OreSmokeTest {
 			StationMining.toggle(level, dim, station);
 			stage = 1;
 		} else if (stage == 1 && robots.stream().allMatch(r -> r.getMiningLook() == RobotEntity.MINING_LOOK_NONE)) {
-			Container tools = (Container) level.getBlockEntity(StorageData.get().station(dim, station).toolChest().orElse(station));
-			int count = 0;
+			int pickaxes = 0;
 
-			for (int slot = 0; slot < tools.getContainerSize(); slot++) {
-				count += tools.getItem(slot).isEmpty() ? 0 : 1;
+			for (StorageNetwork.StoredItem entry : network.entries()) {
+				pickaxes += entry.prototype.is(Items.IRON_PICKAXE) ? (int) entry.count : 0;
 			}
 
-			if (count != 6) {
-				errors.add("Nach der Erzsuche liegen " + count + " statt 6 Werkzeuge in der Werkzeugkiste");
+			if (pickaxes != 2) {
+				errors.add("Nach der Erzsuche sind " + pickaxes + " statt 2 Spitzhacken im ME-Speicher der Filterkiste");
 			}
 
 			StorageDimensionMod.LOGGER.info("SMOKETEST Erzsuche: Werkzeug zurück nach {} Ticks", ticks);
