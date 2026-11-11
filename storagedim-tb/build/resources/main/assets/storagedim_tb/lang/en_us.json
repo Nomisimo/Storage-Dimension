@@ -1,0 +1,10 @@
+{
+  "item.storagedim_tb.me_upgrade": "ME Upgrade",
+  "screen.storagedim_tb.me_upgrade": "ME Upgrade",
+  "screen.storagedim_tb.me_upgrade_click": "Left-click: show ME storage · Right-click: remove",
+  "screen.storagedim_tb.source_me": "Crafting: ME as source",
+  "screen.storagedim_tb.source_inventory": "Crafting: inventory only",
+  "screen.storagedim_tb.switch_to_inventory": "Click: inventory only",
+  "screen.storagedim_tb.switch_to_me": "Click: ME as source",
+  "screen.storagedim_tb.me_upgrade_click_back": "Left-click: back to the backpack · Right-click: remove"
+}

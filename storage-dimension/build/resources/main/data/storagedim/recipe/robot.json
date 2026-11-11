@@ -1,0 +1,20 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "pattern": [
+    "IPI",
+    "RHR",
+    "N N"
+  ],
+  "key": {
+    "I": "minecraft:iron_ingot",
+    "P": "minecraft:pumpkin",
+    "R": "minecraft:redstone",
+    "H": "minecraft:hopper",
+    "N": "minecraft:iron_nugget"
+  },
+  "result": {
+    "id": "storagedim:robot",
+    "count": 1
+  }
+}

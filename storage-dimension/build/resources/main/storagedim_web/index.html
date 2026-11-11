@@ -1,0 +1,771 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="referrer" content="no-referrer">
+<title>ME-Speicher</title>
+<style>
+	:root {
+		--bg: #f4f1ea;
+		--panel: #fffdf8;
+		--text: #2a2620;
+		--muted: #776f63;
+		--line: #e2dccf;
+		--accent: #6b3fa0;
+		--accent-soft: #ece3f7;
+		--foil: #9b59d0;
+		--good: #2f8a4c;
+		color-scheme: light;
+	}
+
+	@media (prefers-color-scheme: dark) {
+		:root {
+			--bg: #17151c;
+			--panel: #211e28;
+			--text: #ece8f2;
+			--muted: #9a93a8;
+			--line: #322d3c;
+			--accent: #b78cf0;
+			--accent-soft: #2e2540;
+			--foil: #c69bff;
+			--good: #6fcf8e;
+			color-scheme: dark;
+		}
+	}
+
+	* { box-sizing: border-box; }
+
+	body {
+		margin: 0;
+		background: var(--bg);
+		color: var(--text);
+		font: 15px/1.4 system-ui, -apple-system, "Segoe UI", sans-serif;
+	}
+
+	header {
+		position: sticky;
+		top: 0;
+		z-index: 2;
+		background: var(--bg);
+		border-bottom: 1px solid var(--line);
+		padding: 14px 16px 10px;
+	}
+
+	.top {
+		display: flex;
+		align-items: baseline;
+		justify-content: space-between;
+		gap: 12px;
+		flex-wrap: wrap;
+		max-width: 1100px;
+		margin: 0 auto;
+	}
+
+	h1 { margin: 0; font-size: 20px; }
+	.stats { color: var(--muted); font-size: 14px; font-variant-numeric: tabular-nums; }
+
+	.controls {
+		display: flex;
+		gap: 8px;
+		max-width: 1100px;
+		margin: 10px auto 0;
+	}
+
+	input, select {
+		font: inherit;
+		color: inherit;
+		background: var(--panel);
+		border: 1px solid var(--line);
+		border-radius: 8px;
+		padding: 8px 10px;
+	}
+
+	input { flex: 1; min-width: 0; }
+	input:focus, select:focus { outline: 2px solid var(--accent); outline-offset: -1px; }
+
+	.chips {
+		display: flex;
+		gap: 6px;
+		overflow-x: auto;
+		max-width: 1100px;
+		margin: 10px auto 0;
+		padding-bottom: 2px;
+		scrollbar-width: thin;
+	}
+
+	.chip {
+		flex: none;
+		font: inherit;
+		font-size: 13px;
+		color: var(--text);
+		background: var(--panel);
+		border: 1px solid var(--line);
+		border-radius: 999px;
+		padding: 4px 10px;
+		cursor: pointer;
+	}
+
+	.chip[aria-pressed="true"] { background: var(--accent-soft); border-color: var(--accent); color: var(--accent); }
+	.chip small { color: var(--muted); margin-left: 4px; }
+
+	main { max-width: 1100px; margin: 0 auto; padding: 12px 16px 40px; }
+
+	.grid {
+		display: grid;
+		grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+		gap: 8px;
+	}
+
+	.item {
+		display: flex;
+		align-items: center;
+		gap: 10px;
+		background: var(--panel);
+		border: 1px solid var(--line);
+		border-radius: 10px;
+		padding: 8px 10px;
+		min-width: 0;
+	}
+
+	.icon {
+		flex: none;
+		width: 32px;
+		height: 32px;
+		image-rendering: pixelated;
+	}
+
+	.letter {
+		flex: none;
+		width: 32px;
+		height: 32px;
+		border-radius: 6px;
+		display: grid;
+		place-items: center;
+		font-weight: 700;
+		color: var(--accent);
+		background: var(--accent-soft);
+	}
+
+	.info { min-width: 0; flex: 1; }
+	.name { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+	.item.foil .name { color: var(--foil); }
+	.details { color: var(--muted); font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+	.count {
+		flex: none;
+		text-align: right;
+		font-weight: 600;
+		font-variant-numeric: tabular-nums;
+	}
+
+	.count small { display: block; font-weight: 400; color: var(--muted); font-size: 11px; }
+
+	.message { text-align: center; color: var(--muted); padding: 48px 16px; }
+	.message strong { display: block; color: var(--text); font-size: 17px; margin-bottom: 6px; }
+	code { background: var(--accent-soft); color: var(--accent); padding: 1px 5px; border-radius: 4px; }
+
+	.tabs { display: flex; gap: 4px; }
+	.tab {
+		font: inherit;
+		font-size: 14px;
+		color: var(--muted);
+		background: none;
+		border: 1px solid transparent;
+		border-radius: 8px;
+		padding: 4px 10px;
+		cursor: pointer;
+	}
+	.tab[aria-selected="true"] { color: var(--accent); background: var(--accent-soft); border-color: var(--accent); }
+
+	button.primary, button.plain {
+		font: inherit;
+		border-radius: 8px;
+		padding: 8px 12px;
+		cursor: pointer;
+		white-space: nowrap;
+	}
+	button.primary { background: var(--accent); color: var(--panel); border: 1px solid var(--accent); font-weight: 600; }
+	button.plain { background: var(--panel); color: var(--text); border: 1px solid var(--line); }
+	button.icon-btn {
+		font: inherit;
+		background: none;
+		border: none;
+		color: var(--muted);
+		cursor: pointer;
+		padding: 4px 6px;
+		border-radius: 6px;
+	}
+	button.icon-btn:hover { color: var(--text); background: var(--accent-soft); }
+
+	.project {
+		background: var(--panel);
+		border: 1px solid var(--line);
+		border-radius: 12px;
+		padding: 12px;
+		margin-bottom: 12px;
+	}
+	.project-head { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+	.project-head input.pname { flex: 1; min-width: 140px; font-weight: 600; font-size: 16px; }
+	.toggle { display: inline-flex; align-items: center; gap: 6px; font-size: 14px; color: var(--muted); cursor: pointer; user-select: none; }
+	.toggle input { accent-color: var(--accent); width: 16px; height: 16px; }
+	.progress { height: 6px; border-radius: 3px; background: var(--line); overflow: hidden; margin: 10px 0 4px; }
+	.progress div { height: 100%; background: var(--accent); }
+	.progress.done div { background: var(--good); }
+	.psum { font-size: 13px; color: var(--muted); font-variant-numeric: tabular-nums; }
+	.entries { margin-top: 8px; display: grid; gap: 4px; }
+	.entry { display: flex; align-items: center; gap: 10px; padding: 4px 0; border-top: 1px solid var(--line); }
+	.entry .info { min-width: 0; flex: 1; }
+	.entry .have { font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; }
+	.entry .have.ok { color: var(--good); }
+	.entry input.amount { flex: none; width: 92px; text-align: right; padding: 6px 8px; }
+	.adder { position: relative; margin-top: 8px; }
+	.adder input { width: 100%; }
+	.results {
+		position: absolute;
+		left: 0;
+		right: 0;
+		top: calc(100% + 4px);
+		z-index: 3;
+		max-height: 320px;
+		overflow-y: auto;
+		background: var(--panel);
+		border: 1px solid var(--line);
+		border-radius: 10px;
+		box-shadow: 0 8px 24px rgba(0, 0, 0, .18);
+	}
+	.result { display: flex; align-items: center; gap: 10px; padding: 6px 10px; cursor: pointer; }
+	.result:hover, .result.active { background: var(--accent-soft); }
+	.result .info { min-width: 0; flex: 1; }
+	.result .stock { font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; }
+	.toast {
+		position: fixed;
+		left: 50%;
+		bottom: 20px;
+		transform: translateX(-50%);
+		background: var(--text);
+		color: var(--bg);
+		padding: 8px 14px;
+		border-radius: 8px;
+		font-size: 14px;
+		z-index: 5;
+	}
+</style>
+</head>
+<body>
+<header>
+	<div class="top">
+		<div class="tabs" role="tablist">
+			<button class="tab" id="tab-items" role="tab" type="button">ME-Speicher</button>
+			<button class="tab" id="tab-projects" role="tab" type="button">Projekte</button>
+		</div>
+		<div class="stats" id="stats"></div>
+	</div>
+	<div id="items-controls">
+		<div class="controls">
+			<input id="search" type="search" placeholder="Suchen: Name, ID, Verzauberung, Trank …" autocomplete="off">
+			<select id="sort" aria-label="Sortierung">
+				<option value="count">Menge</option>
+				<option value="name">A–Z</option>
+			</select>
+		</div>
+		<div class="chips" id="chips"></div>
+	</div>
+	<div id="projects-controls" hidden>
+		<form class="controls" id="new-project">
+			<input id="new-name" placeholder="Name für ein neues Projekt" maxlength="32" autocomplete="off">
+			<button class="primary" type="submit">Projekt anlegen</button>
+		</form>
+	</div>
+</header>
+<main>
+	<div id="items-view">
+		<div class="grid" id="grid"></div>
+	</div>
+	<div id="projects-view" hidden></div>
+	<div class="message" id="message" hidden></div>
+</main>
+<script>
+	"use strict";
+
+	// Vanilla textures are not on the server, so they come from public copies of the game assets; mod items from the server.
+	const ASSETS = [
+		"https://cdn.jsdelivr.net/gh/InventivetalentDev/minecraft-assets@1.21.4/assets/minecraft/textures/",
+		"https://raw.githubusercontent.com/InventivetalentDev/minecraft-assets/1.21.4/assets/minecraft/textures/",
+		"https://assets.mcasset.cloud/1.21.4/assets/minecraft/textures/"
+	];
+	const REFRESH_MS = 10000;
+	const fmt = new Intl.NumberFormat("de-DE");
+
+	const el = id => document.getElementById(id);
+	const state = { view: "items", items: [], projects: [], catalog: null, category: "", search: "", sort: "count" };
+
+	function store(key, value) {
+		try {
+			if (value === undefined) return localStorage.getItem(key);
+			localStorage.setItem(key, value);
+		} catch (e) {
+			return null;
+		}
+	}
+
+	// The link from /storage web carries the token after "#"; it is kept so a bookmark without it still works.
+	let token = location.hash.slice(1);
+
+	if (token) {
+		store("storagedim-token", token);
+		history.replaceState(null, "", location.pathname);
+	} else {
+		token = store("storagedim-token") || "";
+	}
+
+	state.sort = store("storagedim-sort") === "name" ? "name" : "count";
+	state.view = store("storagedim-view") === "projects" ? "projects" : "items";
+	el("sort").value = state.sort;
+
+	function short(n) {
+		if (n < 1000) return String(n);
+		for (const [u, v] of [["T", 1e12], ["B", 1e9], ["M", 1e6], ["k", 1e3]]) {
+			if (n >= v) {
+				const x = n / v;
+				return (x >= 100 ? Math.floor(x) : Math.floor(x * 10) / 10).toString().replace(".", ",") + u;
+			}
+		}
+	}
+
+	function toast(text) {
+		const t = document.createElement("div");
+		t.className = "toast";
+		t.textContent = text;
+		document.body.append(t);
+		setTimeout(() => t.remove(), 2500);
+	}
+
+	// ---- icons ----
+
+	// Icon id to the texture that loaded, or null when none did; avoids flicker and new requests on every refresh.
+	const icons = new Map();
+
+	function picture(url) {
+		const img = document.createElement("img");
+		img.className = "icon";
+		img.alt = "";
+		img.src = url;
+		return img;
+	}
+
+	function iconUrls(icon) {
+		const [ns, path] = icon.split(":");
+		if (ns !== "minecraft") return ["icon/" + ns + "/" + path];
+		const names = ["item/" + path, "block/" + path, "block/" + path + "_side", "block/" + path + "_top", "block/" + path + "_front"];
+		return ASSETS.flatMap(base => names.map(n => base + n + ".png"));
+	}
+
+	function icon(item) {
+		const id = item.icon || item.id;
+		if (icons.get(id)) return picture(icons.get(id));
+
+		const box = document.createElement("div");
+		box.className = "letter";
+		box.textContent = item.name.charAt(0).toUpperCase();
+
+		if (icons.has(id)) return box;
+
+		const tries = iconUrls(id);
+		let i = 0;
+		const probe = new Image();
+		probe.onload = () => {
+			icons.set(id, tries[i]);
+			box.replaceWith(picture(tries[i]));
+		};
+		probe.onerror = () => {
+			if (++i < tries.length) probe.src = tries[i];
+			else icons.set(id, null);
+		};
+		probe.src = tries[0];
+		return box;
+	}
+
+	function itemInfo(item, extra) {
+		const info = document.createElement("div");
+		info.className = "info";
+		const name = document.createElement("div");
+		name.className = "name";
+		name.textContent = item.name;
+		if (item.foil) name.style.color = "var(--foil)";
+		info.append(name);
+		const lines = item.details.slice();
+		if (extra) lines.unshift(extra);
+		if (lines.length) {
+			const d = document.createElement("div");
+			d.className = "details";
+			d.textContent = lines.join(" · ");
+			d.title = lines.join("\n");
+			info.append(d);
+		}
+		return info;
+	}
+
+	// ---- server ----
+
+	async function api(path, body) {
+		const res = await fetch("api/" + path, {
+			method: body ? "POST" : "GET",
+			headers: { Authorization: "Bearer " + token, "Content-Type": "application/json" },
+			body: body ? JSON.stringify(body) : undefined,
+			cache: "no-store"
+		});
+		let data = {};
+		try { data = await res.json(); } catch (e) { /* empty answer */ }
+		if (res.status === 401) throw Object.assign(new Error("401"), { unauthorized: true });
+		if (!res.ok || data.error) throw new Error(data.error || "Server antwortet nicht");
+		return data;
+	}
+
+	function message(title, html) {
+		const m = el("message");
+		m.hidden = false;
+		m.innerHTML = "";
+		const strong = document.createElement("strong");
+		strong.textContent = title;
+		const p = document.createElement("span");
+		p.innerHTML = html;
+		m.append(strong, p);
+	}
+
+	function clearMessage() {
+		el("message").hidden = true;
+	}
+
+	// ---- storage view ----
+
+	function matches(item, q) {
+		if (!q) return true;
+		return item.name.toLowerCase().includes(q) || item.id.includes(q) || item.details.some(d => d.toLowerCase().includes(q));
+	}
+
+	function renderChips() {
+		const counts = new Map();
+		for (const item of state.items) counts.set(item.category, (counts.get(item.category) || 0) + 1);
+		const chips = [["", "Alle", state.items.length], ...[...counts.entries()].sort((a, b) => a[0].localeCompare(b[0], "de")).map(([c, n]) => [c, c, n])];
+
+		if (state.category && !counts.has(state.category)) state.category = "";
+
+		el("chips").replaceChildren(...chips.map(([value, label, n]) => {
+			const b = document.createElement("button");
+			b.className = "chip";
+			b.type = "button";
+			b.setAttribute("aria-pressed", String(value === state.category));
+			b.append(label);
+			const s = document.createElement("small");
+			s.textContent = n;
+			b.append(s);
+			b.onclick = () => { state.category = value; renderItems(); };
+			return b;
+		}));
+	}
+
+	function renderItems() {
+		renderChips();
+		const q = state.search.trim().toLowerCase();
+		let list = state.items.filter(i => (!state.category || i.category === state.category) && matches(i, q));
+
+		if (state.sort === "name") list = list.slice().sort((a, b) => a.name.localeCompare(b.name, "de"));
+
+		el("grid").replaceChildren();
+
+		if (state.items.length === 0) return message("Der Speicher ist leer", "Lagere im Spiel etwas ein, dann taucht es hier auf.");
+		if (list.length === 0) return message("Nichts gefunden", "Versuch es mit einem anderen Suchbegriff oder einer anderen Abteilung.");
+
+		clearMessage();
+		el("grid").replaceChildren(...list.map(item => {
+			const row = document.createElement("div");
+			row.className = "item";
+			row.title = item.id;
+
+			const count = document.createElement("div");
+			count.className = "count";
+			count.textContent = short(item.count);
+			count.title = fmt.format(item.count);
+
+			if (item.count >= 1000) {
+				const s = document.createElement("small");
+				s.textContent = fmt.format(item.count);
+				count.append(s);
+			}
+
+			if (item.available < item.count) {
+				const s = document.createElement("small");
+				s.textContent = fmt.format(item.count - item.available) + " für Projekte";
+				count.append(s);
+			}
+
+			row.append(icon(item), itemInfo(item), count);
+			return row;
+		}));
+	}
+
+	// ---- projects view ----
+
+	function stockOf(key) {
+		const item = state.items.find(i => i.key === key);
+		return item ? item.count : 0;
+	}
+
+	async function change(body) {
+		try {
+			const data = await api("projects", body);
+			state.projects = data.projects;
+			renderProjects();
+			return true;
+		} catch (e) {
+			toast(e.message);
+			return false;
+		}
+	}
+
+	function amountInput(project, entry) {
+		const input = document.createElement("input");
+		input.className = "amount";
+		input.type = "number";
+		input.min = "0";
+		input.step = "1";
+		input.value = entry.target;
+		input.setAttribute("aria-label", "Menge");
+		input.onchange = () => {
+			const target = Math.max(0, Math.floor(Number(input.value) || 0));
+			change({ action: "set", id: project.id, key: entry.key, target });
+		};
+		return input;
+	}
+
+	function adder(project) {
+		const box = document.createElement("div");
+		box.className = "adder";
+		const input = document.createElement("input");
+		input.type = "search";
+		input.placeholder = "Item hinzufügen: suchen …";
+		input.autocomplete = "off";
+		const results = document.createElement("div");
+		results.className = "results";
+		results.hidden = true;
+		box.append(input, results);
+
+		let active = 0;
+		let shown = [];
+
+		function pick(item) {
+			const existing = project.entries.find(e => e.key === item.key);
+			change({ action: "set", id: project.id, key: item.key, target: (existing ? existing.target : 0) + 64 });
+			input.value = "";
+			results.hidden = true;
+		}
+
+		async function update() {
+			const q = input.value.trim().toLowerCase();
+			if (!q) { results.hidden = true; return; }
+			if (!state.catalog) {
+				results.hidden = false;
+				results.textContent = "Lade Items …";
+				try {
+					state.catalog = (await api("catalog")).items;
+				} catch (e) {
+					results.textContent = e.message;
+					return;
+				}
+			}
+			// Stored items first (they carry their exact components), then the rest of the game.
+			const seen = new Set();
+			shown = [];
+			for (const item of [...state.items, ...state.catalog]) {
+				if (shown.length >= 40) break;
+				if (seen.has(item.key) || !matches(item, q)) continue;
+				seen.add(item.key);
+				shown.push(item);
+			}
+			active = 0;
+			results.hidden = false;
+			if (!shown.length) { results.textContent = "Nichts gefunden"; return; }
+			results.replaceChildren(...shown.map((item, i) => {
+				const row = document.createElement("div");
+				row.className = "result" + (i === active ? " active" : "");
+				const stock = document.createElement("div");
+				stock.className = "stock";
+				stock.textContent = "im ME: " + fmt.format(stockOf(item.key));
+				row.append(icon(item), itemInfo(item), stock);
+				row.onmousedown = e => { e.preventDefault(); pick(item); };
+				return row;
+			}));
+		}
+
+		input.addEventListener("input", update);
+		input.addEventListener("blur", () => setTimeout(() => { results.hidden = true; }, 150));
+		input.addEventListener("keydown", e => {
+			if (results.hidden || !shown.length) return;
+			if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+				e.preventDefault();
+				active = (active + (e.key === "ArrowDown" ? 1 : shown.length - 1)) % shown.length;
+				[...results.children].forEach((c, i) => c.classList.toggle("active", i === active));
+				results.children[active].scrollIntoView({ block: "nearest" });
+			} else if (e.key === "Enter") {
+				e.preventDefault();
+				pick(shown[active]);
+			} else if (e.key === "Escape") {
+				results.hidden = true;
+			}
+		});
+		return box;
+	}
+
+	function renderProject(project) {
+		const card = document.createElement("section");
+		card.className = "project";
+		card.dataset.id = project.id;
+
+		const head = document.createElement("div");
+		head.className = "project-head";
+		const name = document.createElement("input");
+		name.className = "pname";
+		name.value = project.name;
+		name.maxLength = 32;
+		name.setAttribute("aria-label", "Projektname");
+		name.onchange = () => {
+			if (name.value.trim()) change({ action: "name", id: project.id, name: name.value });
+			else name.value = project.name;
+		};
+		const toggle = document.createElement("label");
+		toggle.className = "toggle";
+		toggle.title = "Die Mengen bleiben für das Projekt im ME-Speicher, woanders lässt sich nur der Rest herausnehmen.";
+		const check = document.createElement("input");
+		check.type = "checkbox";
+		check.checked = project.block;
+		check.onchange = () => change({ action: "block", id: project.id, block: check.checked });
+		toggle.append(check, "Im ME blocken");
+		head.append(name, toggle);
+
+		let need = 0;
+		let have = 0;
+		for (const e of project.entries) {
+			need += e.target;
+			have += Math.min(e.target, (e.taken || 0) + e.have);
+		}
+		const done = need > 0 && have >= need;
+		const bar = document.createElement("div");
+		bar.className = "progress" + (done ? " done" : "");
+		const fill = document.createElement("div");
+		fill.style.width = (need ? Math.round(have / need * 100) : 0) + "%";
+		bar.append(fill);
+		const sum = document.createElement("div");
+		sum.className = "psum";
+		sum.textContent = project.entries.length
+			? project.entries.length + (project.entries.length === 1 ? " Item" : " Items") + " · " + fmt.format(have) + " von " + fmt.format(need) + " da" + (done ? " · fertig" : "")
+			: "Noch keine Items. Füge unten welche hinzu.";
+
+		const entries = document.createElement("div");
+		entries.className = "entries";
+		for (const entry of project.entries) {
+			const row = document.createElement("div");
+			row.className = "entry";
+			const taken = entry.taken || 0;
+			const missing = entry.target - taken - entry.have;
+			const remove = document.createElement("button");
+			remove.className = "icon-btn";
+			remove.type = "button";
+			remove.textContent = "✕";
+			remove.title = "Entfernen";
+			remove.onclick = () => change({ action: "set", id: project.id, key: entry.key, target: 0 });
+			const info = itemInfo(entry);
+			const h = document.createElement("div");
+			h.className = "have" + (missing <= 0 ? " ok" : "");
+			h.textContent = "im ME: " + fmt.format(entry.have) + (taken > 0 ? " · entnommen " + fmt.format(taken) : "")
+				+ (taken >= entry.target ? " · alles entnommen" : missing > 0 ? " · fehlt " + fmt.format(missing) : " · alles da");
+			info.append(h);
+			row.append(icon(entry), info, amountInput(project, entry), remove);
+			entries.append(row);
+		}
+
+		card.append(head, bar, sum, entries, adder(project));
+		return card;
+	}
+
+	function renderProjects() {
+		const view = el("projects-view");
+		if (!state.projects.length) {
+			view.replaceChildren();
+			return message("Noch keine Projekte", "Leg oben eins an. Es steht dann auch in der Eingangshalle der Bibliothek.");
+		}
+		clearMessage();
+		view.replaceChildren(...state.projects.map(renderProject));
+	}
+
+	// ---- loading ----
+
+	function renderStats() {
+		if (state.view === "items") {
+			el("stats").textContent = state.total === undefined ? "" : fmt.format(state.types) + " Sorten · " + fmt.format(state.total) + " Items" + (state.shared ? " · gemeinsamer Speicher" : "");
+		} else {
+			el("stats").textContent = state.projects.length + (state.projects.length === 1 ? " Projekt" : " Projekte");
+		}
+	}
+
+	function editing() {
+		const a = document.activeElement;
+		return a && el("projects-view").contains(a) && (a.tagName === "INPUT");
+	}
+
+	async function load() {
+		if (!token) return message("Kein Zugang", "Gib im Spiel <code>/storage web</code> ein und öffne den Link, den du bekommst.");
+
+		try {
+			const [items, projects] = await Promise.all([api("items"), api("projects")]);
+			state.items = items.items;
+			state.types = items.types;
+			state.total = items.total;
+			state.shared = items.shared;
+			state.projects = projects.projects;
+			renderStats();
+			if (state.view === "items") renderItems();
+			else if (!editing()) renderProjects();
+		} catch (e) {
+			if (e.unauthorized) message("Link ungültig", "Gib im Spiel <code>/storage web</code> ein und öffne den neuen Link.");
+			else el("stats").textContent = "Server nicht erreichbar, versuche es gleich wieder …";
+		}
+	}
+
+	function show(view) {
+		state.view = view;
+		store("storagedim-view", view);
+		el("tab-items").setAttribute("aria-selected", String(view === "items"));
+		el("tab-projects").setAttribute("aria-selected", String(view === "projects"));
+		el("items-controls").hidden = view !== "items";
+		el("items-view").hidden = view !== "items";
+		el("projects-controls").hidden = view !== "projects";
+		el("projects-view").hidden = view !== "projects";
+		document.title = view === "items" ? "ME-Speicher" : "Projekte";
+		renderStats();
+		if (state.total === undefined) return;
+		if (view === "items") renderItems();
+		else renderProjects();
+	}
+
+	el("tab-items").onclick = () => show("items");
+	el("tab-projects").onclick = () => show("projects");
+	el("search").addEventListener("input", e => { state.search = e.target.value; renderItems(); });
+	el("sort").addEventListener("change", e => { state.sort = e.target.value; store("storagedim-sort", state.sort); renderItems(); });
+	el("new-project").addEventListener("submit", async e => {
+		e.preventDefault();
+		const name = el("new-name").value.trim();
+		if (await change({ action: "create", name })) {
+			el("new-name").value = "";
+			renderStats();
+			toast("Projekt angelegt");
+		}
+	});
+
+	show(state.view);
+	load();
+	setInterval(() => { if (!document.hidden) load(); }, REFRESH_MS);
+	document.addEventListener("visibilitychange", () => { if (!document.hidden) load(); });
+</script>
+</body>
+</html>

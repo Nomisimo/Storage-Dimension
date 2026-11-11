@@ -1,0 +1,18 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "pattern": [
+    "RAR",
+    "AEA",
+    "RAR"
+  ],
+  "key": {
+    "R": "minecraft:redstone",
+    "A": "minecraft:amethyst_shard",
+    "E": "minecraft:ender_chest"
+  },
+  "result": {
+    "id": "storagedim:me_terminal",
+    "count": 1
+  }
+}
