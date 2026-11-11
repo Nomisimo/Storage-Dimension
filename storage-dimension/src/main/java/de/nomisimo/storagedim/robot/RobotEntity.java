@@ -439,9 +439,10 @@ public class RobotEntity extends PathfinderMob {
 		mining = stationConfig.mining();
 		oreSearch = mining && stationConfig.oreSearch();
 		toolChest = stationConfig.toolChest().orElse(null);
+		int wasRange = workRange();
 		stationRange = Math.clamp(stationConfig.range(), MIN_RANGE, RANGE);
 
-		if (wasOres != oreSearch) {
+		if (wasOres != oreSearch || was != mining || wasRange != workRange()) {
 			applyRange();
 		}
 
@@ -1081,7 +1082,8 @@ public class RobotEntity extends PathfinderMob {
 		BlockPos h = home();
 		double dx = pos.x - h.getX();
 		double dz = pos.z - h.getZ();
-		return dx * dx + dz * dz > (range + 4) * (range + 4) || !below && Math.abs(pos.y - h.getY()) > VERTICAL_RANGE + 4;
+		int reach = workRange();
+		return dx * dx + dz * dz > (reach + 4) * (reach + 4) || !below && Math.abs(pos.y - h.getY()) > VERTICAL_RANGE + 4;
 	}
 
 	private boolean inRange(Vec3 pos) {
@@ -1743,7 +1745,7 @@ public class RobotEntity extends PathfinderMob {
 					return startDigging(job, pos);
 				}
 
-				Path path = getNavigation().createPath(pos, 4);
+				Path path = digPath(pos);
 
 				if (path != null && path.canReach()) {
 					plannedPath = path;
@@ -1756,6 +1758,15 @@ public class RobotEntity extends PathfinderMob {
 			mineIdle = true;
 			mineFinished = job.finished();
 			return false;
+		}
+
+		/**
+		 * A way to where it can reach a block to dig. Asked for the block itself, the game would aim for the first
+		 * open block above it instead, which for a block deep in the rock (the next one of a tunnel) is a cave or the
+		 * surface far above, so no way would ever get there and the robots gave up on every tunnel after a few blocks.
+		 */
+		private Path digPath(BlockPos pos) {
+			return getNavigation().createPath(Set.of(pos.immutable()), 4);
 		}
 
 		private boolean startDigging(DigJob job, BlockPos pos) {
@@ -1910,7 +1921,7 @@ public class RobotEntity extends PathfinderMob {
 				getNavigation().moveTo(plannedPath, 1.0);
 				plannedPath = null;
 			} else if (getNavigation().isDone()) {
-				Path path = getNavigation().createPath(mineTarget, 4);
+				Path path = digPath(mineTarget);
 
 				if (path != null && path.canReach()) {
 					getNavigation().moveTo(path, 1.0);
@@ -2355,13 +2366,18 @@ public class RobotEntity extends PathfinderMob {
 				&& level.getBlockState(pos.above()).getCollisionShape(level, pos.above()).isEmpty();
 	}
 
+	/** How far from its station it works: its own range, while mining at least the station's (the area all its robots dig). */
+	private int workRange() {
+		return mining ? Math.max(range, stationRange) : range;
+	}
+
 	/**
 	 * Paths may be as long as its range, so it can work out the whole way to anything in range; in the ore search
 	 * also all the way down the staircase.
 	 */
 	private void applyRange() {
 		int depth = oreSearch && station != null ? Math.max(0, station.getY() - level().getMinY()) : 0;
-		getAttribute(Attributes.FOLLOW_RANGE).setBaseValue((area != null ? areaReach : range) + 16 + depth);
+		getAttribute(Attributes.FOLLOW_RANGE).setBaseValue((area != null ? areaReach : workRange()) + 16 + depth);
 		getNavigation().updatePathfinderMaxVisitedNodes();
 	}
 

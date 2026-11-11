@@ -1,5 +1,6 @@
 package de.nomisimo.storagedim.robot;
 
+import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -67,6 +68,8 @@ public final class MiningJob implements DigJob {
 	/** Columns in the order they are looked at the first time: closest to the station first. */
 	private final long[] order;
 	private int scanned;
+	/** Columns that were not loaded when their turn came: looked at again on every call until they are. */
+	private final ArrayDeque<Long> unloaded = new ArrayDeque<>();
 	/** Blocks a robot is on its way to or digging (packed position to robot). */
 	private final Map<Long, UUID> claimed = new HashMap<>();
 	private final Map<Long, Long> skipped = new HashMap<>();
@@ -145,12 +148,12 @@ public final class MiningJob implements DigJob {
 	/** Every column has been looked at and none has anything left to dig. */
 	@Override
 	public boolean finished() {
-		return scanned >= order.length && layers.isEmpty();
+		return scanned >= order.length && unloaded.isEmpty() && layers.isEmpty();
 	}
 
 	/** How many columns still have something to dig, and how many have not been looked at yet. */
 	public int columnsLeft() {
-		return tops.size() + order.length - scanned;
+		return tops.size() + order.length - scanned + unloaded.size();
 	}
 
 	public int highestLayer() {
@@ -296,28 +299,37 @@ public final class MiningJob implements DigJob {
 		}
 	}
 
-	/** Looks at more columns for the first time, closest to the station first. */
+	/**
+	 * Looks at more columns for the first time, closest to the station first. A column that is not loaded yet goes
+	 * to the back and is looked at again on the next calls, so the ones behind it are not held up. (They used to be
+	 * swapped with the last column, which bounced two unloaded columns back and forth and stopped the scan there for
+	 * good: the robots only ever knew the columns closest to the station.)
+	 */
 	private void scan(ServerLevel level) {
 		int[] budget = {0};
 
 		while (scanned < order.length && budget[0] < SCAN_BUDGET) {
-			long column = order[scanned];
+			long column = order[scanned++];
 			Integer top = findTop(level, columnX(column), columnZ(column), maxY, budget);
 
 			if (top == null) {
-				// not loaded (yet): looked at again once the others are done
-				if (scanned == order.length - 1) {
-					break;
-				}
-
-				order[scanned] = order[order.length - 1];
-				order[order.length - 1] = column;
+				unloaded.add(column);
 				budget[0] += 16;
-				continue;
+			} else {
+				setTop(column, top);
 			}
+		}
 
-			setTop(column, top);
-			scanned++;
+		for (int n = unloaded.size(); n > 0 && budget[0] < SCAN_BUDGET; n--) {
+			long column = unloaded.poll();
+			Integer top = findTop(level, columnX(column), columnZ(column), maxY, budget);
+
+			if (top == null) {
+				unloaded.add(column);
+				budget[0] += 16;
+			} else {
+				setTop(column, top);
+			}
 		}
 	}
 

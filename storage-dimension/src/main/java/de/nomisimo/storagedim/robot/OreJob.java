@@ -1,5 +1,6 @@
 package de.nomisimo.storagedim.robot;
 
+import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -61,6 +62,8 @@ public final class OreJob implements DigJob {
 	/** Chunk columns (x, z packed) in the order they are searched: closest to the station first. */
 	private final long[] chunks;
 	private int searched;
+	/** Chunks that were not loaded when their turn came: searched once they are. */
+	private final ArrayDeque<Long> unloaded = new ArrayDeque<>();
 	/** Ores found, best first. */
 	private final TreeSet<long[]> ores = new TreeSet<>(Comparator.<long[]>comparingLong(o -> o[1]).thenComparingLong(o -> o[0]));
 	private final Set<Long> known = new HashSet<>();
@@ -296,67 +299,82 @@ public final class OreJob implements DigJob {
 		return (long) x << 32 | z & 0xFFFFFFFFL;
 	}
 
-	private void scan(ServerLevel level) {
-		int budget = 0;
-		int deferred = 0;
+	/**
+	 * Searches more chunks for ores, closest to the station first. A chunk that is not loaded yet goes to the back
+	 * and is tried again on the next calls. (It used to be swapped with the last chunk, which bounced two unloaded
+	 * chunks back and forth and stopped the search there for good, so only the ores near the station were found.)
+	 */
+	void scan(ServerLevel level) {
+		int[] budget = {0};
 
-		while (searched < chunks.length && budget < SCAN_BUDGET) {
-			long column = chunks[searched];
-			int cx = (int) (column >> 32);
-			int cz = (int) column;
-			LevelChunk chunk = level.getChunkSource().getChunkNow(cx, cz);
+		while (searched < chunks.length && budget[0] < SCAN_BUDGET) {
+			long column = chunks[searched++];
 
-			if (chunk == null) {
-				// not loaded (yet): searched once the others are done
-				if (searched == chunks.length - 1 || ++deferred > 64) {
-					break;
-				}
+			if (!search(level, column, budget)) {
+				unloaded.add(column);
+				budget[0] += 16;
+			}
+		}
 
-				chunks[searched] = chunks[chunks.length - 1];
-				chunks[chunks.length - 1] = column;
+		for (int n = unloaded.size(); n > 0 && budget[0] < SCAN_BUDGET; n--) {
+			long column = unloaded.poll();
+
+			if (!search(level, column, budget)) {
+				unloaded.add(column);
+				budget[0] += 16;
+			}
+		}
+	}
+
+	/** Searches one chunk of the area for ores; false when it is not loaded. */
+	private boolean search(ServerLevel level, long column, int[] budget) {
+		int cx = (int) (column >> 32);
+		int cz = (int) column;
+		LevelChunk chunk = level.getChunkSource().getChunkNow(cx, cz);
+
+		if (chunk == null) {
+			return false;
+		}
+
+		int x0 = Math.max(minX, cx << 4);
+		int x1 = Math.min(maxX, (cx << 4) + 15);
+		int z0 = Math.max(minZ, cz << 4);
+		int z1 = Math.min(maxZ, (cz << 4) + 15);
+		BlockPos.MutableBlockPos pos = new BlockPos.MutableBlockPos();
+
+		for (int sy = maxY >> 4; sy >= minY >> 4; sy--) {
+			int index = chunk.getSectionIndexFromSectionY(sy);
+
+			if (index < 0 || index >= chunk.getSections().length) {
 				continue;
 			}
 
-			int x0 = Math.max(minX, cx << 4);
-			int x1 = Math.min(maxX, (cx << 4) + 15);
-			int z0 = Math.max(minZ, cz << 4);
-			int z1 = Math.min(maxZ, (cz << 4) + 15);
-			BlockPos.MutableBlockPos pos = new BlockPos.MutableBlockPos();
+			LevelChunkSection section = chunk.getSection(index);
+			budget[0]++;
 
-			for (int sy = maxY >> 4; sy >= minY >> 4; sy--) {
-				int index = chunk.getSectionIndexFromSectionY(sy);
+			if (section.hasOnlyAir() || !section.maybeHas(OreJob::isOre)) {
+				continue;
+			}
 
-				if (index < 0 || index >= chunk.getSections().length) {
-					continue;
-				}
+			int y0 = Math.max(minY, sy << 4);
+			int y1 = Math.min(maxY, (sy << 4) + 15);
 
-				LevelChunkSection section = chunk.getSection(index);
-				budget++;
+			for (int y = y1; y >= y0; y--) {
+				for (int x = x0; x <= x1; x++) {
+					for (int z = z0; z <= z1; z++) {
+						budget[0]++;
+						BlockState state = section.getBlockState(x & 15, y & 15, z & 15);
 
-				if (section.hasOnlyAir() || !section.maybeHas(OreJob::isOre)) {
-					continue;
-				}
-
-				int y0 = Math.max(minY, sy << 4);
-				int y1 = Math.min(maxY, (sy << 4) + 15);
-
-				for (int y = y1; y >= y0; y--) {
-					for (int x = x0; x <= x1; x++) {
-						for (int z = z0; z <= z1; z++) {
-							budget++;
-							BlockState state = section.getBlockState(x & 15, y & 15, z & 15);
-
-							if (isOre(state) && !inShaft(x, z)) {
-								pos.set(x, y, z);
-								add(pos.immutable(), state);
-							}
+						if (isOre(state) && !inShaft(x, z)) {
+							pos.set(x, y, z);
+							add(pos.immutable(), state);
 						}
 					}
 				}
 			}
-
-			searched++;
 		}
+
+		return true;
 	}
 
 	private void add(BlockPos pos, BlockState state) {
@@ -371,7 +389,7 @@ public final class OreJob implements DigJob {
 
 	@Override
 	public boolean finished() {
-		return searched >= chunks.length && exhausted && tunnels.isEmpty();
+		return searched >= chunks.length && unloaded.isEmpty() && exhausted && tunnels.isEmpty();
 	}
 
 	// ---- handing out blocks ----
@@ -702,5 +720,10 @@ public final class OreJob implements DigJob {
 	/** For the smoke test: ores found so far. */
 	int oresKnown() {
 		return ores.size();
+	}
+
+	/** For the smoke test: the search has found this ore. */
+	boolean knows(BlockPos pos) {
+		return known.contains(pos.asLong());
 	}
 }

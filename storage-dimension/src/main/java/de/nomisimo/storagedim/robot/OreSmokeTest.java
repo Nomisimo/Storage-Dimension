@@ -23,11 +23,19 @@ import net.minecraft.world.level.block.ChestBlock;
 /**
  * Smoke test of the ore search (CI, after the mining test): high above the overworld a station on a block of stone
  * with a few ores inside it. The robots have to dig down the staircase and tunnels to the iron, the diamond and both
- * coal ores (a vein of two), bring home only the ores (no stone), and leave the gold ore next to a pocket of lava
- * alone. Switched back to collecting, the tools go back into the tool chest.
+ * coal ores (a vein of two) and to an iron ore further out and deep below (the way there runs through the rock, so a
+ * robot must find a path to blocks with rock above them), bring home only the ores (no stone), and leave the gold ore
+ * next to a pocket of lava alone. Switched back to collecting, the tools go back into the tool chest.
+ * <p>
+ * A probe checks that the search goes on past chunks that are not loaded: an ore in a loaded chunk behind unloaded
+ * ones must still be found.
  */
 public final class OreSmokeTest {
-	private static final int TIMEOUT = 7200;
+	private static final int TIMEOUT = 9600;
+	/** Far from everything: only the chunk of this spot and one three chunks east of it are loaded, for the search probe. */
+	private static final BlockPos PROBE = new BlockPos(2008, 100, 2008);
+	private static final BlockPos PROBE_ORE = PROBE.offset(48, -30, 0);
+	private static boolean probeDone;
 	private static final int Y = 290;
 
 	private static ServerLevel level;
@@ -56,10 +64,13 @@ public final class OreSmokeTest {
 			}
 		}
 
-		// a block of stone under the station, 13 wide and 10 deep
-		for (int dx = -6; dx <= 6; dx++) {
-			for (int dz = -6; dz <= 6; dz++) {
-				for (int dy = -10; dy <= -1; dy++) {
+		level.setChunkForced(PROBE.getX() >> 4, PROBE.getZ() >> 4, true);
+		level.setChunkForced(PROBE_ORE.getX() >> 4, PROBE_ORE.getZ() >> 4, true);
+
+		// a block of stone under the station, 29 wide and 14 deep
+		for (int dx = -14; dx <= 14; dx++) {
+			for (int dz = -14; dz <= 14; dz++) {
+				for (int dy = -14; dy <= -1; dy++) {
 					level.setBlockAndUpdate(station.offset(dx, dy, dz), Blocks.STONE.defaultBlockState());
 				}
 			}
@@ -69,6 +80,7 @@ public final class OreSmokeTest {
 		ore(station.offset(-3, -6, 2), Blocks.DIAMOND_ORE);
 		ore(station.offset(0, -4, -4), Blocks.COAL_ORE);
 		ore(station.offset(0, -4, -5), Blocks.COAL_ORE);
+		ore(station.offset(-13, -11, 1), Blocks.IRON_ORE);
 		gold = station.offset(4, -2, 4);
 		lava = station.offset(5, -2, 4);
 		level.setBlockAndUpdate(gold, Blocks.GOLD_ORE.defaultBlockState());
@@ -150,7 +162,17 @@ public final class OreSmokeTest {
 		Container loot = (Container) level.getBlockEntity(station.east());
 		List<String> errors = new ArrayList<>();
 
-		if (stage == 0 && dug() && count(loot, Items.RAW_IRON) > 0 && count(loot, Items.DIAMOND) > 0 && count(loot, Items.COAL) > 0) {
+		if (!probeDone && level.isLoaded(PROBE) && level.isLoaded(PROBE_ORE)) {
+			probeDone = true;
+			String problem = probe();
+
+			if (problem != null) {
+				finish(List.of(problem));
+				return;
+			}
+		}
+
+		if (stage == 0 && probeDone && dug() && count(loot, Items.RAW_IRON) > 0 && count(loot, Items.DIAMOND) > 0 && count(loot, Items.COAL) > 0) {
 			for (Item spoil : List.of(Items.COBBLESTONE, Items.STONE)) {
 				if (count(loot, spoil) > 0) {
 					errors.add("Kiste hat " + spoil + ", die Erzsuche soll nur Erze heimbringen");
@@ -206,9 +228,35 @@ public final class OreSmokeTest {
 				errors.add("Roboter: " + robot.describeMining() + " " + robot.status().getString() + " " + robot.describe() + " at " + robot.blockPosition());
 			}
 
+			if (!probeDone) {
+				errors.add("Chunks für die Suchprobe nicht geladen");
+			}
+
 			errors.add(0, "Erzsuche-Test nach " + ticks + " Ticks nicht fertig (Stufe " + stage + ")");
 			finish(errors);
 		}
+	}
+
+	/**
+	 * The search of an area three chunks around a spot where only its own chunk and one at the east edge are loaded:
+	 * the ore in that one must be found although unloaded chunks come before it. Null when it is.
+	 */
+	private static String probe() {
+		level.setBlockAndUpdate(PROBE_ORE, Blocks.DIAMOND_ORE.defaultBlockState());
+		String dim = "smoketest-probe";
+		OreJob job = OreJob.get(dim, PROBE, PROBE.getX() - 48, PROBE.getZ() - 48, PROBE.getX() + 48, PROBE.getZ() + 48, level.getMinY(),
+				level.getGameTime());
+
+		for (int i = 0; i < 200 && !job.knows(PROBE_ORE); i++) {
+			job.scan(level);
+		}
+
+		boolean found = job.knows(PROBE_ORE);
+		OreJob.reset(dim, PROBE);
+		level.setChunkForced(PROBE.getX() >> 4, PROBE.getZ() >> 4, false);
+		level.setChunkForced(PROBE_ORE.getX() >> 4, PROBE_ORE.getZ() >> 4, false);
+		StorageDimensionMod.LOGGER.info("SMOKETEST Erzsuche-Probe: Erz hinter ungeladenen Chunks {}", found ? "gefunden" : "NICHT gefunden");
+		return found ? null : "Erzsuche findet kein Erz hinter ungeladenen Chunks (Suche bleibt am ersten ungeladenen Chunk hängen)";
 	}
 
 	private static boolean dug() {
