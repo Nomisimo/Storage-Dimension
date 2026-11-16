@@ -224,6 +224,14 @@ public final class DeepOreSmokeTest {
 		}
 
 		OreJob job = job();
+		StringBuilder dig = new StringBuilder();
+
+		for (BlockPos pos : job.candidates(level, at, robot.getUUID(), 8, level.getGameTime())) {
+			net.minecraft.world.level.pathfinder.Path path = robot.getNavigation().createPath(java.util.Set.of(pos), 4);
+			dig.append(' ').append(pos.toShortString()).append(path == null ? "->null" : "->" + path.canReach() + "/" + path.getNodeCount() + "@" + path.getEndNode().asBlockPos().toShortString());
+		}
+
+		StorageDimensionMod.LOGGER.info("SMOKETEST Tief-Grabweg von {}:{}", at, dig);
 		StringBuilder out = new StringBuilder();
 		Integer failed = null;
 
