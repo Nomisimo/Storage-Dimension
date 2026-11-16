@@ -250,6 +250,31 @@ public final class MiningJob implements DigJob {
 		return contains(pos) && toClear(level, pos, level.getBlockState(pos));
 	}
 
+	/**
+	 * A solid block right beside (or below) still standing water of the area: left until that water is filled, or the
+	 * water would run into the hole again and again. Water from outside the area does not count; where it keeps
+	 * coming back the block stays as a wall after a few tries.
+	 */
+	private boolean besideWater(ServerLevel level, BlockPos pos) {
+		if (isWater(level.getBlockState(pos))) {
+			return false;
+		}
+
+		for (Direction side : Direction.values()) {
+			if (side == Direction.DOWN) {
+				continue;
+			}
+
+			BlockPos next = pos.relative(side);
+
+			if (contains(next) && level.isLoaded(next) && level.getFluidState(next).isSource() && isWater(level.getBlockState(next))) {
+				return true;
+			}
+		}
+
+		return false;
+	}
+
 	/** A robot can get at it: one of its sides is open (air, water or a block without collision). */
 	private static boolean exposed(ServerLevel level, BlockPos pos) {
 		for (Direction side : Direction.values()) {
@@ -431,7 +456,7 @@ public final class MiningJob implements DigJob {
 					continue;
 				}
 
-				if (!exposed(level, pos)) {
+				if (!exposed(level, pos) || besideWater(level, pos)) {
 					continue;
 				}
 
@@ -472,7 +497,7 @@ public final class MiningJob implements DigJob {
 				continue;
 			}
 
-			if (wanted(level, pos) && exposed(level, pos)) {
+			if (wanted(level, pos) && exposed(level, pos) && !besideWater(level, pos)) {
 				found.add(pos.immutable());
 			}
 		}
