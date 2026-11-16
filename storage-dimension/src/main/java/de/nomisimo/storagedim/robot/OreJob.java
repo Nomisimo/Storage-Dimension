@@ -54,6 +54,8 @@ public final class OreJob implements DigJob {
 	static final int TORCH_GAP = 8;
 	/** Tunnel places a robot goes through per call. */
 	private static final int STEPS = 32;
+	/** How far up or down the staircase a robot goes in one stretch when no way to its goal is found. */
+	private static final int WAYPOINT_SPAN = 16;
 
 	private static final Map<String, OreJob> JOBS = new HashMap<>();
 
@@ -652,7 +654,40 @@ public final class OreJob implements DigJob {
 		return out.toString();
 	}
 
-	/** For the smoke test: the step of the staircase at a height. */
+	/**
+	 * Places to stand on the staircase on the way from {@code from} up or down to the height {@code toY}, the
+	 * farthest (up to {@value #WAYPOINT_SPAN} blocks) first; none when it is close by in height.
+	 */
+	public List<BlockPos> waypoints(ServerLevel level, BlockPos from, int toY) {
+		List<BlockPos> found = new ArrayList<>();
+		int dy = toY - from.getY();
+
+		if (Math.abs(dy) <= 6) {
+			return found;
+		}
+
+		int dir = Integer.signum(dy);
+		int far = from.getY() + dir * Math.min(Math.abs(dy) - 1, WAYPOINT_SPAN);
+
+		for (int y = far; y != from.getY() && found.size() < 4; y -= dir) {
+			if (y >= station.getY() || y < minY) {
+				continue;
+			}
+
+			BlockPos stepPos = step(y);
+			BlockPos feet = stepPos.above();
+
+			if (level.isLoaded(stepPos) && level.getBlockState(stepPos).isFaceSturdy(level, stepPos, Direction.UP) && clear(level, feet) && clear(level, feet.above())
+					&& !liquid(level.getBlockState(feet))) {
+				found.add(feet);
+				y -= dir * 3;
+			}
+		}
+
+		return found;
+	}
+
+	/** The step of the staircase at a height. */
 	BlockPos step(int y) {
 		int[] cell = RING[stepIndex(y)];
 		return new BlockPos(pillar.getX() + cell[0], y, pillar.getZ() + cell[1]);

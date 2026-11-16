@@ -2567,6 +2567,32 @@ public class RobotEntity extends PathfinderMob {
 				nodeEvaluator.setCanWalkOverFences(true);
 				return new PathFinder(nodeEvaluator, maxVisitedNodes);
 			}
+
+			/**
+			 * In the ore search a way far up or down the staircase often finds none: caves that cross the staircase
+			 * use up the search. Then it goes by the staircase instead, a stretch of it at a time.
+			 */
+			@Override
+			protected Path createPath(Set<BlockPos> targets, int regionOffset, boolean offsetUpward, int reachRange, float maxPathLength) {
+				Path path = super.createPath(targets, regionOffset, offsetUpward, reachRange, maxPathLength);
+
+				if (path != null && path.canReach() || targets.isEmpty() || !oreSearch || station == null || !(level() instanceof ServerLevel server)
+						|| !(miningJob() instanceof OreJob ores)) {
+					return path;
+				}
+
+				int toY = targets.iterator().next().getY();
+
+				for (BlockPos waypoint : ores.waypoints(server, blockPosition(), toY)) {
+					Path part = super.createPath(Set.of(waypoint), regionOffset, false, 1, maxPathLength);
+
+					if (part != null && part.canReach() && part.getNodeCount() > 1) {
+						return part;
+					}
+				}
+
+				return path;
+			}
 		};
 	}
 
@@ -2656,6 +2682,13 @@ public class RobotEntity extends PathfinderMob {
 
 				if (!level().getBlockState(spot).getCollisionShape(level(), spot).isEmpty()
 						|| !level().getBlockState(spot.above()).getCollisionShape(level(), spot.above()).isEmpty() && dy == 0) {
+					continue;
+				}
+
+				// something to stand on (not over the staircase of the ore search, which goes down right beside the station)
+				BlockPos floor = spot.below();
+
+				if (level().getBlockState(floor).getCollisionShape(level(), floor).isEmpty() && level().getFluidState(spot).isEmpty()) {
 					continue;
 				}
 
