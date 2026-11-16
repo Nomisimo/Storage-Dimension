@@ -25,7 +25,7 @@ import net.minecraft.world.level.block.state.BlockState;
 /**
  * Smoke test of the mining mode (CI, -Dstoragedim.smoketest=true): high above the overworld a station with a chest,
  * two robots and a few blocks around it. Mining is switched on (the tool chest has to appear), the robots fetch their
- * tools, dig everything except the staircase, a worn-out pickaxe breaks and is replaced from the tool chest, all
+ * tools, dig everything except the staircase and pump a pond dry, a worn-out pickaxe breaks and is replaced from the tool chest, all
  * drops end up in the chest; switched off, the tools go back into the tool chest.
  */
 public final class MiningSmokeTest {
@@ -84,6 +84,19 @@ public final class MiningSmokeTest {
 		put(station.offset(-4, 1, 3), Blocks.SAND);
 		put(station.offset(-4, 2, 3), Blocks.SAND);
 
+		// a pond in a stone rim: the robots pump its water away
+		for (int dx = -7; dx <= -4; dx++) {
+			for (int dz = -7; dz <= -4; dz++) {
+				BlockPos pos = station.offset(dx, 0, dz);
+
+				if (dx == -7 || dx == -4 || dz == -7 || dz == -4) {
+					put(pos, Blocks.STONE);
+				} else {
+					put(pos, Blocks.WATER);
+				}
+			}
+		}
+
 		// the staircase: two rings of stone around the station and one block on top of it
 		for (int dy = 1; dy <= 2; dy++) {
 			for (int dx = -1; dx <= 1; dx++) {
@@ -94,6 +107,8 @@ public final class MiningSmokeTest {
 			}
 		}
 
+		// the mine reaches down to the bedrock; here only the blocks on the stone floor are to go
+		System.setProperty("storagedim.mineBottom", Integer.toString(Y));
 		StorageData data = StorageData.get();
 		data.setStation(dim, station, data.station(dim, station).withRange(16).withName("Kumpel").withStationName("Grube"));
 		StationMining.Result result = StationMining.toggle(level, dim, station);
@@ -282,6 +297,7 @@ public final class MiningSmokeTest {
 	}
 
 	private static void finish(List<String> errors) {
+		System.clearProperty("storagedim.mineBottom");
 		Consumer<List<String>> callback = done;
 		done = null;
 		callback.accept(errors);

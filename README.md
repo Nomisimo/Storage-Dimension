@@ -211,11 +211,14 @@ Die Roboter lagern nur in Speicher, der **direkt an der Station** steht, also an
 
 Mit dem Knopf **Sammeln / Abbauen** in der Station werden alle Roboter der Station zu Bergleuten. Sie bauen jeden Block in ihrem Bereich ab und bringen alles in die Kisten an der Station. So lassen sich Wüsten, Hügel und Höhlen abtragen.
 
-- **Werkzeugkiste:** Beim Einschalten stellt sich an einer freien Seite der Station eine Kiste auf. Ist keine Seite frei, bleibt der Modus aus und es kommt eine Fehlermeldung. In die Kiste gehört **für jeden Roboter eine Spitzhacke, eine Axt und eine Schaufel**. Jeder Roboter holt sich zuerst ein Werkzeug von jeder Sorte. Fehlt etwas, sitzt er traurig an der Station („Fehler: Werkzeug fehlt: Axt“). Geht ein Werkzeug kaputt, holt er sich ein neues aus der Kiste. In die Werkzeugkiste lagern die Roboter nie etwas ein, die Beute kommt in die anderen Kisten an der Station.
-- **Bereich:** Mit [Antennen](#antennen-und-fernbedienung) die Antennen-Box. Ohne Antennen ein Quadrat in der Reichweite der Station, das von der Station aus genauso hoch nach oben reicht, wie die Reichweite ist (also nicht der ganze Chunk bis zum Himmel). Die Station steht dabei unten.
+- **Werkzeug:** Jeder Roboter braucht nur **eine Spitzhacke**. Liegen Äxte und Schaufeln bereit, nimmt er je eine mit, damit Holz, Erde und Sand schneller gehen. Ohne Spitzhacke sitzt er traurig an der Station („Fehler: Werkzeug fehlt: Spitzhacke“). Geht ein Werkzeug kaputt, holt er sich ein neues.
+- **Filterkiste als Werkzeugkiste:** Stell selbst eine [Filterkiste](#filterkiste) direkt neben die Station (zum Beispiel dahinter) und setz eine Spitzhacke als Filter. Dann holen sich die Roboter ihre Spitzhacken (und Äxte und Schaufeln, falls als Filter gesetzt) aus dem ME-Speicher und bringen sie beim Ausschalten dorthin zurück. Das geht auch, wenn der Abbau schon läuft.
+- **Werkzeugkiste:** Steht keine Filterkiste an der Station, stellt sich beim Einschalten an einer freien Seite der Station eine normale Kiste auf. Ist keine Seite frei, bleibt der Modus aus und es kommt eine Fehlermeldung. In die Werkzeugkiste (oder Filterkiste) lagern die Roboter nie Beute ein, die kommt in die anderen Kisten an der Station.
+- **Bereich:** Mit [Antennen](#antennen-und-fernbedienung) die Antennen-Box. Ohne Antennen das ganze Quadrat in der Reichweite der Station, von der Oberfläche (auch Bäume und Berge) bis hinunter zum Grundgestein, wie ein Steinbruch. Die Station bleibt auf ihrer Säule stehen, und die Wendeltreppe um die Säule führt bis ganz nach unten.
 - **Von oben nach unten:** Die Roboter bauen immer die obersten Schichten zuerst ab, jeder den Block, der ihm am nächsten ist. Bis zu 32 Roboter teilen sich die Arbeit, und jeder Block wird nur einem Roboter gegeben. Ist der Bereich überdacht (die Station steht zum Beispiel unten in einer Höhle), graben sie sich zuerst rund um sich frei und arbeiten sich über die Treppe nach oben.
 - **Treppe zur Station:** Um eine Säule an der Station bleibt eine Wendeltreppe stehen, mit einer Stufe pro Block Höhe. So kommt man immer zur Station hinunter. Liegt Sand oder Kies auf einer Stufe, bleibt der Block darunter auch stehen. Die Treppe besteht aus den Blöcken, die dort schon waren: Wo vorher Luft war, fehlt eine Stufe.
-- **Was stehen bleibt:** die Station, Antennen, Roboter-Barrieren, alle Blöcke mit Inhalt (Kisten, Öfen, Spawner …), Wasser und Lava, unzerstörbare Blöcke wie Grundgestein.
+- **Wasser:** Wasser im Bereich (still oder fließend) füllen die Roboter mit Bruchstein auf und bauen den dann ab. So werden Teiche, Seen und geflutete Höhlen trocken und nichts läuft nach. Kommt an einer Stelle immer wieder Wasser (etwa von einem Meer neben dem Bereich), bleibt dort nach dem dritten Mal der Bruchstein als Wand stehen.
+- **Was stehen bleibt:** die Station, Antennen, Roboter-Barrieren, alle Blöcke mit Inhalt (Kisten, Öfen, Spawner …), Lava, unzerstörbare Blöcke wie Grundgestein.
 - **Abbauzeit wie beim Spieler:** Harte Blöcke dauern länger, mit dem falschen Werkzeug noch länger. Effizienz macht schneller. Man sieht die Risse im Block, und der Roboter pickt mit dem Schnabel daran herum.
 - **Verzauberungen:** Glück (Fortune), Behutsamkeit (Silk Touch) und die anderen wirken wie beim Spieler, Haltbarkeit (Unbreaking) schont das Werkzeug. **Reparatur (Mending)** repariert das Werkzeug mit den Erfahrungskugeln aus dem abgebauten Block. Ohne Mending-Werkzeug bleiben die Kugeln für die Spieler liegen. Mit einer zu schwachen Spitzhacke gibt ein Block (z. B. Diamanterz mit einer Steinspitzhacke) wie beim Spieler nichts.
 - **Beute:** Jeder Roboter sammelt bis zu 9 Stapel, dann bringt er sie Stapel für Stapel in die Kisten an der Station.
@@ -224,16 +227,18 @@ Mit dem Knopf **Sammeln / Abbauen** in der Station werden alle Roboter der Stati
 
 ### Erzsuche
 
-Ein Klick nach **Abbauen** kommt **Erzsuche**. Statt alles abzutragen, spüren die Roboter die Erze im Boden unter der Station auf und holen nur die. Die Oberfläche bleibt stehen.
+Ein Klick nach **Abbauen** kommt **Erzsuche**: Strip Mining unter der Station. Die Roboter sehen nicht durch den Fels. Sie graben Gänge und holen die Erze, die sie darin sehen. Die Oberfläche bleibt stehen.
 
-- **Bereich:** dasselbe Quadrat (oder die Antennen-Box) wie beim Abbauen, aber von der Station **nach unten bis zum Grund der Welt**.
-- **Wendeltreppe nach unten:** Um die Säule unter der Station graben die Roboter eine Wendeltreppe in die Tiefe, nur so weit, wie das nächste Erz es braucht. Fehlt eine Stufe (Höhle), setzen sie Bruchstein hin.
-- **Gänge zu den Erzen:** Von der Stufe auf der Höhe des Erzes (oder knapp darüber) graben sie einen 2 Blöcke hohen Gang zum Erz, auch schräg nach unten. Über Höhlen legen sie einen Boden aus Bruchstein. Jeder Roboter hat seinen eigenen Gang, bis zu 32 arbeiten gleichzeitig.
-- **Reihenfolge:** das nächste Erz zuerst, seltene Erze zählen als näher: Diamant, Smaragd und antiker Schrott vierfach, Gold, Redstone und Lapis doppelt.
-- **Adern:** Ist ein Roboter an einem Erz, baut er die ganze Ader drumherum ab und bringt sie heim, bevor er zum nächsten Erz gräbt.
+- **Bereich:** dasselbe Quadrat (oder die Antennen-Box) wie beim Abbauen, aber von der Station **nach unten bis zum Grundgestein**.
+- **Wendeltreppe nach unten:** Um die Säule unter der Station graben die Roboter eine Wendeltreppe bis zur untersten Ebene, 6 Blöcke über dem Grund der Welt (in der Oberwelt auf Höhe −58, knapp über dem Grundgestein). Fehlt eine Stufe (Höhle), setzen sie Bruchstein hin.
+- **Gänge:** Auf jeder Ebene ein Hauptgang nach Norden und Süden durch die Treppe, und davon alle 4 Blöcke Seitengänge nach Osten und Westen bis zum Rand des Bereichs. Die Gänge sind 2 Blöcke hoch. Jeder Roboter hat seinen eigenen Gang, bis zu 32 arbeiten gleichzeitig.
+- **Ebenen:** Die tiefste zuerst (Diamanten), dann alle 2 Blöcke eine höher, bis kurz unter die Station. Die Seitengänge jeder zweiten Ebene sind um 2 Blöcke versetzt. So liegt **jeder Block** des Bodens in Wand, Boden oder Decke genau eines Gangs und wird angeschaut, abgebaut wird aber nur ein Viertel.
+- **Erze:** Ein Roboter baut die Erze ab, die er sieht: in Wand, Boden und Decke seines Gangs, in Spieler-Reichweite (4,5 Blöcke). So folgt er jeder Ader, auf die er stößt. Nach jedem Gang bringt er seine Erze heim.
 - **Nur Erze heim:** Was die Erze droppen (mit Glück entsprechend mehr), kommt in die Kisten. Der Stein aus Treppe und Gängen bleibt nicht übrig.
-- **Was zählt als Erz:** alle Erze des Spiels (auch Tiefenschiefer-, Nether-Gold- und Quarzerz, antiker Schrott) und die Erze anderer Mods mit dem üblichen Erz-Tag.
-- **Lava:** Neben Lava graben die Roboter nicht. Ein Erz, an das man nur durch Lava, Grundgestein oder Kisten käme, lassen sie liegen.
+- **Was zählt als Erz:** alle Erze des Spiels (auch Tiefenschiefer-, Nether-Gold- und Quarzerz, antiker Schrott) und die Erze anderer Mods mit dem Erz-Tag `c:ores`. Außerdem Amethyst: Amethyst-Cluster und Amethystblöcke aus Geoden. Knospender Amethyst bleibt stehen, damit die Geode weiter wächst, und kleine Knospen auch.
+- **Lava und Wasser:** Bevor ein Roboter einen Block der Treppe oder eines Gangs öffnet, wird Wasser und Lava darin und rundherum zu Bruchstein. So läuft nichts in die Mine, und die Gänge führen an Lava vorbei oder darüber hinweg. Über Höhlen und Lavaseen legen sie einen Boden aus Bruchstein.
+- **Fackeln (freiwillig):** Liegen Fackeln in der Werkzeugkiste (oder in der Filterkiste mit Fackel-Filter), nimmt jeder Roboter einen Stapel mit und stellt alle 8 Blöcke eine Fackel in die Gänge. Ohne Fackeln arbeiten sie genauso, nur im Dunkeln.
+- Die Kopflampe am Helm leuchtet nur zum Ansehen, Licht gibt sie nicht.
 - Werkzeugkiste, Helm, Abbauzeit, Verzauberungen und Beutesack wie im [Abbau-Modus](#abbau-modus).
 
 ### Jade und Xaero's Minimap

@@ -1,5 +1,6 @@
 package de.nomisimo.storagedim.robot;
 
+import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -26,7 +27,7 @@ import net.minecraft.world.level.block.state.BlockState;
  * getting in each other's way.
  * <p>
  * The area is the station's antenna box, or without antennas a square of its range around the station, from the
- * station's height up by the range. It is dug from the top down: for every column of the area the job knows its
+ * top of the ground down to the bottom of the world (a quarry; the station stays on its pillar). It is dug from the top down: for every column of the area the job knows its
  * highest block still to dig, and the robots take the blocks of the highest layers first, each the one closest to
  * itself that no other robot has taken.
  * <p>
@@ -34,7 +35,8 @@ import net.minecraft.world.level.block.state.BlockState;
  * of the station (or, when the station sits at a corner of its antenna box, the column diagonally inside the box),
  * and of the eight columns around it each keeps one block every eight blocks of height, one higher than the one
  * before. Sand or gravel under a step keeps the block it rests on. Blocks with contents (chests, furnaces, ...),
- * the station, antennas, robot barriers, liquids and unbreakable blocks are never dug.
+ * the station, antennas, robot barriers, lava and unbreakable blocks are never dug. Water is pumped away (the robot
+ * takes it out like a block, in no time), so lakes and flooded caves in the area are emptied too.
  */
 public final class MiningJob implements DigJob {
 	/** The eight columns around the pillar, in walking order; corners are even, so no step sits right on a chest beside the station. */
@@ -48,6 +50,8 @@ public final class MiningJob implements DigJob {
 	/** Layers below the highest one that robots may already take blocks from. */
 	private static final int LAYER_BAND = 2;
 	private static final int CLEARED = Integer.MIN_VALUE;
+	/** Water that is back this often: its cobblestone is left as a wall. */
+	private static final int MAX_PUMPS = 3;
 
 	private static final Map<String, MiningJob> JOBS = new HashMap<>();
 
@@ -67,9 +71,13 @@ public final class MiningJob implements DigJob {
 	/** Columns in the order they are looked at the first time: closest to the station first. */
 	private final long[] order;
 	private int scanned;
+	/** Columns that were not loaded when their turn came: looked at again on every call until they are. */
+	private final ArrayDeque<Long> unloaded = new ArrayDeque<>();
 	/** Blocks a robot is on its way to or digging (packed position to robot). */
 	private final Map<Long, UUID> claimed = new HashMap<>();
 	private final Map<Long, Long> skipped = new HashMap<>();
+	/** How often water at a place was turned into cobblestone: where it keeps coming back, the cobblestone stays as a wall. */
+	private final Map<Long, Integer> pumped = new HashMap<>();
 	private long lastUsed;
 
 	private MiningJob(BlockPos station, int minX, int minY, int minZ, int maxX, int maxY, int maxZ) {
@@ -145,12 +153,12 @@ public final class MiningJob implements DigJob {
 	/** Every column has been looked at and none has anything left to dig. */
 	@Override
 	public boolean finished() {
-		return scanned >= order.length && layers.isEmpty();
+		return scanned >= order.length && unloaded.isEmpty() && layers.isEmpty();
 	}
 
 	/** How many columns still have something to dig, and how many have not been looked at yet. */
 	public int columnsLeft() {
-		return tops.size() + order.length - scanned;
+		return tops.size() + order.length - scanned + unloaded.size();
 	}
 
 	public int highestLayer() {
@@ -218,10 +226,53 @@ public final class MiningJob implements DigJob {
 				&& !state.is(Blocks.BUBBLE_COLUMN) && state.getDestroySpeed(level, pos) >= 0;
 	}
 
+	/**
+	 * Water the robots get rid of: still and flowing water and bubble columns. It is not taken away (a pond of two by
+	 * two would only fill up again) but turned into cobblestone, which is then dug like any other block. (Waterlogged
+	 * blocks and plants under water are dug as usual; the water they leave goes the same way.)
+	 */
+	public static boolean isWater(BlockState state) {
+		return state.is(Blocks.WATER) || state.is(Blocks.BUBBLE_COLUMN);
+	}
+
+	/** To dig or pump away: a block that may be dug, or water anywhere in the area (even where a step goes). */
+	private boolean toClear(ServerLevel level, BlockPos pos, BlockState state) {
+		if (isWater(state)) {
+			return true;
+		}
+
+		// where water kept coming back (from a sea beside the area) the cobblestone stays as a wall
+		return diggable(level, pos, state) && !isProtected(level, pos, state) && pumped.getOrDefault(pos.asLong(), 0) < MAX_PUMPS;
+	}
+
 	@Override
 	public boolean wanted(ServerLevel level, BlockPos pos) {
-		BlockState state = level.getBlockState(pos);
-		return contains(pos) && diggable(level, pos, state) && !isProtected(level, pos, state);
+		return contains(pos) && toClear(level, pos, level.getBlockState(pos));
+	}
+
+	/**
+	 * A solid block right beside (or below) still standing water of the area: left until that water is filled, or the
+	 * water would run into the hole again and again. Water from outside the area does not count; where it keeps
+	 * coming back the block stays as a wall after a few tries.
+	 */
+	private boolean besideWater(ServerLevel level, BlockPos pos) {
+		if (isWater(level.getBlockState(pos))) {
+			return false;
+		}
+
+		for (Direction side : Direction.values()) {
+			if (side == Direction.DOWN) {
+				continue;
+			}
+
+			BlockPos next = pos.relative(side);
+
+			if (contains(next) && level.isLoaded(next) && level.getFluidState(next).isSource() && isWater(level.getBlockState(next))) {
+				return true;
+			}
+		}
+
+		return false;
 	}
 
 	/** A robot can get at it: one of its sides is open (air, water or a block without collision). */
@@ -267,7 +318,7 @@ public final class MiningJob implements DigJob {
 			budget[0]++;
 			BlockState state = level.getBlockState(pos);
 
-			if (diggable(level, pos, state) && !isProtected(level, pos, state)) {
+			if (toClear(level, pos, state)) {
 				return y;
 			}
 		}
@@ -296,32 +347,57 @@ public final class MiningJob implements DigJob {
 		}
 	}
 
-	/** Looks at more columns for the first time, closest to the station first. */
+	/**
+	 * Looks at more columns for the first time, closest to the station first. A column that is not loaded yet goes
+	 * to the back and is looked at again on the next calls, so the ones behind it are not held up. (They used to be
+	 * swapped with the last column, which bounced two unloaded columns back and forth and stopped the scan there for
+	 * good: the robots only ever knew the columns closest to the station.)
+	 */
 	private void scan(ServerLevel level) {
 		int[] budget = {0};
 
 		while (scanned < order.length && budget[0] < SCAN_BUDGET) {
-			long column = order[scanned];
-			Integer top = findTop(level, columnX(column), columnZ(column), maxY, budget);
+			long column = order[scanned++];
+			Integer top = findTop(level, columnX(column), columnZ(column), surface(level, column), budget);
 
 			if (top == null) {
-				// not loaded (yet): looked at again once the others are done
-				if (scanned == order.length - 1) {
-					break;
-				}
-
-				order[scanned] = order[order.length - 1];
-				order[order.length - 1] = column;
+				unloaded.add(column);
 				budget[0] += 16;
-				continue;
+			} else {
+				setTop(column, top);
 			}
+		}
 
-			setTop(column, top);
-			scanned++;
+		for (int n = unloaded.size(); n > 0 && budget[0] < SCAN_BUDGET; n--) {
+			long column = unloaded.poll();
+			Integer top = findTop(level, columnX(column), columnZ(column), surface(level, column), budget);
+
+			if (top == null) {
+				unloaded.add(column);
+				budget[0] += 16;
+			} else {
+				setTop(column, top);
+			}
 		}
 	}
 
+	/** The highest block of a column (from the height map), so the air above the ground is not looked through block by block. */
+	private int surface(ServerLevel level, long column) {
+		if (!level.isLoaded(new BlockPos(columnX(column), minY, columnZ(column)))) {
+			// not loaded: the height map would load it; findTop sees that and tries again later
+			return maxY;
+		}
+
+		int top = level.getHeight(net.minecraft.world.level.levelgen.Heightmap.Types.WORLD_SURFACE, columnX(column), columnZ(column)) - 1;
+		return Math.min(maxY, Math.max(top, minY));
+	}
+
 	/** A block was dug (or turned out to be gone): its column looks further down. */
+	/** Water was turned into cobblestone there. */
+	public void pumped(BlockPos pos) {
+		pumped.merge(pos.asLong(), 1, Integer::sum);
+	}
+
 	@Override
 	public void dug(ServerLevel level, BlockPos pos) {
 		long column = column(pos.getX(), pos.getZ());
@@ -380,7 +456,7 @@ public final class MiningJob implements DigJob {
 					continue;
 				}
 
-				if (!exposed(level, pos)) {
+				if (!exposed(level, pos) || besideWater(level, pos)) {
 					continue;
 				}
 
@@ -421,7 +497,7 @@ public final class MiningJob implements DigJob {
 				continue;
 			}
 
-			if (wanted(level, pos) && exposed(level, pos)) {
+			if (wanted(level, pos) && exposed(level, pos) && !besideWater(level, pos)) {
 				found.add(pos.immutable());
 			}
 		}
