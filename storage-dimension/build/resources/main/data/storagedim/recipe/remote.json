@@ -1,0 +1,19 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "redstone",
+  "pattern": [
+    " R ",
+    "CGC",
+    "CEC"
+  ],
+  "key": {
+    "R": "minecraft:redstone",
+    "C": "minecraft:copper_ingot",
+    "G": "minecraft:glass_pane",
+    "E": "minecraft:ender_pearl"
+  },
+  "result": {
+    "id": "storagedim:remote",
+    "count": 1
+  }
+}

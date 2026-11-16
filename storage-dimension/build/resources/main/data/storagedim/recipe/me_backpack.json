@@ -1,0 +1,12 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "category": "misc",
+  "ingredients": [
+    "#minecraft:bundles",
+    "storagedim:me_upgrade"
+  ],
+  "result": {
+    "id": "storagedim:me_backpack",
+    "count": 1
+  }
+}

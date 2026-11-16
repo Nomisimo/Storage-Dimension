@@ -1,0 +1,30 @@
+{
+  "variants": {
+    "facing=down": {
+      "model": "storagedim:block/antenna",
+      "x": 180
+    },
+    "facing=east": {
+      "model": "storagedim:block/antenna",
+      "x": 90,
+      "y": 90
+    },
+    "facing=north": {
+      "model": "storagedim:block/antenna",
+      "x": 90
+    },
+    "facing=south": {
+      "model": "storagedim:block/antenna",
+      "x": 90,
+      "y": 180
+    },
+    "facing=up": {
+      "model": "storagedim:block/antenna"
+    },
+    "facing=west": {
+      "model": "storagedim:block/antenna",
+      "x": 90,
+      "y": 270
+    }
+  }
+}

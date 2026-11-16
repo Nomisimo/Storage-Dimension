@@ -1,0 +1,10 @@
+{
+  "item.storagedim_tb.me_upgrade": "ME-Upgrade",
+  "screen.storagedim_tb.me_upgrade": "ME-Upgrade",
+  "screen.storagedim_tb.me_upgrade_click": "Linksklick: ME-Speicher anzeigen · Rechtsklick: entfernen",
+  "screen.storagedim_tb.source_me": "Crafting: ME als Quelle",
+  "screen.storagedim_tb.source_inventory": "Crafting: nur Inventar",
+  "screen.storagedim_tb.switch_to_inventory": "Klicken: nur Inventar",
+  "screen.storagedim_tb.switch_to_me": "Klicken: ME als Quelle",
+  "screen.storagedim_tb.me_upgrade_click_back": "Linksklick: zurück zum Rucksack · Rechtsklick: entfernen"
+}

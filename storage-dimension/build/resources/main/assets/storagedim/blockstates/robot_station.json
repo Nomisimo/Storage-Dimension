@@ -1,0 +1,7 @@
+{
+  "variants": {
+    "": {
+      "model": "storagedim:block/robot_station"
+    }
+  }
+}
