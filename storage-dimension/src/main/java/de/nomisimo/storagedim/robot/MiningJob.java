@@ -50,7 +50,7 @@ public final class MiningJob implements DigJob {
 	/** Layers below the highest one that robots may already take blocks from. */
 	private static final int LAYER_BAND = 2;
 	private static final int CLEARED = Integer.MIN_VALUE;
-	/** Water that is back this often after being pumped away is left where it is. */
+	/** Water that is back this often: its cobblestone is left as a wall. */
 	private static final int MAX_PUMPS = 3;
 
 	private static final Map<String, MiningJob> JOBS = new HashMap<>();
@@ -76,7 +76,7 @@ public final class MiningJob implements DigJob {
 	/** Blocks a robot is on its way to or digging (packed position to robot). */
 	private final Map<Long, UUID> claimed = new HashMap<>();
 	private final Map<Long, Long> skipped = new HashMap<>();
-	/** How often the water at a place was pumped away: water that keeps coming back (from a sea beside the area) is left. */
+	/** How often water at a place was turned into cobblestone: where it keeps coming back, the cobblestone stays as a wall. */
 	private final Map<Long, Integer> pumped = new HashMap<>();
 	private long lastUsed;
 
@@ -227,17 +227,22 @@ public final class MiningJob implements DigJob {
 	}
 
 	/**
-	 * Water the robots pump away: water source blocks and bubble columns. Flowing water runs dry by itself once its
-	 * sources are gone. (Waterlogged blocks and plants under water are dug like any other block; the water they
-	 * leave is pumped away after them.)
+	 * Water the robots get rid of: still and flowing water and bubble columns. It is not taken away (a pond of two by
+	 * two would only fill up again) but turned into cobblestone, which is then dug like any other block. (Waterlogged
+	 * blocks and plants under water are dug as usual; the water they leave goes the same way.)
 	 */
 	public static boolean isWater(BlockState state) {
-		return state.is(Blocks.WATER) && state.getFluidState().isSource() || state.is(Blocks.BUBBLE_COLUMN);
+		return state.is(Blocks.WATER) || state.is(Blocks.BUBBLE_COLUMN);
 	}
 
 	/** To dig or pump away: a block that may be dug, or water anywhere in the area (even where a step goes). */
 	private boolean toClear(ServerLevel level, BlockPos pos, BlockState state) {
-		return isWater(state) ? pumped.getOrDefault(pos.asLong(), 0) < MAX_PUMPS : diggable(level, pos, state) && !isProtected(level, pos, state);
+		if (isWater(state)) {
+			return true;
+		}
+
+		// where water kept coming back (from a sea beside the area) the cobblestone stays as a wall
+		return diggable(level, pos, state) && !isProtected(level, pos, state) && pumped.getOrDefault(pos.asLong(), 0) < MAX_PUMPS;
 	}
 
 	@Override
@@ -363,7 +368,7 @@ public final class MiningJob implements DigJob {
 	}
 
 	/** A block was dug (or turned out to be gone): its column looks further down. */
-	/** Water was pumped away there. */
+	/** Water was turned into cobblestone there. */
 	public void pumped(BlockPos pos) {
 		pumped.merge(pos.asLong(), 1, Integer::sum);
 	}

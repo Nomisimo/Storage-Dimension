@@ -1655,9 +1655,9 @@ public class RobotEntity extends PathfinderMob {
 		BlockState state = server.getBlockState(pos);
 
 		if (MiningJob.isWater(state)) {
-			// water is not broken (that would leave it where it is) but taken away; it wears no tool
-			server.setBlockAndUpdate(pos, Blocks.AIR.defaultBlockState());
-			playSound(SoundEvents.BUCKET_FILL, 0.4F, 1.2F);
+			// water is not broken (that would leave it where it is) but filled with cobblestone, which is dug next
+			server.setBlockAndUpdate(pos, Blocks.COBBLESTONE.defaultBlockState());
+			playSound(SoundEvents.STONE_PLACE, 0.5F, 1.0F);
 			server.destroyBlockProgress(getId(), pos, -1);
 
 			if (job instanceof MiningJob area) {
