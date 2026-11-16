@@ -423,10 +423,16 @@ public class BackpackJeiTest implements FabricClientGameTest {
 		context.takeScreenshot("backpack-me-view-hover");
 		context.getInput().setCursorPos(0, 0);
 
+		// Momo: in the ME view a left-click on an item in JEI's list did not open its recipes (right-click for uses did)
+		List<String> jeiClicks = new java.util.ArrayList<>();
+		jeiClick(context, "ME view", jeiClicks);
+
 		context.runOnClient(client -> toggleView());
 		context.waitTicks(10);
 		logClientSlots(context, "view off");
 		logState(world, "view off");
+		jeiClick(context, "backpack view", jeiClicks);
+		log("CHECK jei-click " + (jeiClicks.isEmpty() ? "OK" : "FEHLT " + jeiClicks));
 		setCraftingTab(context, false);
 		context.waitTicks(10);
 		logClientSlots(context, "view off, tab closed");
@@ -508,6 +514,67 @@ public class BackpackJeiTest implements FabricClientGameTest {
 		context.runOnClient(client -> client.player.closeContainer());
 		context.waitTicks(5);
 		log("CHECK typing " + (failed.isEmpty() ? "OK" : "FEHLT " + failed));
+	}
+
+	/**
+	 * Left-clicks (twice, like a player trying again) and right-clicks an item in JEI's ingredient list, the way a
+	 * player does: left must open its recipes, right its uses. Logs what the click left behind when it did not.
+	 */
+	private static void jeiClick(ClientGameTestContext context, String where, List<String> failed) {
+		double[] at = null;
+		double scale = context.computeOnClient(client -> client.getWindow().getGuiScale());
+		int width = context.computeOnClient(client -> client.getWindow().getGuiScaledWidth());
+		int height = context.computeOnClient(client -> client.getWindow().getGuiScaledHeight());
+
+		search:
+		for (int y = 30; y < height - 30; y += 9) {
+			for (int x = width - 10; x > width / 2; x -= 9) {
+				context.getInput().setCursorPos(x * scale, y * scale);
+				boolean hit = context.computeOnClient(client -> TestJeiPlugin.runtime.getIngredientListOverlay().getIngredientUnderMouse().isPresent());
+
+				if (hit) {
+					at = new double[] {x * scale, y * scale};
+					break search;
+				}
+			}
+		}
+
+		if (at == null) {
+			log("jei-click " + where + ": no ingredient found in JEI's list");
+			failed.add(where + " (keine Zutat gefunden)");
+			return;
+		}
+
+		int[] buttons = {GLFW.GLFW_MOUSE_BUTTON_LEFT, GLFW.GLFW_MOUSE_BUTTON_LEFT, GLFW.GLFW_MOUSE_BUTTON_RIGHT};
+		String[] names = {"left", "left again", "right"};
+
+		for (int i = 0; i < buttons.length; i++) {
+			context.getInput().setCursorPos(at[0], at[1]);
+			context.waitTicks(2);
+			String hovered = context.computeOnClient(client -> String.valueOf(TestJeiPlugin.runtime.getIngredientListOverlay().getIngredientUnderMouse()
+					.map(ingredient -> ingredient.getIngredient()).orElse(null)));
+			String before = context.computeOnClient(client -> "carried=" + client.player.containerMenu.getCarried()
+					+ " focused=" + (client.screen.getFocused() == null ? "-" : client.screen.getFocused().getClass().getSimpleName())
+					+ " jeiFocus=" + TestJeiPlugin.runtime.getIngredientListOverlay().hasKeyboardFocus());
+			context.getInput().holdMouse(buttons[i]);
+			context.waitTicks(2);
+			context.getInput().releaseMouse(buttons[i]);
+			context.waitTicks(5);
+			String screen = context.computeOnClient(client -> client.screen == null ? "-" : client.screen.getClass().getName());
+			boolean recipes = screen.startsWith("mezz.jei.");
+			log("jei-click " + where + " " + names[i] + " on " + hovered + ": screen=" + screen + " (" + before + ")");
+
+			if (recipes) {
+				context.takeScreenshot("jei-click-" + where.replace(' ', '-') + "-" + i);
+				context.getInput().pressKey(GLFW.GLFW_KEY_ESCAPE);
+				context.waitFor(client -> client.screen instanceof BackpackScreen, 100);
+				context.waitTicks(5);
+			} else {
+				failed.add(where + " " + names[i]);
+			}
+		}
+
+		context.getInput().setCursorPos(0, 0);
 	}
 
 	/** JEI's search bar (an EditBox inside its ingredient list overlay), found by reflection; null if not found. */

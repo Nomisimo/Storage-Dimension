@@ -72,3 +72,7 @@ jobs:
         run: |
           grep "STORAGEDIM JEI typing" client.log
           grep -q "STORAGEDIM JEI CHECK typing OK" client.log
+      - name: a left-click on an item in JEI's list opens its recipes, also in the backpack's ME view
+        run: |
+          grep "STORAGEDIM JEI jei-click" client.log
+          grep -q "STORAGEDIM JEI CHECK jei-click OK" client.log
