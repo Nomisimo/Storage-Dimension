@@ -453,8 +453,8 @@ public class BackpackJeiTest implements FabricClientGameTest {
 		List<String> jeiClicksReal = new java.util.ArrayList<>();
 		jeiClick(context, "reopened ME", jeiClicksReal);
 		int firstMe = context.computeOnClient(client -> ((BackpackBaseMenu) client.player.containerMenu).BACKPACK_INV_START);
-		double[] slotAt = context.computeOnClient(client -> screenPos(client, firstMe));
-		context.getInput().setCursorPos(slotAt[0], slotAt[1]);
+		double[] meSlotAt = context.computeOnClient(client -> screenPos(client, firstMe));
+		context.getInput().setCursorPos(meSlotAt[0], meSlotAt[1]);
 		context.waitTicks(2);
 		context.getInput().pressMouse(GLFW.GLFW_MOUSE_BUTTON_LEFT);
 		context.waitTicks(5);
