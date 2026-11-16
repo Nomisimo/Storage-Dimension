@@ -161,9 +161,13 @@ public final class OreJob implements DigJob {
 
 	// ---- what an ore is ----
 
-	/** Ores of the game and of other mods (the common ore tag {@code c:ores}), ancient debris included. */
+	/**
+	 * Ores of the game and of other mods (the common ore tag {@code c:ores}), ancient debris included, and amethyst:
+	 * the clusters and amethyst blocks of geodes. Budding amethyst is left (it drops nothing and would no longer grow
+	 * new buds), and so are the buds that have not grown into clusters yet.
+	 */
 	public static boolean isOre(BlockState state) {
-		return state.is(ConventionalBlockTags.ORES) || state.is(BlockTags.COAL_ORES) || state.is(BlockTags.IRON_ORES) || state.is(BlockTags.COPPER_ORES)
+		return state.is(Blocks.AMETHYST_CLUSTER) || state.is(Blocks.AMETHYST_BLOCK) || state.is(ConventionalBlockTags.ORES) || state.is(BlockTags.COAL_ORES) || state.is(BlockTags.IRON_ORES) || state.is(BlockTags.COPPER_ORES)
 				|| state.is(BlockTags.GOLD_ORES) || state.is(BlockTags.REDSTONE_ORES) || state.is(BlockTags.LAPIS_ORES) || state.is(BlockTags.DIAMOND_ORES)
 				|| state.is(BlockTags.EMERALD_ORES) || state.is(Blocks.NETHER_QUARTZ_ORE) || state.is(Blocks.ANCIENT_DEBRIS);
 	}
