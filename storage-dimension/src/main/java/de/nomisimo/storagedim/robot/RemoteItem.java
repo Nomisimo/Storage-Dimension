@@ -18,6 +18,7 @@ import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.ItemStackTemplate;
 import net.minecraft.world.item.component.BundleContents;
 import net.minecraft.world.item.component.CustomData;
 import net.minecraft.world.item.component.ItemContainerContents;
@@ -79,14 +80,14 @@ public class RemoteItem extends Item {
 
 		for (TypedDataComponent<?> component : stack.getComponents()) {
 			if (component.value() instanceof ItemContainerContents contents) {
-				for (ItemStack inner : contents.nonEmptyItems()) {
-					if (carriesAuto(inner, depth + 1)) {
+				for (ItemStackTemplate inner : contents.nonEmptyItems()) {
+					if (carriesAuto(inner.create(), depth + 1)) {
 						return true;
 					}
 				}
 			} else if (component.value() instanceof BundleContents bundle) {
-				for (ItemStack inner : bundle.items()) {
-					if (carriesAuto(inner, depth + 1)) {
+				for (ItemStackTemplate inner : bundle.items()) {
+					if (carriesAuto(inner.create(), depth + 1)) {
 						return true;
 					}
 				}
