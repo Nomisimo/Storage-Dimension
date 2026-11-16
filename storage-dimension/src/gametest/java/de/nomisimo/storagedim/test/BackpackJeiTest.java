@@ -448,6 +448,35 @@ public class BackpackJeiTest implements FabricClientGameTest {
 		context.waitTicks(5);
 		reopenBackpack(context, world, "left as ME");
 		context.takeScreenshot("backpack-reopen-me");
+		// the same as a player does it: opened straight into the ME view, then real mouse clicks on an ME slot and into
+		// the own search field before trying JEI's list again
+		List<String> jeiClicksReal = new java.util.ArrayList<>();
+		jeiClick(context, "reopened ME", jeiClicksReal);
+		int firstMe = context.computeOnClient(client -> ((BackpackBaseMenu) client.player.containerMenu).BACKPACK_INV_START);
+		double[] slotAt = context.computeOnClient(client -> screenPos(client, firstMe));
+		context.getInput().setCursorPos(slotAt[0], slotAt[1]);
+		context.waitTicks(2);
+		context.getInput().pressMouse(GLFW.GLFW_MOUSE_BUTTON_LEFT);
+		context.waitTicks(5);
+		context.getInput().pressMouse(GLFW.GLFW_MOUSE_BUTTON_LEFT);
+		context.waitTicks(5);
+		jeiClick(context, "after ME slot click", jeiClicksReal);
+		double[] searchAt = context.computeOnClient(client -> client.screen.children().stream()
+				.filter(child -> child instanceof net.minecraft.client.gui.components.EditBox)
+				.map(child -> (net.minecraft.client.gui.components.EditBox) child).findFirst()
+				.map(box -> new double[] {(box.getX() + 5) * client.getWindow().getGuiScale(), (box.getY() + 5) * client.getWindow().getGuiScale()})
+				.orElse(null));
+
+		if (searchAt != null) {
+			context.getInput().setCursorPos(searchAt[0], searchAt[1]);
+			context.waitTicks(2);
+			context.getInput().pressMouse(GLFW.GLFW_MOUSE_BUTTON_LEFT);
+			context.getInput().typeChars("pl");
+			context.waitTicks(10);
+			jeiClick(context, "after own search", jeiClicksReal);
+		}
+
+		log("CHECK jei-click-real " + (jeiClicksReal.isEmpty() ? "OK" : "FEHLT " + jeiClicksReal));
 		context.runOnClient(client -> client.player.closeContainer());
 		context.waitTicks(5);
 
