@@ -27,7 +27,7 @@ import net.minecraft.world.level.block.state.BlockState;
  * getting in each other's way.
  * <p>
  * The area is the station's antenna box, or without antennas a square of its range around the station, from the
- * station's height up by the range. It is dug from the top down: for every column of the area the job knows its
+ * top of the ground down to the bottom of the world (a quarry; the station stays on its pillar). It is dug from the top down: for every column of the area the job knows its
  * highest block still to dig, and the robots take the blocks of the highest layers first, each the one closest to
  * itself that no other robot has taken.
  * <p>
@@ -328,7 +328,7 @@ public final class MiningJob implements DigJob {
 
 		while (scanned < order.length && budget[0] < SCAN_BUDGET) {
 			long column = order[scanned++];
-			Integer top = findTop(level, columnX(column), columnZ(column), maxY, budget);
+			Integer top = findTop(level, columnX(column), columnZ(column), surface(level, column), budget);
 
 			if (top == null) {
 				unloaded.add(column);
@@ -340,7 +340,7 @@ public final class MiningJob implements DigJob {
 
 		for (int n = unloaded.size(); n > 0 && budget[0] < SCAN_BUDGET; n--) {
 			long column = unloaded.poll();
-			Integer top = findTop(level, columnX(column), columnZ(column), maxY, budget);
+			Integer top = findTop(level, columnX(column), columnZ(column), surface(level, column), budget);
 
 			if (top == null) {
 				unloaded.add(column);
@@ -349,6 +349,17 @@ public final class MiningJob implements DigJob {
 				setTop(column, top);
 			}
 		}
+	}
+
+	/** The highest block of a column (from the height map), so the air above the ground is not looked through block by block. */
+	private int surface(ServerLevel level, long column) {
+		if (!level.isLoaded(new BlockPos(columnX(column), minY, columnZ(column)))) {
+			// not loaded: the height map would load it; findTop sees that and tries again later
+			return maxY;
+		}
+
+		int top = level.getHeight(net.minecraft.world.level.levelgen.Heightmap.Types.WORLD_SURFACE, columnX(column), columnZ(column)) - 1;
+		return Math.min(maxY, Math.max(top, minY));
 	}
 
 	/** A block was dug (or turned out to be gone): its column looks further down. */

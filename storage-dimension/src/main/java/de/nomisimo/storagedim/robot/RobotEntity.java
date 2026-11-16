@@ -1078,7 +1078,7 @@ public class RobotEntity extends PathfinderMob {
 		Vec3 pos = position();
 
 		// in the ore search the ground below the station belongs to its range
-		boolean below = oreSearch && station != null && pos.y < station.getY();
+		boolean below = mining && station != null && pos.y < station.getY();
 
 		if (area != null) {
 			AABB box = area.inflate(4);
@@ -1399,9 +1399,9 @@ public class RobotEntity extends PathfinderMob {
 			maxX = station.getX() + stationRange;
 			minZ = station.getZ() - stationRange;
 			maxZ = station.getZ() + stationRange;
-			// the station stands at the bottom; the area reaches as high up as the range is wide
-			minY = station.getY();
-			maxY = station.getY() + stationRange - 1;
+			// the whole square, from the top of the ground down to the bedrock (the ore search only looks below the station)
+			minY = Math.max(level().getMinY(), Integer.getInteger("storagedim.mineBottom", level().getMinY()));
+			maxY = level().getMaxY();
 		}
 
 		if (oreSearch) {
@@ -2525,7 +2525,7 @@ public class RobotEntity extends PathfinderMob {
 	 * also all the way down the staircase.
 	 */
 	private void applyRange() {
-		int depth = oreSearch && station != null ? Math.max(0, station.getY() - level().getMinY()) : 0;
+		int depth = mining && station != null ? Math.max(0, station.getY() - level().getMinY()) : 0;
 		getAttribute(Attributes.FOLLOW_RANGE).setBaseValue((area != null ? areaReach : workRange()) + 16 + depth);
 		getNavigation().updatePathfinderMaxVisitedNodes();
 	}

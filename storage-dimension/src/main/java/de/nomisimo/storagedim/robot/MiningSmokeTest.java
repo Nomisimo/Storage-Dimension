@@ -107,6 +107,8 @@ public final class MiningSmokeTest {
 			}
 		}
 
+		// the mine reaches down to the bedrock; here only the blocks on the stone floor are to go
+		System.setProperty("storagedim.mineBottom", Integer.toString(Y));
 		StorageData data = StorageData.get();
 		data.setStation(dim, station, data.station(dim, station).withRange(16).withName("Kumpel").withStationName("Grube"));
 		StationMining.Result result = StationMining.toggle(level, dim, station);
@@ -295,6 +297,7 @@ public final class MiningSmokeTest {
 	}
 
 	private static void finish(List<String> errors) {
+		System.clearProperty("storagedim.mineBottom");
 		Consumer<List<String>> callback = done;
 		done = null;
 		callback.accept(errors);
