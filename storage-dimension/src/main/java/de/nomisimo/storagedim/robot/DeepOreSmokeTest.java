@@ -35,6 +35,9 @@ public final class DeepOreSmokeTest {
 	private static final List<RobotEntity> robots = new ArrayList<>();
 	private static int ticks;
 	private static int deepest;
+	private static final java.util.Map<RobotEntity, Integer> idle = new java.util.HashMap<>();
+	/** A robot with a pickaxe that waits this long while there is still work has lost its way. */
+	private static final int IDLE_LIMIT = 2400;
 	private static Consumer<List<String>> done;
 	private static boolean running;
 
@@ -141,6 +144,18 @@ public final class DeepOreSmokeTest {
 
 		for (RobotEntity robot : robots) {
 			deepest = Math.min(deepest, robot.blockPosition().getY());
+			idle.merge(robot, 1, Integer::sum);
+
+			if (!robot.describeMining().contains("idle=true") || robot.tool(0).isEmpty()) {
+				idle.put(robot, 0);
+			}
+
+			if (idle.get(robot) > IDLE_LIMIT) {
+				pathProbe();
+				finish(List.of("Tiefe Erzsuche: Roboter wartet seit " + IDLE_LIMIT + " Ticks, obwohl noch Arbeit da ist: " + robot.describeMining() + " "
+						+ robot.status().getString() + " at " + robot.blockPosition(), "Stand: " + job.describe(level)));
+				return;
+			}
 		}
 
 		if (ticks % 400 == 0) {
@@ -149,6 +164,8 @@ public final class DeepOreSmokeTest {
 			for (RobotEntity robot : robots) {
 				StorageDimensionMod.LOGGER.info("SMOKETEST Tief-Roboter {}: {} {} at {}", ticks, robot.describeMining(), robot.status().getString(), robot.blockPosition());
 			}
+
+			pathProbe();
 		}
 
 		// the first place of the main tunnel north on the deepest level is open: the robots got all the way down
@@ -170,6 +187,58 @@ public final class DeepOreSmokeTest {
 			}
 
 			finish(errors);
+		}
+	}
+
+	/**
+	 * For a robot up at the station: how deep down the staircase a way can be worked out, standing on each step in
+	 * turn, and what the staircase looks like where it ends.
+	 */
+	private static void pathProbe() {
+		RobotEntity robot = robots.stream().filter(r -> r.getY() >= station.getY() - 1).findFirst().orElse(null);
+
+		if (robot == null) {
+			return;
+		}
+
+		OreJob job = job();
+		StringBuilder out = new StringBuilder();
+		Integer failed = null;
+
+		for (int y = station.getY() - 1; y > job.levels()[0]; y -= 4) {
+			BlockPos feet = job.step(y).above();
+
+			if (!level.getBlockState(feet).getCollisionShape(level, feet).isEmpty()) {
+				// not dug down to here yet
+				break;
+			}
+
+			net.minecraft.world.level.pathfinder.Path path = robot.getNavigation().createPath(feet, 0);
+			boolean ok = path != null && path.canReach();
+			out.append(' ').append(y).append(ok ? ":ok" : path == null ? ":null" : ":bis" + path.getEndNode().asBlockPos().getY() + "(" + path.getNodeCount() + ")");
+
+			if (!ok && failed == null) {
+				failed = y;
+			}
+		}
+
+		StorageDimensionMod.LOGGER.info("SMOKETEST Tief-Weg von {}:{}", robot.blockPosition(), out);
+
+		if (failed != null) {
+			for (int y = failed + 6; y >= failed - 2; y--) {
+				StringBuilder row = new StringBuilder();
+
+				for (int dz = -1; dz <= 1; dz++) {
+					for (int dx = -1; dx <= 1; dx++) {
+						BlockPos pos = new BlockPos(station.getX() + dx, y, station.getZ() + dz);
+						BlockPos stepPos = job.step(y);
+						String name = level.getBlockState(pos).getBlock().getDescriptionId().replace("block.minecraft.", "");
+						row.append(pos.equals(stepPos) ? "[" + name + "]" : name).append(dx == 1 ? " | " : " ");
+					}
+				}
+
+				StorageDimensionMod.LOGGER.info("SMOKETEST Tief-Treppe y={}: {}", y, row);
+			}
 		}
 	}
 

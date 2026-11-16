@@ -652,6 +652,12 @@ public final class OreJob implements DigJob {
 		return out.toString();
 	}
 
+	/** For the smoke test: the step of the staircase at a height. */
+	BlockPos step(int y) {
+		int[] cell = RING[stepIndex(y)];
+		return new BlockPos(pillar.getX() + cell[0], y, pillar.getZ() + cell[1]);
+	}
+
 	/** For the smoke test: the heights of the mining levels, deepest first. */
 	int[] levels() {
 		return levels.clone();
