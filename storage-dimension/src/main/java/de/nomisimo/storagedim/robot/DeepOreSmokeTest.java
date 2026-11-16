@@ -103,7 +103,9 @@ public final class DeepOreSmokeTest {
 
 		for (int i = 0; i < 4; i++) {
 			RobotEntity robot = Robots.ROBOT.create(level, EntitySpawnReason.SPAWN_ITEM_USE);
-			robot.snapTo(station.getX() + 0.5 + (i % 2 == 0 ? -2 : 2), station.getY(), station.getZ() + 0.5 + (i < 2 ? -2 : 2), 0, 0);
+			int x = station.getX() + (i % 2 == 0 ? -3 : 3);
+			int z = station.getZ() + (i < 2 ? -3 : 3);
+			robot.snapTo(x + 0.5, level.getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, x, z), z + 0.5, 0, 0);
 			robot.setup(null, station);
 			robot.applyConfig(config);
 			level.addFreshEntity(robot);
@@ -195,10 +197,30 @@ public final class DeepOreSmokeTest {
 	 * turn, and what the staircase looks like where it ends.
 	 */
 	private static void pathProbe() {
-		RobotEntity robot = robots.stream().filter(r -> r.getY() >= station.getY() - 1).findFirst().orElse(null);
+		RobotEntity robot = robots.stream().filter(r -> r.getY() >= station.getY() - 1 && !r.tool(0).isEmpty() && r.describeMining().contains("idle=true"))
+				.findFirst().orElse(null);
 
 		if (robot == null) {
 			return;
+		}
+
+		BlockPos at = robot.blockPosition();
+		BlockPos aside = at.relative(net.minecraft.core.Direction.SOUTH, 3);
+		net.minecraft.world.level.pathfinder.Path flat = robot.getNavigation().createPath(aside, 0);
+		StorageDimensionMod.LOGGER.info("SMOKETEST Tief-Weg Roboter {} ({}) onGround={} unten={} follow={} Weg 3 zur Seite: {}", robot.position(), at, robot.onGround(),
+				level.getBlockState(at.below()), robot.getAttributeValue(net.minecraft.world.entity.ai.attributes.Attributes.FOLLOW_RANGE),
+				flat == null ? "null" : flat.canReach() + "/" + flat.getNodeCount());
+
+		for (int dx = -2; dx <= 2; dx++) {
+			StringBuilder row = new StringBuilder();
+
+			for (int dz = -2; dz <= 2; dz++) {
+				for (int dy = -2; dy <= 1; dy++) {
+					row.append(level.getBlockState(at.offset(dx, dy, dz)).getBlock().getDescriptionId().replace("block.minecraft.", "").replace("block.storagedim.", "")).append(dy == 1 ? " | " : ",");
+				}
+			}
+
+			StorageDimensionMod.LOGGER.info("SMOKETEST Tief-Umgebung dx={} (dz -2..2, je dy -2..1): {}", dx, row);
 		}
 
 		OreJob job = job();
