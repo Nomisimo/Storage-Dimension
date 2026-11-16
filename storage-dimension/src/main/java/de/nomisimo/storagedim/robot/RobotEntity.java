@@ -184,6 +184,8 @@ public class RobotEntity extends PathfinderMob {
 	/** Items and chests it could not reach, with the game time until which it leaves them alone. */
 	private final Map<UUID, Long> ignoredItems = new HashMap<>();
 	private final Map<BlockPos, Long> ignoredChests = new HashMap<>();
+	/** Open sides of chests it could not get to (another robot sitting there, say), left out for a while. */
+	private final Map<BlockPos, Long> ignoredSides = new HashMap<>();
 	/** The way to the current item or chest, worked out once when it was chosen. */
 	private Path plannedPath;
 	private long nextSearch;
@@ -2234,7 +2236,21 @@ public class RobotEntity extends PathfinderMob {
 			getNavigation().stop();
 			long until = level().getGameTime() + IGNORE_TICKS;
 
-			if (goalKey == delivery) {
+			BlockPos failedSide = goalKey == delivery && lastSteer != null && !lastSteer.equals(Vec3.atCenterOf(delivery))
+					? BlockPos.containing(lastSteer) : null;
+
+			if (failedSide != null) {
+				// it could not get to that side of the chest: it tries another side before it gives up on the chest
+				ignoredSides.put(failedSide, until);
+			}
+
+			if (failedSide != null && openSide(delivery) != null) {
+				// on to the next side
+			} else if (goalKey == delivery) {
+				if (failedSide != null) {
+					ignoredSides.remove(failedSide);
+				}
+
 				ignoredChests.put(delivery, until);
 				delivery = planDelivery();
 			} else if (goalKey == home) {
@@ -2354,6 +2370,16 @@ public class RobotEntity extends PathfinderMob {
 
 			// the path ends on the block next to the goal; walk the last bit straight
 			if (getNavigation().isDone() && position().distanceTo(approach) < reach + 2) {
+				// an open side of the chest behind something (the station, another chest): walk round it on a path
+				if (approach != goal && position().distanceTo(approach) > 0.5 && !straightTo(approach)) {
+					Path path = getNavigation().createPath(BlockPos.containing(approach), 0);
+
+					if (path != null && path.canReach() && path.getNodeCount() > 1) {
+						getNavigation().moveTo(path, 1.0);
+						return;
+					}
+				}
+
 				getMoveControl().setWantedPosition(approach.x, approach.y, approach.z, 1.0);
 				return;
 			}
@@ -2617,10 +2643,16 @@ public class RobotEntity extends PathfinderMob {
 	 */
 	private BlockPos openSide(BlockPos chest) {
 		BlockPos best = null;
+		long now = level().getGameTime();
+		ignoredSides.values().removeIf(until -> until < now);
 
 		for (net.minecraft.core.Direction side : net.minecraft.core.Direction.Plane.HORIZONTAL) {
 			for (int dy = 0; dy >= -1; dy--) {
 				BlockPos spot = chest.relative(side).above(dy);
+
+				if (ignoredSides.containsKey(spot)) {
+					continue;
+				}
 
 				if (!level().getBlockState(spot).getCollisionShape(level(), spot).isEmpty()
 						|| !level().getBlockState(spot.above()).getCollisionShape(level(), spot.above()).isEmpty() && dy == 0) {
@@ -2667,6 +2699,17 @@ public class RobotEntity extends PathfinderMob {
 	}
 
 	/** The line from {@code from} to {@code to} runs through air until it meets the chest (or, without a chest, all the way). */
+	/** Nothing solid between its feet (and its head) and that spot, so it can walk there in a straight line. */
+	private boolean straightTo(Vec3 spot) {
+		for (double dy : new double[] {0.3, getBbHeight() - 0.1}) {
+			if (!clearTo(position().add(0, dy, 0), spot.add(0, dy, 0), null, null)) {
+				return false;
+			}
+		}
+
+		return true;
+	}
+
 	private boolean clearTo(Vec3 from, Vec3 to, BlockPos chest, BlockPos partner) {
 		var hit = level().clip(new net.minecraft.world.level.ClipContext(from, to, net.minecraft.world.level.ClipContext.Block.COLLIDER,
 				net.minecraft.world.level.ClipContext.Fluid.NONE, this));

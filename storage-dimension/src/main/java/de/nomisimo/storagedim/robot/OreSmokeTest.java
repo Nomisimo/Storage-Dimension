@@ -21,6 +21,7 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.ChestBlock;
 
 /**
@@ -240,7 +241,7 @@ public final class OreSmokeTest {
 			finish(errors);
 		} else if (ticks > TIMEOUT) {
 			for (BlockPos pos : ores) {
-				if (!level.getBlockState(pos).isAir()) {
+				if (!gone(pos)) {
 					errors.add("Erz nicht abgebaut: " + pos + " " + level.getBlockState(pos));
 				}
 			}
@@ -258,12 +259,21 @@ public final class OreSmokeTest {
 
 	private static boolean dug() {
 		for (BlockPos pos : ores) {
-			if (!level.getBlockState(pos).isAir()) {
+			if (!gone(pos)) {
 				return false;
 			}
 		}
 
 		return true;
+	}
+
+	/**
+	 * The ore there was dug: air, or cobblestone when it lay in a tunnel floor and the hole it left was filled again
+	 * so the robots can walk over it.
+	 */
+	private static boolean gone(BlockPos pos) {
+		BlockState state = level.getBlockState(pos);
+		return state.isAir() || state.is(Blocks.COBBLESTONE);
 	}
 
 	private static void finish(List<String> errors) {
