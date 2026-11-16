@@ -97,7 +97,8 @@ public final class Backpacks {
 		return false;
 	}
 
-	private static ItemStack wornTravelersBackpack(Player player) {
+	/** The Traveler's Backpack worn on the back, or empty. */
+	public static ItemStack wornTravelersBackpack(Player player) {
 		if (!lookedUp) {
 			lookedUp = true;
 
