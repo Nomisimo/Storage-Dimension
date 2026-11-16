@@ -52,9 +52,9 @@ public final class DeepOreSmokeTest {
 		station = null;
 
 		// somewhere on dry land, away from the other tests high up in the air
-		for (int i = 0; i < 16 && station == null; i++) {
-			int x = 400 + i * 48;
-			int z = 400;
+		for (int i = 0; i < 64 && station == null; i++) {
+			int x = 400 + (i % 8) * 96;
+			int z = 400 + (i / 8) * 96;
 
 			for (int cx = -1; cx <= 1; cx++) {
 				for (int cz = -1; cz <= 1; cz++) {
@@ -66,7 +66,7 @@ public final class DeepOreSmokeTest {
 			int y = level.getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, x, z);
 			BlockPos ground = new BlockPos(x, y - 1, z);
 
-			if (level.getFluidState(ground).isEmpty() && level.getFluidState(ground.above()).isEmpty() && level.getBlockState(ground).isSolidRender()) {
+			if (level.getFluidState(ground).isEmpty() && level.getFluidState(ground.above()).isEmpty() && level.getBlockState(ground).isFaceSturdy(level, ground, net.minecraft.core.Direction.UP)) {
 				station = ground.above();
 			}
 		}
