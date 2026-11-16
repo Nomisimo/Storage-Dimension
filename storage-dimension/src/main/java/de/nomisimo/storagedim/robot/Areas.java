@@ -11,6 +11,7 @@ import java.util.Set;
 import java.util.UUID;
 
 import de.nomisimo.storagedim.StorageDimensionMod;
+import de.nomisimo.storagedim.storage.Backpacks;
 import de.nomisimo.storagedim.storage.Rooms;
 import de.nomisimo.storagedim.storage.StorageData;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
@@ -274,12 +275,13 @@ public final class Areas {
 	}
 
 	private static boolean hasAutoRemote(ServerPlayer player) {
-		if (RemoteItem.isAuto(player.getOffhandItem())) {
+		// a remote in a bundle or backpack counts too, also in a Traveler's Backpack worn on the back
+		if (RemoteItem.carriesAuto(player.getOffhandItem()) || RemoteItem.carriesAuto(Backpacks.wornTravelersBackpack(player))) {
 			return true;
 		}
 
 		for (int i = 0; i < player.getInventory().getContainerSize(); i++) {
-			if (RemoteItem.isAuto(player.getInventory().getItem(i))) {
+			if (RemoteItem.carriesAuto(player.getInventory().getItem(i))) {
 				return true;
 			}
 		}

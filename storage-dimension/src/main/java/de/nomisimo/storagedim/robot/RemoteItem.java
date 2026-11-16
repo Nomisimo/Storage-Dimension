@@ -6,6 +6,7 @@ import de.nomisimo.storagedim.StorageDimensionMod;
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.Registry;
 import net.minecraft.core.component.DataComponents;
+import net.minecraft.core.component.TypedDataComponent;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.nbt.CompoundTag;
@@ -17,14 +18,17 @@ import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.component.BundleContents;
 import net.minecraft.world.item.component.CustomData;
+import net.minecraft.world.item.component.ItemContainerContents;
 import net.minecraft.world.item.component.ItemLore;
 import net.minecraft.world.level.Level;
 
 /**
  * The remote for antenna areas. Held in either hand it shows the outlines of the areas around; right-click opens
  * its screen, where areas are switched on and off and its auto mode is set: then the areas a player with this
- * remote stands in pause, and their robots wait at their station until the player has left.
+ * remote stands in pause, and their robots wait at their station until the player has left. For auto mode the remote
+ * may also sit in a bundle, a shulker box or a Traveler's Backpack (also one worn on the back).
  */
 public class RemoteItem extends Item {
 	public static final ResourceKey<Item> KEY = ResourceKey.create(Registries.ITEM, StorageDimensionMod.id("remote"));
@@ -50,6 +54,46 @@ public class RemoteItem extends Item {
 
 		CustomData data = stack.get(DataComponents.CUSTOM_DATA);
 		return data != null && data.copyTag().getBooleanOr(AUTO, false);
+	}
+
+	/**
+	 * Is this stack a remote in auto mode, or does it carry one: in a bundle, a shulker box or a Traveler's Backpack
+	 * (any item component that holds items), also nested a few levels deep.
+	 */
+	public static boolean carriesAuto(ItemStack stack) {
+		return carriesAuto(stack, 0);
+	}
+
+	private static boolean carriesAuto(ItemStack stack, int depth) {
+		if (stack.isEmpty()) {
+			return false;
+		}
+
+		if (isAuto(stack)) {
+			return true;
+		}
+
+		if (depth >= 3) {
+			return false;
+		}
+
+		for (TypedDataComponent<?> component : stack.getComponents()) {
+			if (component.value() instanceof ItemContainerContents contents) {
+				for (ItemStack inner : contents.nonEmptyItems()) {
+					if (carriesAuto(inner, depth + 1)) {
+						return true;
+					}
+				}
+			} else if (component.value() instanceof BundleContents bundle) {
+				for (ItemStack inner : bundle.items()) {
+					if (carriesAuto(inner, depth + 1)) {
+						return true;
+					}
+				}
+			}
+		}
+
+		return false;
 	}
 
 	public static void setAuto(ItemStack stack, boolean auto) {
