@@ -147,11 +147,15 @@ public class RobotEntity extends PathfinderMob {
 	/** Stacks a mining robot gathers before it takes them to the chests (besides the one in its beak). */
 	public static final int BAG_SLOTS = 9;
 	/** How far from its eyes a mining robot digs, like a player. */
-	private static final double MINE_REACH = 4.8;
+	/** How far it reaches to dig: like a player. */
+	private static final double MINE_REACH = 4.5;
 	/** Its tools, one of each: pickaxe, axe, shovel. */
 	private static final int PICKAXE = 0;
 	private static final int AXE = 1;
 	private static final int SHOVEL = 2;
+	/** Not a tool slot: torches, fetched like a tool (a stack at a time). */
+	private static final int TORCH = 3;
+	private static final int TORCH_STACK = 64;
 	private static final String[] TOOL_NAMES = {"Spitzhacke", "Axt", "Schaufel"};
 	/** The icon on both sides of the name while it has an error. */
 	public static final String ERROR_ICON = "\ue5d0";
@@ -223,6 +227,8 @@ public class RobotEntity extends PathfinderMob {
 	private int stationRange = RANGE;
 	/** Pickaxe, axe and shovel, taken from the tool chest; empty when it has none (or it broke). */
 	private final ItemStack[] tools = {ItemStack.EMPTY, ItemStack.EMPTY, ItemStack.EMPTY};
+	/** Torches for the tunnels of the strip mine, taken along with the tools when there are some. */
+	private ItemStack torches = ItemStack.EMPTY;
 	/** What it dug and has not taken to the chests yet. */
 	private final List<ItemStack> bag = new ArrayList<>();
 	/** The block it is going to dig or digging, and how far along it is. */
@@ -1327,6 +1333,10 @@ public class RobotEntity extends PathfinderMob {
 	}
 
 	private boolean hasAnyTool() {
+		if (!torches.isEmpty()) {
+			return true;
+		}
+
 		for (ItemStack tool : tools) {
 			if (!tool.isEmpty()) {
 				return true;
@@ -1395,7 +1405,9 @@ public class RobotEntity extends PathfinderMob {
 		}
 
 		if (oreSearch) {
-			return OreJob.get(Rooms.id(level()), station, minX, minZ, maxX, maxZ, level().getMinY(), level().getGameTime());
+			// the smoke test strip-mines a block of stone high up instead of the whole ground
+			int bottom = Math.max(level().getMinY(), Integer.getInteger("storagedim.stripBottom", level().getMinY()));
+			return OreJob.get(Rooms.id(level()), station, minX, minZ, maxX, maxZ, bottom, level().getGameTime());
 		}
 
 		minY = Math.max(minY, level().getMinY());
@@ -1449,13 +1461,15 @@ public class RobotEntity extends PathfinderMob {
 		}
 
 		ItemStack take(int kind) {
+			int amount = kind == TORCH ? TORCH_STACK : 1;
+
 			if (chest != null) {
 				int slot = slotWith(chest, kind);
-				return slot < 0 ? ItemStack.EMPTY : chest.removeItem(slot, 1);
+				return slot < 0 ? ItemStack.EMPTY : chest.removeItem(slot, amount);
 			}
 
 			ItemStack prototype = stored(kind);
-			ItemStack taken = prototype == null ? ItemStack.EMPTY : network.extract(prototype, 1);
+			ItemStack taken = prototype == null ? ItemStack.EMPTY : network.extract(prototype, amount);
 
 			if (!taken.isEmpty()) {
 				StorageMenu.refreshAll(network);
@@ -1505,6 +1519,7 @@ public class RobotEntity extends PathfinderMob {
 		return switch (kind) {
 			case PICKAXE -> stack.is(ItemTags.PICKAXES);
 			case AXE -> stack.is(ItemTags.AXES);
+			case TORCH -> stack.is(net.minecraft.world.item.Items.TORCH);
 			default -> stack.is(ItemTags.SHOVELS);
 		};
 	}
@@ -1517,15 +1532,19 @@ public class RobotEntity extends PathfinderMob {
 		return tools[PICKAXE].isEmpty() && (source == null || !source.has(PICKAXE)) ? List.of(TOOL_NAMES[PICKAXE]) : List.of();
 	}
 
-	/** A tool it has not got and could fetch: the pickaxe, or an axe or shovel that is there. */
+	/** A tool it has not got and could fetch: the pickaxe, or an axe or shovel that is there; torches for the strip mine. */
 	private boolean wantsTools(ToolSource source) {
+		if (source == null) {
+			return false;
+		}
+
 		for (int kind = 0; kind < tools.length; kind++) {
-			if (tools[kind].isEmpty() && source != null && source.has(kind)) {
+			if (tools[kind].isEmpty() && source.has(kind)) {
 				return true;
 			}
 		}
 
-		return false;
+		return oreSearch && torches.isEmpty() && source.has(TORCH);
 	}
 
 	private static int slotWith(Container chest, int kind) {
@@ -1546,6 +1565,10 @@ public class RobotEntity extends PathfinderMob {
 			}
 		}
 
+		if (oreSearch && torches.isEmpty()) {
+			torches = source.take(TORCH);
+		}
+
 		source.changed();
 		playSound(SoundEvents.ITEM_PICKUP, 0.4F, 1.0F);
 	}
@@ -1561,6 +1584,11 @@ public class RobotEntity extends PathfinderMob {
 			}
 		}
 
+		if (!torches.isEmpty() && !source.put(torches)) {
+			spawnAtLocation((ServerLevel) level(), torches);
+		}
+
+		torches = ItemStack.EMPTY;
 		source.changed();
 	}
 
@@ -1720,10 +1748,22 @@ public class RobotEntity extends PathfinderMob {
 		}
 	}
 
+	/** Lights the strip mine: a torch on a spot of a tunnel within reach that wants one. */
+	private void placeTorch(OreJob job) {
+		ServerLevel server = (ServerLevel) level();
+		BlockPos spot = job.torchSpot(server, getEyePosition(), MINE_REACH);
+
+		if (spot != null) {
+			server.setBlockAndUpdate(spot, Blocks.TORCH.defaultBlockState());
+			torches.shrink(1);
+			playSound(SoundEvents.WOOD_PLACE, 0.5F, 1.0F);
+		}
+	}
+
 	/** For the smoke test: its tools and bag. */
 	public String describeMining() {
 		return "mining=" + mining + " phase=" + minePhase + " target=" + mineTarget + " idle=" + mineIdle + " finished=" + mineFinished
-				+ " problem=" + (mineProblem == null ? "" : mineProblem.getString()) + " tools=" + java.util.Arrays.toString(tools) + " bag=" + bag
+				+ " problem=" + (mineProblem == null ? "" : mineProblem.getString()) + " tools=" + java.util.Arrays.toString(tools) + " torches=" + torches + " bag=" + bag
 				+ " carried=" + getCarried();
 	}
 
@@ -1835,10 +1875,14 @@ public class RobotEntity extends PathfinderMob {
 
 			if (bag.isEmpty()) {
 				oreDelivery = false;
-			} else if (job instanceof OreJob ores && ores.veinDone((ServerLevel) level(), getUUID(), blockPosition())) {
-				// like an ore golem: each vein goes home before the next one
+			} else if (job instanceof OreJob ores && ores.tunnelDone(getUUID())) {
+				// after each tunnel its ores go home before the next one
 				oreDelivery = true;
 				return false;
+			}
+
+			if (job instanceof OreJob ores && !torches.isEmpty()) {
+				placeTorch(ores);
 			}
 
 			List<BlockPos> candidates = job.candidates((ServerLevel) level(), blockPosition(), getUUID(), PATH_CHECKS, now);
@@ -2828,6 +2872,11 @@ public class RobotEntity extends PathfinderMob {
 			}
 		}
 
+		if (!torches.isEmpty()) {
+			all.add(torches);
+			torches = ItemStack.EMPTY;
+		}
+
 		return all;
 	}
 
@@ -2860,6 +2909,7 @@ public class RobotEntity extends PathfinderMob {
 		output.putBoolean("FilterExclude", excludeFilter);
 		output.store("Tools", ItemStack.OPTIONAL_CODEC.listOf(), List.of(tools));
 		output.store("Bag", ItemStack.CODEC.listOf(), List.copyOf(bag));
+		output.store("Torches", ItemStack.OPTIONAL_CODEC, torches);
 	}
 
 	@Override
@@ -2882,5 +2932,6 @@ public class RobotEntity extends PathfinderMob {
 
 		bag.clear();
 		bag.addAll(input.read("Bag", ItemStack.CODEC.listOf()).orElse(List.of()));
+		torches = input.read("Torches", ItemStack.OPTIONAL_CODEC).orElse(ItemStack.EMPTY);
 	}
 }

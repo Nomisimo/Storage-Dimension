@@ -40,8 +40,9 @@ public final class StationMining {
 		if (config.mining()) {
 			data.setStation(dim, station, config.withOreSearch(true));
 			OreJob.reset(dim, station);
-			return new Result(true, Component.literal("Erzsuche: Die Roboter spüren die Erze unter der Station auf, graben eine Wendeltreppe "
-					+ "nach unten und Gänge zu den Erzen. Nur die Erze kommen in die Kisten.").withStyle(ChatFormatting.AQUA));
+			return new Result(true, Component.literal("Erzsuche: Die Roboter graben eine Wendeltreppe bis kurz über das Grundgestein und dort "
+					+ "ein Raster aus Gängen über den ganzen Bereich (Strip Mining), dann die nächste Ebene darüber. Sie bauen die Erze ab, "
+					+ "die sie in den Gängen sehen. Nur die Erze kommen in die Kisten. Fackeln nehmen sie aus der Filterkiste mit.").withStyle(ChatFormatting.AQUA));
 		}
 
 		BlockPos filter = filterChestBeside(level, dim, station);

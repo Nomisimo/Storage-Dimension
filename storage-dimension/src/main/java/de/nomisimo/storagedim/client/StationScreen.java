@@ -90,8 +90,8 @@ public class StationScreen extends AbstractContainerScreen<StationMenu> {
 						+ "lassen eine Wendeltreppe zur Station stehen und bringen alles in die Kisten. "
 						+ "Wasser pumpen sie dabei ab. Pro Roboter braucht es eine Spitzhacke (Axt und Schaufel gehen schneller): aus einer Filterkiste "
 						+ "neben der Station (aus dem ME-Speicher) oder aus der Werkzeugkiste, die sich sonst neben der Station aufstellt. "
-						+ "Erzsuche: sie spüren die Erze unter der Station auf, graben eine Wendeltreppe nach unten und Gänge zu den Erzen, "
-						+ "folgen jeder Ader und bringen nur die Erze heim. Klick: nächster Modus")))
+						+ "Erzsuche: Strip Mining unter der Station: Wendeltreppe bis kurz über das Grundgestein, dort Gänge über den ganzen Bereich, "
+						+ "Erze, die sie in den Gängen sehen, bringen sie heim. Klick: nächster Modus")))
 				.build());
 		addRenderableWidget(Button.builder(Component.literal("Zurückrufen"), b -> send(StationMenu.ACTION_RECALL, 0, ""))
 				.bounds(l + 8, t + StationMenu.BUTTONS_Y, 78, 14)

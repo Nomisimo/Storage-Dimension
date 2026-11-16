@@ -24,22 +24,17 @@ import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.ChestBlock;
 
 /**
- * Smoke test of the ore search (CI, after the mining test): high above the overworld a station on a block of stone
- * with a few ores inside it. The robots have to dig down the staircase and tunnels to the iron, the diamond and both
- * coal ores (a vein of two) and to an iron ore further out and deep below (the way there runs through the rock, so a
- * robot must find a path to blocks with rock above them), bring home only the ores (no stone), and leave the gold ore
- * next to a pocket of lava alone. Their only tools are two pickaxes, taken from a filter chest west of the station
- * (out of its ME storage). Switched back to collecting, the pickaxes go back into the ME storage.
- * <p>
- * A probe checks that the search goes on past chunks that are not loaded: an ore in a loaded chunk behind unloaded
- * ones must still be found.
+ * Smoke test of the strip mine (CI, after the mining test): high above the overworld a station on a block of stone 35
+ * wide and 14 deep; the mine's bottom is set to the bottom of the stone, so there is one mining level 8 below the
+ * station. The robots dig the staircase down and the grid of tunnels, and get the ores that show in the tunnels'
+ * walls, floor and ceiling (iron, diamond, a vein of two coal ores, a far iron, a gold ore behind a pocket of lava),
+ * but not an emerald ore deep in the rock between the tunnels: they cannot see through the rock. The lava next to a
+ * tunnel and a pocket of water become cobblestone. Only the ores come home (no stone), torches go up in the tunnels.
+ * Their only tools are two pickaxes, taken with the torches from a filter chest west of the station (out of its ME
+ * storage). Switched back to collecting, the pickaxes go back into the ME storage.
  */
 public final class OreSmokeTest {
 	private static final int TIMEOUT = 9600;
-	/** Far from everything: only the chunk of this spot and one three chunks east of it are loaded, for the search probe. */
-	private static final BlockPos PROBE = new BlockPos(2008, 100, 2008);
-	private static final BlockPos PROBE_ORE = PROBE.offset(48, -30, 0);
-	private static boolean probeDone;
 	private static StorageNetwork network;
 	private static final int Y = 290;
 
@@ -47,8 +42,9 @@ public final class OreSmokeTest {
 	private static BlockPos station;
 	private static final List<RobotEntity> robots = new ArrayList<>();
 	private static final List<BlockPos> ores = new ArrayList<>();
-	private static BlockPos gold;
+	private static BlockPos hidden;
 	private static BlockPos lava;
+	private static BlockPos water;
 	private static int ticks;
 	private static int stage;
 	private static Consumer<List<String>> done;
@@ -69,27 +65,33 @@ public final class OreSmokeTest {
 			}
 		}
 
-		level.setChunkForced(PROBE.getX() >> 4, PROBE.getZ() >> 4, true);
-		level.setChunkForced(PROBE_ORE.getX() >> 4, PROBE_ORE.getZ() >> 4, true);
+		System.setProperty("storagedim.stripBottom", Integer.toString(Y - 14));
 
-		// a block of stone under the station, 29 wide and 14 deep
-		for (int dx = -14; dx <= 14; dx++) {
-			for (int dz = -14; dz <= 14; dz++) {
+		// a block of stone under the station, 35 wide and 14 deep
+		for (int dx = -17; dx <= 17; dx++) {
+			for (int dz = -17; dz <= 17; dz++) {
 				for (int dy = -14; dy <= -1; dy++) {
 					level.setBlockAndUpdate(station.offset(dx, dy, dz), Blocks.STONE.defaultBlockState());
 				}
 			}
 		}
 
-		ore(station.offset(4, -3, 0), Blocks.IRON_ORE);
-		ore(station.offset(-3, -6, 2), Blocks.DIAMOND_ORE);
-		ore(station.offset(0, -4, -4), Blocks.COAL_ORE);
-		ore(station.offset(0, -4, -5), Blocks.COAL_ORE);
-		ore(station.offset(-13, -11, 1), Blocks.IRON_ORE);
-		gold = station.offset(4, -2, 4);
-		lava = station.offset(5, -2, 4);
-		level.setBlockAndUpdate(gold, Blocks.GOLD_ORE.defaultBlockState());
+		// the tunnels: feet at Y - 8, head at Y - 7; the main one north and south at x 0, side ones every 3 blocks of z
+		ore(station.offset(5, -7, 1), Blocks.IRON_ORE);
+		ore(station.offset(-6, -9, 3), Blocks.DIAMOND_ORE);
+		ore(station.offset(0, -6, -7), Blocks.COAL_ORE);
+		ore(station.offset(0, -5, -7), Blocks.COAL_ORE);
+		ore(station.offset(-13, -7, 6), Blocks.IRON_ORE);
+		// in the wall of the tunnel at z -3, with lava behind it next to the tunnel at z -6
+		ore(station.offset(4, -7, -4), Blocks.GOLD_ORE);
+		lava = station.offset(4, -7, -5);
 		level.setBlockAndUpdate(lava, Blocks.LAVA.defaultBlockState());
+		// water beside the tunnel west at z 0
+		water = station.offset(-4, -7, -1);
+		level.setBlockAndUpdate(water, Blocks.WATER.defaultBlockState());
+		// two blocks from every tunnel: no robot can see it
+		hidden = station.offset(8, -12, 8);
+		level.setBlockAndUpdate(hidden, Blocks.EMERALD_ORE.defaultBlockState());
 
 		level.setBlockAndUpdate(station, RobotStationBlock.BLOCK.defaultBlockState());
 		level.setBlockAndUpdate(station.east(), Blocks.CHEST.defaultBlockState().setValue(ChestBlock.FACING, net.minecraft.core.Direction.EAST));
@@ -101,10 +103,12 @@ public final class OreSmokeTest {
 		level.setBlockAndUpdate(filterPos, Blocks.CHEST.defaultBlockState().setValue(ChestBlock.FACING, net.minecraft.core.Direction.WEST));
 		FilterChests.FilterChest filterChest = FilterChests.FilterChest.empty(player);
 		filterChest.filters().set(0, new ItemStack(Items.IRON_PICKAXE));
+		filterChest.filters().set(1, new ItemStack(Items.TORCH));
 		data.setFilterChest(dim, filterPos, filterChest);
 		network = data.networkFor(player);
 		network.insert(new ItemStack(Items.IRON_PICKAXE));
 		network.insert(new ItemStack(Items.IRON_PICKAXE));
+		network.insert(new ItemStack(Items.TORCH, 64));
 		data.setStation(dim, station, data.station(dim, station).withRange(16).withName("Erzi").withStationName("Erzgrube"));
 		List<String> errors = new ArrayList<>();
 		// collecting, then mining (the tool chest is set up), then the ore search
@@ -173,41 +177,45 @@ public final class OreSmokeTest {
 		Container loot = (Container) level.getBlockEntity(station.east());
 		List<String> errors = new ArrayList<>();
 
-		if (!probeDone && level.isLoaded(PROBE) && level.isLoaded(PROBE_ORE)) {
-			probeDone = true;
-			String problem = probe();
-
-			if (problem != null) {
-				finish(List.of(problem));
-				return;
-			}
-		}
-
 		if (stage == 0 && ticks == 400 && robots.stream().anyMatch(r -> r.tool(0).isEmpty())) {
 			finish(List.of("Roboter haben keine Spitzhacke aus der Filterkiste geholt: " + robots.get(0).describeMining()));
 			return;
 		}
 
-		if (stage == 0 && probeDone && dug() && count(loot, Items.RAW_IRON) > 0 && count(loot, Items.DIAMOND) > 0 && count(loot, Items.COAL) > 0) {
+		if (stage == 0 && dug() && count(loot, Items.RAW_IRON) > 0 && count(loot, Items.RAW_GOLD) > 0 && count(loot, Items.DIAMOND) > 0 && count(loot, Items.COAL) > 0) {
 			for (Item spoil : List.of(Items.COBBLESTONE, Items.STONE)) {
 				if (count(loot, spoil) > 0) {
 					errors.add("Kiste hat " + spoil + ", die Erzsuche soll nur Erze heimbringen");
 				}
 			}
 
-			if (!level.getBlockState(gold).is(Blocks.GOLD_ORE)) {
-				errors.add("Golderz neben der Lava wurde abgebaut");
+			if (!level.getBlockState(hidden).is(Blocks.EMERALD_ORE)) {
+				errors.add("Smaragderz tief im Fels wurde abgebaut: die Roboter dürfen nicht durch den Fels sehen");
 			}
 
-			if (!level.getBlockState(lava).is(Blocks.LAVA)) {
-				errors.add("Lava ist nicht mehr an ihrem Platz: " + level.getBlockState(lava));
+			if (!level.getFluidState(lava).isEmpty()) {
+				errors.add("Lava neben dem Gang wurde nicht zu Bruchstein: " + level.getBlockState(lava));
+			}
+
+			if (!level.getFluidState(water).isEmpty()) {
+				errors.add("Wasser neben dem Gang wurde nicht zu Bruchstein: " + level.getBlockState(water));
+			}
+
+			int torchCount = 0;
+
+			for (BlockPos pos : BlockPos.betweenClosed(station.offset(-17, -8, -17), station.offset(17, -8, 17))) {
+				torchCount += level.getBlockState(pos).is(Blocks.TORCH) ? 1 : 0;
+			}
+
+			if (torchCount == 0) {
+				errors.add("Keine Fackeln in den Gängen");
 			}
 
 			if (!level.getBlockState(station).is(RobotStationBlock.BLOCK) || level.getBlockState(station.below()).isAir()) {
 				errors.add("Station oder die Säule darunter wurde abgebaut");
 			}
 
-			StorageDimensionMod.LOGGER.info("SMOKETEST Erzsuche fertig nach {} Ticks", ticks);
+			StorageDimensionMod.LOGGER.info("SMOKETEST Erzsuche fertig nach {} Ticks, {} Fackeln", ticks, torchCount);
 
 			if (!errors.isEmpty()) {
 				finish(errors);
@@ -243,35 +251,9 @@ public final class OreSmokeTest {
 				errors.add("Roboter: " + robot.describeMining() + " " + robot.status().getString() + " " + robot.describe() + " at " + robot.blockPosition());
 			}
 
-			if (!probeDone) {
-				errors.add("Chunks für die Suchprobe nicht geladen");
-			}
-
 			errors.add(0, "Erzsuche-Test nach " + ticks + " Ticks nicht fertig (Stufe " + stage + ")");
 			finish(errors);
 		}
-	}
-
-	/**
-	 * The search of an area three chunks around a spot where only its own chunk and one at the east edge are loaded:
-	 * the ore in that one must be found although unloaded chunks come before it. Null when it is.
-	 */
-	private static String probe() {
-		level.setBlockAndUpdate(PROBE_ORE, Blocks.DIAMOND_ORE.defaultBlockState());
-		String dim = "smoketest-probe";
-		OreJob job = OreJob.get(dim, PROBE, PROBE.getX() - 48, PROBE.getZ() - 48, PROBE.getX() + 48, PROBE.getZ() + 48, level.getMinY(),
-				level.getGameTime());
-
-		for (int i = 0; i < 200 && !job.knows(PROBE_ORE); i++) {
-			job.scan(level);
-		}
-
-		boolean found = job.knows(PROBE_ORE);
-		OreJob.reset(dim, PROBE);
-		level.setChunkForced(PROBE.getX() >> 4, PROBE.getZ() >> 4, false);
-		level.setChunkForced(PROBE_ORE.getX() >> 4, PROBE_ORE.getZ() >> 4, false);
-		StorageDimensionMod.LOGGER.info("SMOKETEST Erzsuche-Probe: Erz hinter ungeladenen Chunks {}", found ? "gefunden" : "NICHT gefunden");
-		return found ? null : "Erzsuche findet kein Erz hinter ungeladenen Chunks (Suche bleibt am ersten ungeladenen Chunk hängen)";
 	}
 
 	private static boolean dug() {
@@ -285,6 +267,7 @@ public final class OreSmokeTest {
 	}
 
 	private static void finish(List<String> errors) {
+		System.clearProperty("storagedim.stripBottom");
 		Consumer<List<String>> callback = done;
 		done = null;
 		callback.accept(errors);

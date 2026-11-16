@@ -1,15 +1,12 @@
 package de.nomisimo.storagedim.robot;
 
-import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.TreeSet;
 import java.util.UUID;
 
 import net.fabricmc.fabric.api.tag.convention.v2.ConventionalBlockTags;
@@ -20,34 +17,41 @@ import net.minecraft.tags.BlockTags;
 import net.minecraft.tags.FluidTags;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.FallingBlock;
+import net.minecraft.world.level.block.LiquidBlock;
 import net.minecraft.world.level.block.state.BlockState;
-import net.minecraft.world.level.chunk.LevelChunk;
-import net.minecraft.world.level.chunk.LevelChunkSection;
 
 /**
- * The ore search of a station's mining robots: they sense the ores in the ground below the station (the station's
- * area, or the square of its range, from the station down to the bottom of the world), dig a spiral staircase down
- * around the station's column and from it a tunnel to each ore, nearest (and most valuable) first. Once at an ore
- * they follow its vein. Only ores are brought home; the stone of the tunnels is not kept.
+ * Strip mining below a station, like a player would do it, without seeing through the rock: the robots dig a spiral
+ * staircase down around the station's column to a mining level, and there a grid of tunnels over the whole area (the
+ * station's square of its range, or its antenna box): a main tunnel north and south through the staircase, and from
+ * it side tunnels east and west every {@value #SPACING} blocks, so that every block of the level is next to a
+ * tunnel. Ores show up in the walls, floor and ceiling of the tunnels; a robot digs those it sees (they touch an open
+ * block) within a player's reach, and so follows each vein it comes across. Only the ores are brought home; the stone
+ * of the tunnels is not kept.
  * <p>
- * The staircase is the one of {@link MiningJob}: the eight columns around the station's column, one step every eight
- * blocks in each, so the robots walk down in a spiral. A tunnel starts on the step at the ore's height (or a few
- * blocks above it, so it leaves the staircase towards the ore) and is two blocks high, so players can walk it too.
- * Missing steps and floor over caves are filled with cobblestone. Nothing next to lava is dug, and an ore that can
- * only be got at through lava (or unbreakable blocks) is left.
+ * The levels are {@value #LEVEL_GAP} blocks apart, the deepest first (diamonds), up to just below the station. When
+ * every tunnel of a level has reached the edge of the area (or lava, bedrock, a chest), the staircase goes on to the
+ * next level. Each robot has a tunnel of its own, up to 32 work at the same time; after each tunnel it takes its ores
+ * home. Missing steps and the floor over caves and lava are filled with cobblestone, and before a robot opens a block
+ * of the staircase or a tunnel, water and lava in it and around it become cobblestone, so the mine is never flooded.
+ * A torch goes up every {@value #TORCH_GAP} blocks of a tunnel when the robots have torches.
  */
 public final class OreJob implements DigJob {
 	private static final int[][] RING = MiningJob.RING;
 	private static final int SKIP_TICKS = 1200;
 	private static final int FORGET_TICKS = 6000;
-	/** Block reads per call while the ground is searched for ores. */
-	private static final int SCAN_BUDGET = 20000;
-	/** How far around a robot the rest of a vein is looked for. */
-	private static final int VEIN = 5;
-	/** Ores looked at per call when a robot needs a new one. */
-	private static final int PICK_CHECKS = 2000;
-	/** A tunnel this long is given up. */
-	private static final int MAX_TUNNEL = 400;
+	/** Blocks between two side tunnels are {@code SPACING - 1}: two, so each one is in a tunnel's wall. */
+	static final int SPACING = 3;
+	/** Height between two mining levels. */
+	static final int LEVEL_GAP = 16;
+	/** The deepest level is this far above the bottom of the area (above the bedrock). */
+	private static final int LEVEL_FLOOR = 6;
+	/** How far around itself a robot looks for ores it can see. */
+	private static final int SIGHT = 4;
+	/** A torch every this many places along a tunnel. */
+	static final int TORCH_GAP = 8;
+	/** Tunnel places a robot goes through per call. */
+	private static final int STEPS = 32;
 
 	private static final Map<String, OreJob> JOBS = new HashMap<>();
 
@@ -59,41 +63,42 @@ public final class OreJob implements DigJob {
 	private final int maxY;
 	private final int maxZ;
 	private final BlockPos pillar;
-	/** Chunk columns (x, z packed) in the order they are searched: closest to the station first. */
-	private final long[] chunks;
-	private int searched;
-	/** Chunks that were not loaded when their turn came: searched once they are. */
-	private final ArrayDeque<Long> unloaded = new ArrayDeque<>();
-	/** Ores found, best first. */
-	private final TreeSet<long[]> ores = new TreeSet<>(Comparator.<long[]>comparingLong(o -> o[1]).thenComparingLong(o -> o[0]));
-	private final Set<Long> known = new HashSet<>();
-	/** Ores that cannot be got at (lava, bedrock, ...). */
-	private final Set<Long> bad = new HashSet<>();
-	private final Map<UUID, Tunnel> tunnels = new HashMap<>();
+	/** The heights a robot stands at in the tunnels (feet), deepest first. */
+	private final int[] levels;
+	private int level;
+	/** The tunnels of the current level, in the order they are handed out. */
+	private List<Tunnel> plan;
+	private final Map<UUID, Tunnel> working = new HashMap<>();
+	/** Robots whose tunnel is finished: they take their ores home before the next one. */
+	private final Set<UUID> tunnelDone = new HashSet<>();
 	private final Map<Long, UUID> claimed = new HashMap<>();
 	private final Map<Long, Long> skipped = new HashMap<>();
-	/** No ore left that a robot could go for. */
-	private boolean exhausted;
+	/** Places in the tunnels that get a torch once a robot with torches comes by. */
+	private final Set<Long> torchSpots = new HashSet<>();
 	private long lastUsed;
 
-	/** The way from the staircase to one ore. */
-	private static final class Tunnel {
-		final BlockPos ore;
-		/** The robot stands here (on a step of the staircase) where the tunnel begins. */
+	/** One straight tunnel of a level, two blocks high. */
+	static final class Tunnel {
 		final BlockPos start;
-		/** The axis it first leaves the staircase along, until two blocks away from the pillar. */
-		final Direction.Axis out;
-		/** Where a robot stands along the tunnel, in order; the last is how far it has got. */
-		final List<BlockPos> cells = new ArrayList<>();
+		final Direction dir;
+		final int length;
+		/** The tunnel it branches off from, and how far that one must be open first; null for those from the staircase. */
+		final Tunnel parent;
+		final int parentCell;
+		/** Places from the start that are open. */
+		int open;
+		boolean done;
 
-		Tunnel(BlockPos ore, BlockPos start, Direction.Axis out) {
-			this.ore = ore;
+		Tunnel(BlockPos start, Direction dir, int length, Tunnel parent, int parentCell) {
 			this.start = start;
-			this.out = out;
+			this.dir = dir;
+			this.length = length;
+			this.parent = parent;
+			this.parentCell = parentCell;
 		}
 
-		BlockPos head() {
-			return cells.isEmpty() ? start : cells.get(cells.size() - 1);
+		BlockPos cell(int i) {
+			return start.relative(dir, i);
 		}
 	}
 
@@ -121,23 +126,21 @@ public final class OreJob implements DigJob {
 		}
 
 		this.pillar = new BlockPos(px, station.getY(), pz);
-		List<long[]> columns = new ArrayList<>();
-		int scx = station.getX() >> 4;
-		int scz = station.getZ() >> 4;
+		List<Integer> heights = new ArrayList<>();
 
-		for (int cx = minX >> 4; cx <= maxX >> 4; cx++) {
-			for (int cz = minZ >> 4; cz <= maxZ >> 4; cz++) {
-				long dx = cx - scx;
-				long dz = cz - scz;
-				columns.add(new long[] {column(cx, cz), dx * dx + dz * dz});
+		for (int y = minY + LEVEL_FLOOR; y <= station.getY() - 4; y += LEVEL_GAP) {
+			// on a height where the step above the robot's head is on a corner of the staircase, never in a tunnel's mouth
+			int feet = Math.floorMod(y - station.getY(), 2) == 0 ? y : y + 1;
+
+			if (feet <= station.getY() - 4) {
+				heights.add(feet);
 			}
 		}
 
-		columns.sort(Comparator.comparingLong(c -> c[1]));
-		chunks = columns.stream().mapToLong(c -> c[0]).toArray();
+		levels = heights.stream().mapToInt(Integer::intValue).toArray();
 	}
 
-	/** The ore search below a station: the footprint of its area (inclusive bounds), from the station down to {@code bottom}. */
+	/** The strip mine below a station: the footprint of its area (inclusive bounds), from the station down to {@code bottom}. */
 	public static OreJob get(String dim, BlockPos station, int minX, int minZ, int maxX, int maxZ, int bottom, long now) {
 		JOBS.values().removeIf(job -> now - job.lastUsed > FORGET_TICKS);
 		String key = dim + "@" + station.asLong();
@@ -158,24 +161,11 @@ public final class OreJob implements DigJob {
 
 	// ---- what an ore is ----
 
-	/** Ores of the game and of other mods (the common ore tag), ancient debris included. */
+	/** Ores of the game and of other mods (the common ore tag {@code c:ores}), ancient debris included. */
 	public static boolean isOre(BlockState state) {
 		return state.is(ConventionalBlockTags.ORES) || state.is(BlockTags.COAL_ORES) || state.is(BlockTags.IRON_ORES) || state.is(BlockTags.COPPER_ORES)
 				|| state.is(BlockTags.GOLD_ORES) || state.is(BlockTags.REDSTONE_ORES) || state.is(BlockTags.LAPIS_ORES) || state.is(BlockTags.DIAMOND_ORES)
 				|| state.is(BlockTags.EMERALD_ORES) || state.is(Blocks.NETHER_QUARTZ_ORE) || state.is(Blocks.ANCIENT_DEBRIS);
-	}
-
-	/** Rare ores count as closer, so the robots go for diamonds before the coal right next to them. */
-	private static int value(BlockState state) {
-		if (state.is(BlockTags.DIAMOND_ORES) || state.is(BlockTags.EMERALD_ORES) || state.is(Blocks.ANCIENT_DEBRIS)) {
-			return 4;
-		}
-
-		if (state.is(BlockTags.GOLD_ORES) || state.is(BlockTags.REDSTONE_ORES) || state.is(BlockTags.LAPIS_ORES)) {
-			return 2;
-		}
-
-		return 1;
 	}
 
 	@Override
@@ -186,12 +176,7 @@ public final class OreJob implements DigJob {
 	// ---- what may be dug ----
 
 	private boolean contains(BlockPos pos) {
-		// the tunnels may start on the top step, one block higher than the deepest ore searched for
 		return pos.getX() >= minX && pos.getX() <= maxX && pos.getY() >= minY && pos.getY() <= maxY + 2 && pos.getZ() >= minZ && pos.getZ() <= maxZ;
-	}
-
-	private boolean inShaft(int x, int z) {
-		return Math.abs(x - pillar.getX()) <= 1 && Math.abs(z - pillar.getZ()) <= 1;
 	}
 
 	private int stepIndex(int y) {
@@ -272,6 +257,7 @@ public final class OreJob implements DigJob {
 		return level.getBlockState(pos).getCollisionShape(level, pos).isEmpty() && !lava(level, pos);
 	}
 
+	/** Can be seen: one of its sides is open. */
 	private static boolean exposed(ServerLevel level, BlockPos pos) {
 		for (Direction side : Direction.values()) {
 			BlockPos next = pos.relative(side);
@@ -284,129 +270,144 @@ public final class OreJob implements DigJob {
 		return false;
 	}
 
-	/** Fills a hole (air, water, plants) with cobblestone, for a step or a tunnel floor. */
+	/** Fills a hole (air, water, lava, plants) with cobblestone, for a step or a tunnel floor: a bridge over caves and lava. */
 	private void fill(ServerLevel level, BlockPos pos) {
 		BlockState state = level.getBlockState(pos);
 
-		if (contains(pos) && level.isLoaded(pos) && state.canBeReplaced() && !lava(level, pos)) {
+		if (contains(pos) && level.isLoaded(pos) && state.canBeReplaced()) {
 			level.setBlockAndUpdate(pos, Blocks.COBBLESTONE.defaultBlockState());
 		}
 	}
 
-	// ---- searching the ground ----
-
-	private static long column(int x, int z) {
-		return (long) x << 32 | z & 0xFFFFFFFFL;
+	/** Water or lava as a block of its own (not a waterlogged block). */
+	private static boolean liquid(BlockState state) {
+		return state.getBlock() instanceof LiquidBlock;
 	}
 
 	/**
-	 * Searches more chunks for ores, closest to the station first. A chunk that is not loaded yet goes to the back
-	 * and is tried again on the next calls. (It used to be swapped with the last chunk, which bounced two unloaded
-	 * chunks back and forth and stopped the search there for good, so only the ores near the station were found.)
+	 * Seals the blocks a robot is about to open: water and lava in them and all around them become cobblestone, so
+	 * nothing runs into the mine. The cobblestone in the way is dug like stone, which takes the water away.
 	 */
-	void scan(ServerLevel level) {
-		int[] budget = {0};
+	private void seal(ServerLevel level, List<BlockPos> blocks) {
+		for (BlockPos pos : blocks) {
+			sealOne(level, pos);
 
-		while (searched < chunks.length && budget[0] < SCAN_BUDGET) {
-			long column = chunks[searched++];
-
-			if (!search(level, column, budget)) {
-				unloaded.add(column);
-				budget[0] += 16;
-			}
-		}
-
-		for (int n = unloaded.size(); n > 0 && budget[0] < SCAN_BUDGET; n--) {
-			long column = unloaded.poll();
-
-			if (!search(level, column, budget)) {
-				unloaded.add(column);
-				budget[0] += 16;
+			for (Direction side : Direction.values()) {
+				sealOne(level, pos.relative(side));
 			}
 		}
 	}
 
-	/** Searches one chunk of the area for ores; false when it is not loaded. */
-	private boolean search(ServerLevel level, long column, int[] budget) {
-		int cx = (int) (column >> 32);
-		int cz = (int) column;
-		LevelChunk chunk = level.getChunkSource().getChunkNow(cx, cz);
-
-		if (chunk == null) {
-			return false;
+	private void sealOne(ServerLevel level, BlockPos pos) {
+		if (contains(pos) && level.isLoaded(pos) && liquid(level.getBlockState(pos))) {
+			level.setBlockAndUpdate(pos, Blocks.COBBLESTONE.defaultBlockState());
 		}
+	}
 
-		int x0 = Math.max(minX, cx << 4);
-		int x1 = Math.min(maxX, (cx << 4) + 15);
-		int z0 = Math.max(minZ, cz << 4);
-		int z1 = Math.min(maxZ, (cz << 4) + 15);
-		BlockPos.MutableBlockPos pos = new BlockPos.MutableBlockPos();
+	// ---- the tunnels of a level ----
 
-		for (int sy = maxY >> 4; sy >= minY >> 4; sy--) {
-			int index = chunk.getSectionIndexFromSectionY(sy);
+	/** The tunnels at a height, the main ones and those closest to the staircase first. */
+	private List<Tunnel> planLevel(int y) {
+		List<Tunnel> tunnels = new ArrayList<>();
+		int px = pillar.getX();
+		int pz = pillar.getZ();
+		Tunnel north = add(tunnels, new BlockPos(px, y, pz - 2), Direction.NORTH, pz - 2 - minZ + 1, null, 0);
+		Tunnel south = add(tunnels, new BlockPos(px, y, pz + 2), Direction.SOUTH, maxZ - (pz + 2) + 1, null, 0);
+		add(tunnels, new BlockPos(px + 2, y, pz), Direction.EAST, maxX - (px + 2) + 1, null, 0);
+		add(tunnels, new BlockPos(px - 2, y, pz), Direction.WEST, px - 2 - minX + 1, null, 0);
 
-			if (index < 0 || index >= chunk.getSections().length) {
-				continue;
-			}
-
-			LevelChunkSection section = chunk.getSection(index);
-			budget[0]++;
-
-			if (section.hasOnlyAir() || !section.maybeHas(OreJob::isOre)) {
-				continue;
-			}
-
-			int y0 = Math.max(minY, sy << 4);
-			int y1 = Math.min(maxY, (sy << 4) + 15);
-
-			for (int y = y1; y >= y0; y--) {
-				for (int x = x0; x <= x1; x++) {
-					for (int z = z0; z <= z1; z++) {
-						budget[0]++;
-						BlockState state = section.getBlockState(x & 15, y & 15, z & 15);
-
-						if (isOre(state) && !inShaft(x, z)) {
-							pos.set(x, y, z);
-							add(pos.immutable(), state);
-						}
-					}
+		for (int d = SPACING; pz - d >= minZ || pz + d <= maxZ; d += SPACING) {
+			for (Tunnel main : new Tunnel[] {north, south}) {
+				if (main == null || d - 2 >= main.length) {
+					continue;
 				}
+
+				int z = main.dir == Direction.NORTH ? pz - d : pz + d;
+				add(tunnels, new BlockPos(px + 1, y, z), Direction.EAST, maxX - (px + 1) + 1, main, d - 2);
+				add(tunnels, new BlockPos(px - 1, y, z), Direction.WEST, px - 1 - minX + 1, main, d - 2);
 			}
 		}
 
-		return true;
+		return tunnels;
 	}
 
-	private void add(BlockPos pos, BlockState state) {
-		if (known.add(pos.asLong())) {
-			long dx = pos.getX() - station.getX();
-			long dy = pos.getY() - station.getY();
-			long dz = pos.getZ() - station.getZ();
-			ores.add(new long[] {pos.asLong(), (dx * dx + dz * dz + dy * dy) / value(state)});
-			exhausted = false;
+	private static Tunnel add(List<Tunnel> tunnels, BlockPos start, Direction dir, int length, Tunnel parent, int parentCell) {
+		if (length <= 0) {
+			return null;
 		}
+
+		Tunnel tunnel = new Tunnel(start, dir, length, parent, parentCell);
+		tunnels.add(tunnel);
+		return tunnel;
 	}
 
-	@Override
-	public boolean finished() {
-		return searched >= chunks.length && unloaded.isEmpty() && exhausted && tunnels.isEmpty();
+	/** The tunnels of the level being worked on; moves on to the next level once all are done. Null when all levels are. */
+	private List<Tunnel> currentPlan() {
+		while (level < levels.length) {
+			if (plan == null) {
+				plan = planLevel(levels[level]);
+			}
+
+			if (plan.stream().anyMatch(t -> !t.done)) {
+				return plan;
+			}
+
+			level++;
+			plan = null;
+			working.clear();
+		}
+
+		return null;
+	}
+
+	/** Its branch point is open. */
+	private static boolean ready(Tunnel tunnel) {
+		return tunnel.parent == null || tunnel.parent.open > tunnel.parentCell;
+	}
+
+	/** The robot's tunnel, or the next one no other robot is in; null when none is ready. */
+	private Tunnel tunnel(UUID robot, List<Tunnel> tunnels) {
+		Tunnel tunnel = working.get(robot);
+
+		if (tunnel != null && !tunnel.done) {
+			return tunnel;
+		}
+
+		working.remove(robot);
+
+		for (Tunnel next : tunnels) {
+			if (!next.done && ready(next) && !working.containsValue(next)) {
+				working.put(robot, next);
+				return next;
+			}
+		}
+
+		return null;
 	}
 
 	// ---- handing out blocks ----
 
 	@Override
 	public List<BlockPos> candidates(ServerLevel level, BlockPos from, UUID robot, int count, long now) {
-		scan(level);
 		skipped.values().removeIf(until -> until < now);
 		claimed.values().removeIf(robot::equals);
-		List<BlockPos> found = vein(level, from);
+		List<BlockPos> found = seenOres(level, from);
 
 		if (found.isEmpty()) {
-			Tunnel tunnel = tunnel(level, robot);
+			List<Tunnel> tunnels = currentPlan();
 
-			if (tunnel != null) {
-				List<BlockPos> shaft = shaft(level, tunnel.start.getY());
-				found = shaft != null ? shaft : next(level, robot, tunnel);
+			if (tunnels != null) {
+				List<BlockPos> shaft = shaft(level, levels[this.level]);
+
+				if (shaft != null) {
+					found = shaft;
+				} else {
+					Tunnel tunnel = tunnel(robot, tunnels);
+
+					if (tunnel != null) {
+						found = next(level, robot, tunnel);
+					}
+				}
 			}
 		}
 
@@ -423,11 +424,11 @@ public final class OreJob implements DigJob {
 		return !claimed.containsKey(pos.asLong()) && !skipped.containsKey(pos.asLong());
 	}
 
-	/** Ores right around the robot it can get at: the rest of the vein it is at. */
-	private List<BlockPos> vein(ServerLevel level, BlockPos from) {
+	/** Ores around the robot that it can see (they touch an open block): in the walls of its tunnel, and the rest of a vein. */
+	private List<BlockPos> seenOres(ServerLevel level, BlockPos from) {
 		List<BlockPos> found = new ArrayList<>();
 
-		for (BlockPos pos : BlockPos.betweenClosed(from.offset(-VEIN, -VEIN, -VEIN), from.offset(VEIN, VEIN, VEIN))) {
+		for (BlockPos pos : BlockPos.betweenClosed(from.offset(-SIGHT, -SIGHT, -SIGHT), from.offset(SIGHT, SIGHT + 1, SIGHT))) {
 			if (free(pos) && isOre(level.getBlockState(pos)) && wanted(level, pos) && exposed(level, pos)) {
 				found.add(pos.immutable());
 			}
@@ -436,130 +437,14 @@ public final class OreJob implements DigJob {
 		return found;
 	}
 
-	/**
-	 * The robot got the ore its tunnel led to, and none of the vein is left around it: time to take the ores home
-	 * (the next call hands it a new tunnel).
-	 */
-	public boolean veinDone(ServerLevel level, UUID robot, BlockPos from) {
-		Tunnel tunnel = tunnels.get(robot);
-
-		if (tunnel == null || !level.isLoaded(tunnel.ore) || isOre(level.getBlockState(tunnel.ore)) && !bad.contains(tunnel.ore.asLong())) {
-			return false;
-		}
-
-		if (!vein(level, from).isEmpty()) {
-			return false;
-		}
-
-		tunnels.remove(robot);
-		return true;
-	}
-
-	/** The robot's tunnel, or a new one to the best ore no other robot goes for; null when there is none. */
-	private Tunnel tunnel(ServerLevel level, UUID robot) {
-		Tunnel tunnel = tunnels.get(robot);
-
-		if (tunnel != null && level.isLoaded(tunnel.ore) && (!isOre(level.getBlockState(tunnel.ore)) || bad.contains(tunnel.ore.asLong()))) {
-			// dug (by it, another robot or a player), or given up
-			tunnels.remove(robot);
-			tunnel = null;
-		}
-
-		if (tunnel != null) {
-			return tunnel;
-		}
-
-		Set<Long> taken = new HashSet<>();
-
-		for (Tunnel other : tunnels.values()) {
-			taken.add(other.ore.asLong());
-		}
-
-		int checks = 0;
-		boolean left = false;
-
-		for (Iterator<long[]> it = ores.iterator(); it.hasNext() && checks < PICK_CHECKS; checks++) {
-			long[] ore = it.next();
-			BlockPos pos = BlockPos.of(ore[0]);
-
-			if (!level.isLoaded(pos)) {
-				left = true;
-				continue;
-			}
-
-			if (!isOre(level.getBlockState(pos)) || bad.contains(ore[0])) {
-				it.remove();
-				known.remove(ore[0]);
-				continue;
-			}
-
-			if (taken.contains(ore[0]) || !free(pos)) {
-				left = true;
-				continue;
-			}
-
-			tunnel = plan(pos);
-
-			if (tunnel == null) {
-				bad.add(ore[0]);
-				continue;
-			}
-
-			tunnels.put(robot, tunnel);
-			return tunnel;
-		}
-
-		exhausted = !left && checks < PICK_CHECKS;
-		return null;
+	/** Its tunnel is finished (once per tunnel): time to take the ores home before the next one. */
+	public boolean tunnelDone(UUID robot) {
+		return tunnelDone.remove(robot);
 	}
 
 	/**
-	 * Where the tunnel to an ore leaves the staircase: on the step at the ore's height or a little above, on the
-	 * side of the staircase facing the ore. Prefers heights from which the tunnel can come down to the ore by the
-	 * time it gets there.
-	 */
-	private Tunnel plan(BlockPos ore) {
-		int dx = ore.getX() - pillar.getX();
-		int dz = ore.getZ() - pillar.getZ();
-		int distance = Math.abs(dx) + Math.abs(dz);
-		Tunnel fallback = null;
-
-		for (int level = ore.getY(); level <= Math.min(ore.getY() + 16, station.getY()); level++) {
-			if (level - 1 < minY) {
-				continue;
-			}
-
-			// the robot stands on the step below its feet
-			int[] cell = RING[stepIndex(level - 1)];
-			Direction.Axis out = null;
-
-			if (cell[0] != 0 && Integer.signum(dx) == cell[0] && Math.abs(dx) >= 2) {
-				out = Direction.Axis.X;
-			} else if (cell[1] != 0 && Integer.signum(dz) == cell[1] && Math.abs(dz) >= 2) {
-				out = Direction.Axis.Z;
-			}
-
-			if (out == null) {
-				continue;
-			}
-
-			Tunnel tunnel = new Tunnel(ore, new BlockPos(pillar.getX() + cell[0], level, pillar.getZ() + cell[1]), out);
-
-			if (level - ore.getY() <= distance - 2) {
-				return tunnel;
-			}
-
-			if (fallback == null) {
-				fallback = tunnel;
-			}
-		}
-
-		return fallback;
-	}
-
-	/**
-	 * The staircase down to a robot standing at height {@code bottom}: the highest blocks of it still to dig, the
-	 * ones it can get at; null when it is open all the way down.
+	 * The staircase down to the level: the highest blocks of it still to dig, the ones a robot can get at; null when
+	 * it is open all the way down.
 	 */
 	private List<BlockPos> shaft(ServerLevel level, int bottom) {
 		List<BlockPos> found = new ArrayList<>();
@@ -571,6 +456,11 @@ public final class OreJob implements DigJob {
 
 				if (!level.isLoaded(pos)) {
 					continue;
+				}
+
+				if (!isStair(pos) && !clear(level, pos) || liquid(level.getBlockState(pos))) {
+					// a cave with water or lava next to the staircase: walled off before it is opened
+					seal(level, List.of(pos));
 				}
 
 				if (isStair(pos)) {
@@ -588,61 +478,47 @@ public final class OreJob implements DigJob {
 		return left ? found : null;
 	}
 
-	/** Blocks a robot stands in at a place along the tunnel: its feet and head, and above its head when it climbs there. */
-	private static List<BlockPos> space(BlockPos cell, BlockPos before) {
-		List<BlockPos> blocks = new ArrayList<>(List.of(cell, cell.above()));
-
-		if (cell.getY() > before.getY()) {
-			blocks.add(before.above(2));
-		}
-
-		return blocks;
-	}
-
-	/** The next blocks of the robot's tunnel: what fell back into it first, then the next place on the way to the ore. */
+	/** The next blocks of the robot's tunnel: what fell back into it first, then the next place along it. */
 	private List<BlockPos> next(ServerLevel level, UUID robot, Tunnel tunnel) {
 		List<BlockPos> found = new ArrayList<>();
-		BlockPos before = tunnel.start;
 
 		// sand, gravel or a player's block in the tunnel so far
-		for (BlockPos cell : tunnel.cells) {
-			for (BlockPos pos : space(cell, before)) {
+		for (int i = 0; i < tunnel.open; i++) {
+			for (BlockPos pos : List.of(tunnel.cell(i), tunnel.cell(i).above())) {
 				if (!clear(level, pos) && free(pos) && wanted(level, pos) && exposed(level, pos)) {
 					found.add(pos);
 				}
 			}
-
-			before = cell;
 		}
 
 		if (!found.isEmpty()) {
 			return found;
 		}
 
-		for (int steps = 0; steps < 32; steps++) {
-			BlockPos head = tunnel.head();
-
-			if (head.equals(tunnel.ore) || tunnel.cells.size() >= MAX_TUNNEL) {
-				// there and the ore is still there (inside a block it cannot dig?), or lost: given up
-				giveUp(robot, tunnel);
+		for (int steps = 0; steps < STEPS; steps++) {
+			if (tunnel.open >= tunnel.length) {
+				finish(robot, tunnel);
 				return found;
 			}
 
-			BlockPos cell = step(head, tunnel);
+			BlockPos cell = tunnel.cell(tunnel.open);
+
+			if (!level.isLoaded(cell) || !level.isLoaded(cell.relative(tunnel.dir))) {
+				return found;
+			}
+
+			// water and lava around it become cobblestone first, so the tunnel goes on through or past them
+			seal(level, List.of(cell, cell.above()));
 			boolean ready = true;
 
-			for (BlockPos pos : space(cell, head)) {
+			for (BlockPos pos : List.of(cell, cell.above())) {
 				if (clear(level, pos)) {
 					continue;
 				}
 
-				if (!level.isLoaded(pos)) {
-					return found;
-				}
-
 				if (!wanted(level, pos)) {
-					// lava, bedrock, a chest, outside the area: no way to this ore
-					giveUp(robot, tunnel);
+					// bedrock, a chest: the tunnel ends here
+					finish(robot, tunnel);
 					return found;
 				}
 
@@ -658,42 +534,50 @@ public final class OreJob implements DigJob {
 			}
 
 			// open: floor over a cave, then on to the next place
-			if (!cell.equals(tunnel.ore)) {
-				fill(level, cell.below());
+			fill(level, cell.below());
+
+			if (tunnel.open % TORCH_GAP == TORCH_GAP / 2) {
+				torchSpots.add(cell.asLong());
 			}
 
-			tunnel.cells.add(cell);
+			tunnel.open++;
 		}
 
 		return found;
 	}
 
-	private void giveUp(UUID robot, Tunnel tunnel) {
-		bad.add(tunnel.ore.asLong());
-		tunnels.remove(robot);
-	}
+	/**
+	 * A place in a tunnel within reach of the robot's eye that gets a torch now: still open, on solid floor, no torch
+	 * there yet. Null when there is none.
+	 */
+	public BlockPos torchSpot(ServerLevel level, net.minecraft.world.phys.Vec3 eye, double reach) {
+		for (java.util.Iterator<Long> it = torchSpots.iterator(); it.hasNext(); ) {
+			BlockPos pos = BlockPos.of(it.next());
 
-	/** One place further towards the ore: away from the staircase first, then along the longer way, coming down (or up) one block each step. */
-	private BlockPos step(BlockPos head, Tunnel tunnel) {
-		BlockPos ore = tunnel.ore;
-		int dx = ore.getX() - head.getX();
-		int dz = ore.getZ() - head.getZ();
-		int dy = Integer.signum(ore.getY() - head.getY());
-		boolean leaving = inShaft(head.getX(), head.getZ()) || (tunnel.out == Direction.Axis.X ? Math.abs(head.getX() - pillar.getX()) : Math.abs(head.getZ() - pillar.getZ())) < 2;
-		boolean alongX;
+			if (!level.isLoaded(pos) || eye.distanceToSqr(net.minecraft.world.phys.Vec3.atCenterOf(pos)) > reach * reach) {
+				continue;
+			}
 
-		if (leaving) {
-			alongX = tunnel.out == Direction.Axis.X;
-		} else if (dx == 0 && dz == 0) {
-			// right above or below it
-			return head.offset(0, dy, 0);
-		} else {
-			alongX = Math.abs(dx) >= Math.abs(dz);
+			it.remove();
+			BlockState state = level.getBlockState(pos);
+
+			if (state.isAir() && level.getBlockState(pos.below()).isFaceSturdy(level, pos.below(), Direction.UP)) {
+				return pos;
+			}
 		}
 
-		int sx = alongX ? Integer.signum(dx) : 0;
-		int sz = alongX ? 0 : Integer.signum(dz);
-		return head.offset(sx, dy, sz);
+		return null;
+	}
+
+	private void finish(UUID robot, Tunnel tunnel) {
+		tunnel.done = true;
+		working.remove(robot);
+		tunnelDone.add(robot);
+	}
+
+	@Override
+	public boolean finished() {
+		return currentPlan() == null;
 	}
 
 	@Override
@@ -717,13 +601,8 @@ public final class OreJob implements DigJob {
 		claimed.remove(pos.asLong());
 	}
 
-	/** For the smoke test: ores found so far. */
-	int oresKnown() {
-		return ores.size();
-	}
-
-	/** For the smoke test: the search has found this ore. */
-	boolean knows(BlockPos pos) {
-		return known.contains(pos.asLong());
+	/** For the smoke test: the heights of the mining levels, deepest first. */
+	int[] levels() {
+		return levels.clone();
 	}
 }

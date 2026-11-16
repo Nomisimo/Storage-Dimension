@@ -227,16 +227,18 @@ Mit dem Knopf **Sammeln / Abbauen** in der Station werden alle Roboter der Stati
 
 ### Erzsuche
 
-Ein Klick nach **Abbauen** kommt **Erzsuche**. Statt alles abzutragen, spüren die Roboter die Erze im Boden unter der Station auf und holen nur die. Die Oberfläche bleibt stehen.
+Ein Klick nach **Abbauen** kommt **Erzsuche**: Strip Mining unter der Station. Die Roboter sehen nicht durch den Fels. Sie graben Gänge und holen die Erze, die sie darin sehen. Die Oberfläche bleibt stehen.
 
-- **Bereich:** dasselbe Quadrat (oder die Antennen-Box) wie beim Abbauen, aber von der Station **nach unten bis zum Grund der Welt**.
-- **Wendeltreppe nach unten:** Um die Säule unter der Station graben die Roboter eine Wendeltreppe in die Tiefe, nur so weit, wie das nächste Erz es braucht. Fehlt eine Stufe (Höhle), setzen sie Bruchstein hin.
-- **Gänge zu den Erzen:** Von der Stufe auf der Höhe des Erzes (oder knapp darüber) graben sie einen 2 Blöcke hohen Gang zum Erz, auch schräg nach unten. Über Höhlen legen sie einen Boden aus Bruchstein. Jeder Roboter hat seinen eigenen Gang, bis zu 32 arbeiten gleichzeitig.
-- **Reihenfolge:** das nächste Erz zuerst, seltene Erze zählen als näher: Diamant, Smaragd und antiker Schrott vierfach, Gold, Redstone und Lapis doppelt.
-- **Adern:** Ist ein Roboter an einem Erz, baut er die ganze Ader drumherum ab und bringt sie heim, bevor er zum nächsten Erz gräbt.
+- **Bereich:** dasselbe Quadrat (oder die Antennen-Box) wie beim Abbauen, aber von der Station **nach unten bis zum Grundgestein**.
+- **Wendeltreppe nach unten:** Um die Säule unter der Station graben die Roboter eine Wendeltreppe bis zur untersten Ebene, 6 Blöcke über dem Grund der Welt (in der Oberwelt auf Höhe −58, knapp über dem Grundgestein). Fehlt eine Stufe (Höhle), setzen sie Bruchstein hin.
+- **Gänge:** Auf jeder Ebene ein Hauptgang nach Norden und Süden durch die Treppe, und davon alle 3 Blöcke Seitengänge nach Osten und Westen bis zum Rand des Bereichs. Die Gänge sind 2 Blöcke hoch, so liegt jeder Block der Ebene in der Wand eines Gangs. Jeder Roboter hat seinen eigenen Gang, bis zu 32 arbeiten gleichzeitig.
+- **Ebenen:** Die tiefste zuerst (Diamanten), dann alle 16 Blöcke eine höher, bis kurz unter die Station.
+- **Erze:** Ein Roboter baut die Erze ab, die er sieht: in Wand, Boden und Decke seines Gangs, in Spieler-Reichweite (4,5 Blöcke). So folgt er jeder Ader, auf die er stößt. Nach jedem Gang bringt er seine Erze heim.
 - **Nur Erze heim:** Was die Erze droppen (mit Glück entsprechend mehr), kommt in die Kisten. Der Stein aus Treppe und Gängen bleibt nicht übrig.
-- **Was zählt als Erz:** alle Erze des Spiels (auch Tiefenschiefer-, Nether-Gold- und Quarzerz, antiker Schrott) und die Erze anderer Mods mit dem üblichen Erz-Tag.
-- **Lava:** Neben Lava graben die Roboter nicht. Ein Erz, an das man nur durch Lava, Grundgestein oder Kisten käme, lassen sie liegen.
+- **Was zählt als Erz:** alle Erze des Spiels (auch Tiefenschiefer-, Nether-Gold- und Quarzerz, antiker Schrott) und die Erze anderer Mods mit dem Erz-Tag `c:ores`.
+- **Lava und Wasser:** Bevor ein Roboter einen Block der Treppe oder eines Gangs öffnet, wird Wasser und Lava darin und rundherum zu Bruchstein. So läuft nichts in die Mine, und die Gänge führen an Lava vorbei oder darüber hinweg. Über Höhlen und Lavaseen legen sie einen Boden aus Bruchstein.
+- **Fackeln:** Liegen Fackeln in der Werkzeugkiste (oder in der Filterkiste mit Fackel-Filter), nimmt jeder Roboter einen Stapel mit und stellt alle 8 Blöcke eine Fackel in die Gänge.
+- Die Kopflampe am Helm leuchtet nur zum Ansehen, Licht gibt sie nicht.
 - Werkzeugkiste, Helm, Abbauzeit, Verzauberungen und Beutesack wie im [Abbau-Modus](#abbau-modus).
 
 ### Jade und Xaero's Minimap
