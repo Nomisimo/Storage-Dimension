@@ -24,14 +24,14 @@ import net.minecraft.world.level.block.state.BlockState;
  * Strip mining below a station, like a player would do it, without seeing through the rock: the robots dig a spiral
  * staircase down around the station's column to a mining level, and there a grid of tunnels over the whole area (the
  * station's square of its range, or its antenna box): a main tunnel north and south through the staircase, and from
- * it side tunnels east and west every {@value #SPACING} blocks, so that every block of the level is next to a
- * tunnel. Ores show up in the walls, floor and ceiling of the tunnels; a robot digs those it sees (they touch an open
+ * it side tunnels east and west every {@value #SPACING} blocks. The levels are {@value #LEVEL_GAP} blocks apart and the
+ * side tunnels of every other level are moved over by half their spacing, so each block of the ground is in the
+ * wall, floor or ceiling of exactly one tunnel: every block is looked at, and only a quarter is dug. Ores show up in the walls, floor and ceiling of the tunnels; a robot digs those it sees (they touch an open
  * block) within a player's reach, and so follows each vein it comes across. Only the ores are brought home; the stone
  * of the tunnels is not kept.
  * <p>
- * The levels are {@value #LEVEL_GAP} blocks apart, the deepest first (diamonds), up to just below the station. When
- * every tunnel of a level has reached the edge of the area (or lava, bedrock, a chest), the staircase goes on to the
- * next level. Each robot has a tunnel of its own, up to 32 work at the same time; after each tunnel it takes its ores
+ * The deepest level comes first (diamonds), then on up to just below the station. When every tunnel of a level has
+ * reached the edge of the area (or bedrock, a chest), the staircase goes on to the next level. Each robot has a tunnel of its own, up to 32 work at the same time; after each tunnel it takes its ores
  * home. Missing steps and the floor over caves and lava are filled with cobblestone, and before a robot opens a block
  * of the staircase or a tunnel, water and lava in it and around it become cobblestone, so the mine is never flooded.
  * A torch goes up every {@value #TORCH_GAP} blocks of a tunnel when the robots have torches.
@@ -40,10 +40,10 @@ public final class OreJob implements DigJob {
 	private static final int[][] RING = MiningJob.RING;
 	private static final int SKIP_TICKS = 1200;
 	private static final int FORGET_TICKS = 6000;
-	/** Blocks between two side tunnels are {@code SPACING - 1}: two, so each one is in a tunnel's wall. */
-	static final int SPACING = 3;
-	/** Height between two mining levels. */
-	static final int LEVEL_GAP = 16;
+	/** Distance between two side tunnels of a level. */
+	static final int SPACING = 4;
+	/** Height between two mining levels; with the side tunnels moved by {@code SPACING / 2} each level, this covers every block. */
+	static final int LEVEL_GAP = 2;
 	/** The deepest level is this far above the bottom of the area (above the bedrock). */
 	private static final int LEVEL_FLOOR = 6;
 	/** How far around itself a robot looks for ores it can see. */
@@ -306,17 +306,22 @@ public final class OreJob implements DigJob {
 
 	// ---- the tunnels of a level ----
 
-	/** The tunnels at a height, the main ones and those closest to the staircase first. */
-	private List<Tunnel> planLevel(int y) {
+	/**
+	 * The tunnels at a height, the main ones and those closest to the staircase first; the side tunnels are
+	 * {@code shift} blocks of z off the ones through the staircase.
+	 */
+	private List<Tunnel> planLevel(int y, int shift) {
 		List<Tunnel> tunnels = new ArrayList<>();
 		int px = pillar.getX();
 		int pz = pillar.getZ();
 		Tunnel north = add(tunnels, new BlockPos(px, y, pz - 2), Direction.NORTH, pz - 2 - minZ + 1, null, 0);
 		Tunnel south = add(tunnels, new BlockPos(px, y, pz + 2), Direction.SOUTH, maxZ - (pz + 2) + 1, null, 0);
-		add(tunnels, new BlockPos(px + 2, y, pz), Direction.EAST, maxX - (px + 2) + 1, null, 0);
-		add(tunnels, new BlockPos(px - 2, y, pz), Direction.WEST, px - 2 - minX + 1, null, 0);
+		if (shift == 0) {
+			add(tunnels, new BlockPos(px + 2, y, pz), Direction.EAST, maxX - (px + 2) + 1, null, 0);
+			add(tunnels, new BlockPos(px - 2, y, pz), Direction.WEST, px - 2 - minX + 1, null, 0);
+		}
 
-		for (int d = SPACING; pz - d >= minZ || pz + d <= maxZ; d += SPACING) {
+		for (int d = shift == 0 ? SPACING : shift; pz - d >= minZ || pz + d <= maxZ; d += SPACING) {
 			for (Tunnel main : new Tunnel[] {north, south}) {
 				if (main == null || d - 2 >= main.length) {
 					continue;
@@ -345,7 +350,7 @@ public final class OreJob implements DigJob {
 	private List<Tunnel> currentPlan() {
 		while (level < levels.length) {
 			if (plan == null) {
-				plan = planLevel(levels[level]);
+				plan = planLevel(levels[level], level % 2 == 0 ? 0 : SPACING / 2);
 			}
 
 			if (plan.stream().anyMatch(t -> !t.done)) {

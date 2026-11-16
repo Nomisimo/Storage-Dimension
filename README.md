@@ -231,13 +231,13 @@ Ein Klick nach **Abbauen** kommt **Erzsuche**: Strip Mining unter der Station. D
 
 - **Bereich:** dasselbe Quadrat (oder die Antennen-Box) wie beim Abbauen, aber von der Station **nach unten bis zum Grundgestein**.
 - **Wendeltreppe nach unten:** Um die Säule unter der Station graben die Roboter eine Wendeltreppe bis zur untersten Ebene, 6 Blöcke über dem Grund der Welt (in der Oberwelt auf Höhe −58, knapp über dem Grundgestein). Fehlt eine Stufe (Höhle), setzen sie Bruchstein hin.
-- **Gänge:** Auf jeder Ebene ein Hauptgang nach Norden und Süden durch die Treppe, und davon alle 3 Blöcke Seitengänge nach Osten und Westen bis zum Rand des Bereichs. Die Gänge sind 2 Blöcke hoch, so liegt jeder Block der Ebene in der Wand eines Gangs. Jeder Roboter hat seinen eigenen Gang, bis zu 32 arbeiten gleichzeitig.
-- **Ebenen:** Die tiefste zuerst (Diamanten), dann alle 16 Blöcke eine höher, bis kurz unter die Station.
+- **Gänge:** Auf jeder Ebene ein Hauptgang nach Norden und Süden durch die Treppe, und davon alle 4 Blöcke Seitengänge nach Osten und Westen bis zum Rand des Bereichs. Die Gänge sind 2 Blöcke hoch. Jeder Roboter hat seinen eigenen Gang, bis zu 32 arbeiten gleichzeitig.
+- **Ebenen:** Die tiefste zuerst (Diamanten), dann alle 2 Blöcke eine höher, bis kurz unter die Station. Die Seitengänge jeder zweiten Ebene sind um 2 Blöcke versetzt. So liegt **jeder Block** des Bodens in Wand, Boden oder Decke genau eines Gangs und wird angeschaut, abgebaut wird aber nur ein Viertel.
 - **Erze:** Ein Roboter baut die Erze ab, die er sieht: in Wand, Boden und Decke seines Gangs, in Spieler-Reichweite (4,5 Blöcke). So folgt er jeder Ader, auf die er stößt. Nach jedem Gang bringt er seine Erze heim.
 - **Nur Erze heim:** Was die Erze droppen (mit Glück entsprechend mehr), kommt in die Kisten. Der Stein aus Treppe und Gängen bleibt nicht übrig.
 - **Was zählt als Erz:** alle Erze des Spiels (auch Tiefenschiefer-, Nether-Gold- und Quarzerz, antiker Schrott) und die Erze anderer Mods mit dem Erz-Tag `c:ores`.
 - **Lava und Wasser:** Bevor ein Roboter einen Block der Treppe oder eines Gangs öffnet, wird Wasser und Lava darin und rundherum zu Bruchstein. So läuft nichts in die Mine, und die Gänge führen an Lava vorbei oder darüber hinweg. Über Höhlen und Lavaseen legen sie einen Boden aus Bruchstein.
-- **Fackeln:** Liegen Fackeln in der Werkzeugkiste (oder in der Filterkiste mit Fackel-Filter), nimmt jeder Roboter einen Stapel mit und stellt alle 8 Blöcke eine Fackel in die Gänge.
+- **Fackeln (freiwillig):** Liegen Fackeln in der Werkzeugkiste (oder in der Filterkiste mit Fackel-Filter), nimmt jeder Roboter einen Stapel mit und stellt alle 8 Blöcke eine Fackel in die Gänge. Ohne Fackeln arbeiten sie genauso, nur im Dunkeln.
 - Die Kopflampe am Helm leuchtet nur zum Ansehen, Licht gibt sie nicht.
 - Werkzeugkiste, Helm, Abbauzeit, Verzauberungen und Beutesack wie im [Abbau-Modus](#abbau-modus).
 

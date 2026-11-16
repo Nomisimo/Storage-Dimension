@@ -25,7 +25,7 @@ import net.minecraft.world.level.block.ChestBlock;
 
 /**
  * Smoke test of the strip mine (CI, after the mining test): high above the overworld a station on a block of stone 35
- * wide and 14 deep; the mine's bottom is set to the bottom of the stone, so there is one mining level 8 below the
+ * wide and 14 deep; the mine's bottom is set to the bottom of the stone, so the deepest mining level is 8 below the
  * station. The robots dig the staircase down and the grid of tunnels, and get the ores that show in the tunnels'
  * walls, floor and ceiling (iron, diamond, a vein of two coal ores, a far iron, a gold ore behind a pocket of lava),
  * but not an emerald ore deep in the rock between the tunnels: they cannot see through the rock. The lava next to a
@@ -34,7 +34,7 @@ import net.minecraft.world.level.block.ChestBlock;
  * storage). Switched back to collecting, the pickaxes go back into the ME storage.
  */
 public final class OreSmokeTest {
-	private static final int TIMEOUT = 9600;
+	private static final int TIMEOUT = 12000;
 	private static StorageNetwork network;
 	private static final int Y = 290;
 
@@ -76,20 +76,20 @@ public final class OreSmokeTest {
 			}
 		}
 
-		// the tunnels: feet at Y - 8, head at Y - 7; the main one north and south at x 0, side ones every 3 blocks of z
+		// the deepest level: feet at Y - 8, head at Y - 7; the main tunnel north and south at x 0, side ones every 4 blocks of z
 		ore(station.offset(5, -7, 1), Blocks.IRON_ORE);
-		ore(station.offset(-6, -9, 3), Blocks.DIAMOND_ORE);
+		ore(station.offset(-6, -9, 4), Blocks.DIAMOND_ORE);
 		ore(station.offset(0, -6, -7), Blocks.COAL_ORE);
 		ore(station.offset(0, -5, -7), Blocks.COAL_ORE);
-		ore(station.offset(-13, -7, 6), Blocks.IRON_ORE);
-		// in the wall of the tunnel at z -3, with lava behind it next to the tunnel at z -6
-		ore(station.offset(4, -7, -4), Blocks.GOLD_ORE);
+		ore(station.offset(-13, -7, 8), Blocks.IRON_ORE);
+		// in the wall of the tunnel at z -4, behind it lava right next to that tunnel
+		ore(station.offset(5, -7, -5), Blocks.GOLD_ORE);
 		lava = station.offset(4, -7, -5);
 		level.setBlockAndUpdate(lava, Blocks.LAVA.defaultBlockState());
 		// water beside the tunnel west at z 0
 		water = station.offset(-4, -7, -1);
 		level.setBlockAndUpdate(water, Blocks.WATER.defaultBlockState());
-		// two blocks from every tunnel: no robot can see it
+		// below the deepest level's floor: no robot can see it
 		hidden = station.offset(8, -12, 8);
 		level.setBlockAndUpdate(hidden, Blocks.EMERALD_ORE.defaultBlockState());
 
