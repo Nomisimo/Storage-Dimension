@@ -40,6 +40,8 @@ public final class OreJob implements DigJob {
 	private static final int[][] RING = MiningJob.RING;
 	private static final int SKIP_TICKS = 1200;
 	private static final int FORGET_TICKS = 6000;
+	/** A robot that has not asked for work this long is gone; what it had taken is free again. */
+	private static final int CLAIM_TICKS = 1200;
 	/** Distance between two side tunnels of a level. */
 	static final int SPACING = 4;
 	/** Height between two mining levels; with the side tunnels moved by {@code SPACING / 2} each level, this covers every block. */
@@ -72,6 +74,8 @@ public final class OreJob implements DigJob {
 	/** Robots whose tunnel is finished: they take their ores home before the next one. */
 	private final Set<UUID> tunnelDone = new HashSet<>();
 	private final Map<Long, UUID> claimed = new HashMap<>();
+	/** When each robot last asked for work: claims of a robot that went away (picked up, unloaded) are let go. */
+	private final Map<UUID, Long> seen = new HashMap<>();
 	private final Map<Long, Long> skipped = new HashMap<>();
 	/** Places in the tunnels that get a torch once a robot with torches comes by. */
 	private final Set<Long> torchSpots = new HashSet<>();
@@ -400,6 +404,10 @@ public final class OreJob implements DigJob {
 	public List<BlockPos> candidates(ServerLevel level, BlockPos from, UUID robot, int count, long now) {
 		skipped.values().removeIf(until -> until < now);
 		claimed.values().removeIf(robot::equals);
+		seen.put(robot, now);
+		seen.values().removeIf(last -> now - last > CLAIM_TICKS);
+		claimed.values().removeIf(owner -> !seen.containsKey(owner));
+		working.keySet().removeIf(owner -> !seen.containsKey(owner));
 		List<BlockPos> found = seenOres(level, from);
 
 		if (found.isEmpty()) {
@@ -608,6 +616,40 @@ public final class OreJob implements DigJob {
 	public void skip(BlockPos pos, long now) {
 		skipped.put(pos.asLong(), now + SKIP_TICKS);
 		claimed.remove(pos.asLong());
+	}
+
+	/** For the smoke test: where the work stands, and the highest blocks of the staircase still to dig. */
+	String describe(ServerLevel level) {
+		StringBuilder out = new StringBuilder("level=" + this.level + "/" + levels.length + (this.level < levels.length ? " y=" + levels[this.level] : "")
+				+ " working=" + working.size() + " claimed=" + claimed.size() + " skipped=" + skipped.size());
+
+		if (this.level < levels.length) {
+			for (int y = station.getY() - 1; y >= levels[this.level]; y--) {
+				StringBuilder row = new StringBuilder();
+
+				for (int[] cell : RING) {
+					BlockPos pos = new BlockPos(pillar.getX() + cell[0], y, pillar.getZ() + cell[1]);
+
+					if (!isStair(pos) && !clear(level, pos)) {
+						BlockState state = level.getBlockState(pos);
+						row.append(' ').append(state.getBlock().getDescriptionId().replace("block.minecraft.", "")).append(wanted(level, pos) ? "" : "(nicht gewollt)")
+								.append(exposed(level, pos) ? "" : "(verdeckt)").append(free(pos) ? "" : skipped.containsKey(pos.asLong()) ? "(übersprungen)" : "(vergeben)");
+					}
+				}
+
+				if (!row.isEmpty()) {
+					out.append(" treppe y=").append(y).append(':').append(row);
+					break;
+				}
+			}
+		}
+
+		if (plan != null) {
+			out.append(" gänge=").append(plan.stream().filter(t -> t.done).count()).append('/').append(plan.size()).append(" offen=")
+					.append(plan.stream().mapToInt(t -> t.open).sum());
+		}
+
+		return out.toString();
 	}
 
 	/** For the smoke test: the heights of the mining levels, deepest first. */

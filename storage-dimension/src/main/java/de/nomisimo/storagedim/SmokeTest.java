@@ -236,7 +236,20 @@ final class SmokeTest {
 
 				// then the ore search, also a few minutes
 				try {
-					de.nomisimo.storagedim.robot.OreSmokeTest.start(server, oreErrors -> report(server, oreErrors));
+					de.nomisimo.storagedim.robot.OreSmokeTest.start(server, oreErrors -> {
+						if (!oreErrors.isEmpty()) {
+							report(server, oreErrors);
+							return;
+						}
+
+						// and the ore search from the surface of the real ground down to the bedrock
+						try {
+							de.nomisimo.storagedim.robot.DeepOreSmokeTest.start(server, deepErrors -> report(server, deepErrors));
+						} catch (Throwable t) {
+							StorageDimensionMod.LOGGER.error("SMOKETEST Ausnahme", t);
+							report(server, List.of(t.toString()));
+						}
+					});
 				} catch (Throwable t) {
 					StorageDimensionMod.LOGGER.error("SMOKETEST Ausnahme", t);
 					report(server, List.of(t.toString()));
