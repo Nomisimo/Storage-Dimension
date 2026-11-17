@@ -102,6 +102,12 @@ public final class MiningSmokeTest {
 			for (int dx = -1; dx <= 1; dx++) {
 				for (int dz = -1; dz <= 1; dz++) {
 					BlockPos pos = station.offset(dx, dy, dz);
+
+					if (dx == 1 && dz == 0) {
+						// not on the loot chest: it could not be opened
+						continue;
+					}
+
 					level.setBlockAndUpdate(pos, Blocks.STONE.defaultBlockState());
 				}
 			}
