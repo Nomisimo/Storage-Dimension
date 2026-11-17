@@ -693,6 +693,11 @@ public final class OreJob implements DigJob {
 		return new BlockPos(pillar.getX() + cell[0], y, pillar.getZ() + cell[1]);
 	}
 
+	/** For the smoke test: tunnels finished on the level being worked on. */
+	int tunnelsDone() {
+		return plan == null ? 0 : (int) plan.stream().filter(t -> t.done).count();
+	}
+
 	/** For the smoke test: the heights of the mining levels, deepest first. */
 	int[] levels() {
 		return levels.clone();

@@ -35,6 +35,7 @@ public final class DeepOreSmokeTest {
 	private static final List<RobotEntity> robots = new ArrayList<>();
 	private static int ticks;
 	private static int deepest;
+	private static int reachedAt = -1;
 	private static final java.util.Map<RobotEntity, Integer> idle = new java.util.HashMap<>();
 	/** A robot with a pickaxe that waits this long while there is still work has lost its way. */
 	private static final int IDLE_LIMIT = 2400;
@@ -173,8 +174,16 @@ public final class DeepOreSmokeTest {
 		// the first place of the main tunnel north on the deepest level is open: the robots got all the way down
 		BlockPos tunnel = new BlockPos(station.getX(), bottom, station.getZ() - 2);
 
-		if (level.getBlockState(tunnel).isAir() && level.getBlockState(tunnel.above()).isAir() && deepest <= bottom + 1) {
+		if (reachedAt < 0 && level.getBlockState(tunnel).isAir() && level.getBlockState(tunnel.above()).isAir() && deepest <= bottom + 1) {
 			StorageDimensionMod.LOGGER.info("SMOKETEST Tiefe Erzsuche: unterste Ebene y={} nach {} Ticks erreicht", bottom, ticks);
+			reachedAt = ticks;
+		}
+
+		// then the tunnels there: several finished, and the robots that took ores home came back down for them
+		long below = robots.stream().filter(r -> !r.tool(0).isEmpty() && r.getY() < bottom + 8).count();
+
+		if (reachedAt >= 0 && job.tunnelsDone() >= 6 && below >= 2) {
+			StorageDimensionMod.LOGGER.info("SMOKETEST Tiefe Erzsuche: {} Gänge fertig nach {} Ticks, {} Roboter unten", job.tunnelsDone(), ticks, below);
 			StationMining.toggle(level, Rooms.id(level), station);
 			finish(List.of());
 		} else if (!robots.isEmpty() && robots.stream().allMatch(r -> !r.isAlive())) {
