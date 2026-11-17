@@ -1733,10 +1733,77 @@ public class RobotEntity extends PathfinderMob {
 		mend(server, pos);
 		server.destroyBlockProgress(getId(), pos, -1);
 		job.dug(server, pos);
+
+		if (job instanceof MiningJob area && state.is(net.minecraft.tags.BlockTags.LOGS)) {
+			fell(server, area, pos);
+		}
+
 		mineTarget = null;
 		digTicks = 0;
 		digTotal = 0;
 		minePhase = 0;
+	}
+
+	/** Blocks of a tree a robot fells at once: more are left for the next log. */
+	private static final int TREE_BLOCKS = 256;
+
+	/**
+	 * Mining: a log it cut fells the whole tree above it, the logs and leaves joined to it (also those far above
+	 * its reach, which no robot could get at otherwise). What they drop goes into its bag.
+	 */
+	private void fell(ServerLevel server, MiningJob area, BlockPos cut) {
+		java.util.ArrayDeque<BlockPos> open = new java.util.ArrayDeque<>();
+		Set<BlockPos> seen = new HashSet<>();
+		open.add(cut);
+		seen.add(cut);
+		int felled = 0;
+
+		while (!open.isEmpty() && felled < TREE_BLOCKS) {
+			BlockPos from = open.poll();
+
+			for (BlockPos next : BlockPos.betweenClosed(from.offset(-1, 0, -1), from.offset(1, 1, 1))) {
+				if (next.getY() < cut.getY() || !seen.add(next.immutable())) {
+					continue;
+				}
+
+				BlockState state = server.getBlockState(next);
+				boolean log = state.is(net.minecraft.tags.BlockTags.LOGS);
+
+				int dx = next.getX() - cut.getX();
+				int dz = next.getZ() - cut.getZ();
+				int far = dx * dx + dz * dz;
+
+				// the tree's own crown and branches, not the next tree of a forest whose leaves touch it
+				if (!(log ? far <= 64 : state.is(net.minecraft.tags.BlockTags.LEAVES) && far <= 36) || !area.wanted(server, next)) {
+					continue;
+				}
+
+				BlockPos pos = next.immutable();
+				int kind = bestTool(state);
+				ItemStack tool = kind < 0 ? ItemStack.EMPTY : tools[kind];
+
+				for (ItemStack drop : Block.getDrops(state, server, pos, null, this, tool)) {
+					if (!addToBag(drop)) {
+						Block.popResource(server, pos, drop);
+					}
+				}
+
+				server.destroyBlock(pos, false, this);
+				area.dug(server, pos);
+				felled++;
+
+				if (log && !tool.isEmpty()) {
+					tool.hurtAndBreak(1, server, (ServerPlayer) null, item -> {
+					});
+
+					if (tool.isEmpty()) {
+						tools[kind] = ItemStack.EMPTY;
+					}
+				}
+
+				open.add(pos);
+			}
+		}
 	}
 
 	/** Into its bag, onto stacks of the same kind first; false when the bag is full. */
@@ -1940,7 +2007,7 @@ public class RobotEntity extends PathfinderMob {
 					return startDigging(job, pos);
 				}
 
-				job.skip(pos, now);
+				job.skip(pos, getUUID(), now);
 			}
 
 			mineIdle = true;
@@ -2100,7 +2167,7 @@ public class RobotEntity extends PathfinderMob {
 			}
 
 			if (stuck(distance)) {
-				job.skip(mineTarget, level().getGameTime());
+				job.skip(mineTarget, getUUID(), level().getGameTime());
 				dropMineTarget();
 				return;
 			}

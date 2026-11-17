@@ -30,9 +30,10 @@ import net.minecraft.world.level.block.state.BlockState;
  * block) within a player's reach, and so follows each vein it comes across. Only the ores are brought home; the stone
  * of the tunnels is not kept.
  * <p>
- * The deepest level comes first (diamonds), then on up to just below the station. When every tunnel of a level has
- * reached the edge of the area (or bedrock, a chest), the staircase goes on to the next level. Each robot has a tunnel of its own, up to 32 work at the same time; after each tunnel it takes its ores
- * home. Missing steps and the floor over caves and lava are filled with cobblestone, and before a robot opens a block
+ * The staircase and the tunnels are dug at the same time: a robot without a tunnel helps with the staircase where
+ * there is a block of it to get at, otherwise it takes a tunnel on the highest level the staircase has reached, so
+ * the work starts at the top and goes down level by level while the staircase goes on below. Each robot has a
+ * tunnel of its own, up to 32 work at the same time; after each tunnel it takes its ores home. Missing steps and the floor over caves and lava are filled with cobblestone, and before a robot opens a block
  * of the staircase or a tunnel, water and lava in it and around it become cobblestone, so the mine is never flooded.
  * A torch goes up every {@value #TORCH_GAP} blocks of a tunnel when the robots have torches.
  */
@@ -69,9 +70,11 @@ public final class OreJob implements DigJob {
 	private final BlockPos pillar;
 	/** The heights a robot stands at in the tunnels (feet), deepest first. */
 	private final int[] levels;
-	private int level;
-	/** The tunnels of the current level, in the order they are handed out. */
-	private List<Tunnel> plan;
+	/** The tunnels of each level (by its index in {@link #levels}), planned once the staircase gets there. */
+	private final Map<Integer, List<Tunnel>> plans = new HashMap<>();
+	/** The staircase as it stands, worked out at most once a tick. */
+	private Shaft shaft;
+	private long shaftTick = Long.MIN_VALUE;
 	private final Map<UUID, Tunnel> working = new HashMap<>();
 	/** Robots whose tunnel is finished: they take their ores home before the next one. */
 	private final Set<UUID> tunnelDone = new HashSet<>();
@@ -356,23 +359,9 @@ public final class OreJob implements DigJob {
 		return tunnel;
 	}
 
-	/** The tunnels of the level being worked on; moves on to the next level once all are done. Null when all levels are. */
-	private List<Tunnel> currentPlan() {
-		while (level < levels.length) {
-			if (plan == null) {
-				plan = planLevel(levels[level], level % 2 == 0 ? 0 : SPACING / 2);
-			}
-
-			if (plan.stream().anyMatch(t -> !t.done)) {
-				return plan;
-			}
-
-			level++;
-			plan = null;
-			working.clear();
-		}
-
-		return null;
+	/** The tunnels of a level, planned the first time they are asked for. */
+	private List<Tunnel> plan(int index) {
+		return plans.computeIfAbsent(index, i -> planLevel(levels[i], i % 2 == 0 ? 0 : SPACING / 2));
 	}
 
 	/** Its branch point is open. */
@@ -380,20 +369,29 @@ public final class OreJob implements DigJob {
 		return tunnel.parent == null || tunnel.parent.open > tunnel.parentCell;
 	}
 
-	/** The robot's tunnel, or the next one no other robot is in; null when none is ready. */
-	private Tunnel tunnel(UUID robot, List<Tunnel> tunnels) {
-		Tunnel tunnel = working.get(robot);
+	/**
+	 * A tunnel for a robot that has none: on the highest level the staircase has reached that still has one ready
+	 * and free, so the robots start at the top and work their way down while the staircase goes on below them.
+	 */
+	private Tunnel newTunnel(UUID robot, Shaft shaft, BlockPos from) {
+		for (int i = levels.length - 1; i >= 0; i--) {
+			if (levels[i] <= shaft.blockedY) {
+				// the staircase does not reach this level yet, nor the ones below
+				break;
+			}
 
-		if (tunnel != null && !tunnel.done) {
-			return tunnel;
-		}
+			Tunnel best = null;
 
-		working.remove(robot);
+			for (Tunnel next : plan(i)) {
+				if (!next.done && ready(next) && !working.containsValue(next)
+						&& (best == null || next.cell(next.open).distSqr(from) < best.cell(best.open).distSqr(from))) {
+					best = next;
+				}
+			}
 
-		for (Tunnel next : tunnels) {
-			if (!next.done && ready(next) && !working.containsValue(next)) {
-				working.put(robot, next);
-				return next;
+			if (best != null) {
+				working.put(robot, best);
+				return best;
 			}
 		}
 
@@ -413,15 +411,24 @@ public final class OreJob implements DigJob {
 		List<BlockPos> found = seenOres(level, from);
 
 		if (found.isEmpty()) {
-			List<Tunnel> tunnels = currentPlan();
+			Tunnel own = working.get(robot);
 
-			if (tunnels != null) {
-				List<BlockPos> shaft = shaft(level, levels[this.level]);
+			if (own != null && !own.done) {
+				found = next(level, robot, own);
+			} else {
+				working.remove(robot);
+				// without a tunnel it helps with the staircase first, as far as there are blocks to get at there;
+				// otherwise it takes a tunnel on a level the staircase has reached
+				Shaft shaft = shaft(level);
 
-				if (shaft != null) {
-					found = shaft;
-				} else {
-					Tunnel tunnel = tunnel(robot, tunnels);
+				for (BlockPos pos : shaft.blocks) {
+					if (free(pos)) {
+						found.add(pos);
+					}
+				}
+
+				if (found.isEmpty()) {
+					Tunnel tunnel = newTunnel(robot, shaft, from);
 
 					if (tunnel != null) {
 						found = next(level, robot, tunnel);
@@ -462,14 +469,37 @@ public final class OreJob implements DigJob {
 	}
 
 	/**
-	 * The staircase down to the level: the highest blocks of it still to dig, the ones a robot can get at; null when
-	 * it is open all the way down.
+	 * The staircase as it stands: the blocks of it to dig now (the highest few layers of it, those a robot can get
+	 * at), and how far down it is open.
 	 */
-	private List<BlockPos> shaft(ServerLevel level, int bottom) {
-		List<BlockPos> found = new ArrayList<>();
-		boolean left = false;
+	private static final class Shaft {
+		final List<BlockPos> blocks = new ArrayList<>();
+		/**
+		 * The highest height where the way over the steps is still to dig; the levels above it can be reached.
+		 * Below the deepest level when the staircase is open all the way down.
+		 */
+		int blockedY = Integer.MIN_VALUE;
+	}
 
-		for (int y = station.getY() - 1; y >= bottom && found.isEmpty(); y--) {
+	/** Layers of the staircase that are dug at the same time, so more robots can help with it. */
+	private static final int SHAFT_LAYERS = 3;
+
+	private Shaft shaft(ServerLevel level) {
+		long now = level.getGameTime();
+
+		if (shaft != null && shaftTick == now) {
+			return shaft;
+		}
+
+		Shaft result = new Shaft();
+		int bottom = levels.length == 0 ? station.getY() : levels[0];
+		int layers = 0;
+
+		for (int y = station.getY() - 1; y >= bottom; y--) {
+			// the highest layers still to dig are worked on: sealed, steps filled, blocks handed out
+			boolean active = layers < SHAFT_LAYERS;
+			boolean any = false;
+
 			for (int[] cell : RING) {
 				BlockPos pos = new BlockPos(pillar.getX() + cell[0], y, pillar.getZ() + cell[1]);
 
@@ -477,39 +507,46 @@ public final class OreJob implements DigJob {
 					continue;
 				}
 
-				if (!isStair(pos) && !clear(level, pos) || liquid(level.getBlockState(pos))) {
-					// a cave with water or lava next to the staircase: walled off before it is opened
-					seal(level, List.of(pos));
-				}
+				if (active) {
+					if (!isStair(pos) && !clear(level, pos) || liquid(level.getBlockState(pos))) {
+						// a cave with water or lava next to the staircase: walled off before it is opened
+						seal(level, List.of(pos));
+					}
 
-				if (isStair(pos)) {
-					fill(level, pos);
-				} else if (!clear(level, pos) && wanted(level, pos)) {
-					// the staircase is open once there is room to walk over every step; the rest of the ring around
-					// the pillar is dug where a robot gets at it, but a block left there (no way to it, out of sight)
-					// does not hold up the tunnels
-					left |= walkway(pos);
-
-					if (free(pos) && exposed(level, pos)) {
-						found.add(pos);
+					if (isStair(pos)) {
+						fill(level, pos);
 					}
 				}
-			}
-		}
 
-		// further down only looked at: is the way over the steps still to dig?
-		for (int y = station.getY() - 1; y >= bottom && !left; y--) {
-			for (int[] cell : RING) {
-				BlockPos pos = new BlockPos(pillar.getX() + cell[0], y, pillar.getZ() + cell[1]);
+				if (isStair(pos) || clear(level, pos) || !wanted(level, pos)) {
+					continue;
+				}
 
-				if (level.isLoaded(pos) && !isStair(pos) && walkway(pos) && !clear(level, pos) && wanted(level, pos)) {
-					left = true;
-					break;
+				// the staircase is open once there is room to walk over every step; the rest of the ring around the
+				// pillar is dug where a robot gets at it, but a block left there (no way to it, out of sight) does
+				// not hold up the tunnels
+				if (walkway(pos) && result.blockedY == Integer.MIN_VALUE) {
+					result.blockedY = y;
+				}
+
+				if (active && exposed(level, pos) && !skipped.containsKey(pos.asLong())) {
+					result.blocks.add(pos);
+					any = true;
 				}
 			}
+
+			if (any) {
+				layers++;
+			}
+
+			if (layers >= SHAFT_LAYERS && result.blockedY != Integer.MIN_VALUE) {
+				break;
+			}
 		}
 
-		return left ? found : null;
+		shaft = result;
+		shaftTick = now;
+		return result;
 	}
 
 	/** Where a robot walks down the staircase: the two blocks above a step. */
@@ -616,7 +653,17 @@ public final class OreJob implements DigJob {
 
 	@Override
 	public boolean finished() {
-		return currentPlan() == null;
+		if (shaft == null || shaft.blockedY != Integer.MIN_VALUE) {
+			return false;
+		}
+
+		for (int i = 0; i < levels.length; i++) {
+			if (plan(i).stream().anyMatch(t -> !t.done)) {
+				return false;
+			}
+		}
+
+		return true;
 	}
 
 	@Override
@@ -635,40 +682,41 @@ public final class OreJob implements DigJob {
 	}
 
 	@Override
-	public void skip(BlockPos pos, long now) {
+	public void skip(BlockPos pos, UUID robot, long now) {
 		skipped.put(pos.asLong(), now + SKIP_TICKS);
 		claimed.remove(pos.asLong());
 	}
 
 	/** For the smoke test: where the work stands, and the highest blocks of the staircase still to dig. */
 	String describe(ServerLevel level) {
-		StringBuilder out = new StringBuilder("level=" + this.level + "/" + levels.length + (this.level < levels.length ? " y=" + levels[this.level] : "")
+		Shaft shaft = shaft(level);
+		StringBuilder out = new StringBuilder("ebenen=" + levels.length + " treppe offen bis über y=" + shaft.blockedY + " treppe frei=" + shaft.blocks.size()
 				+ " working=" + working.size() + " claimed=" + claimed.size() + " skipped=" + skipped.size());
 
-		if (this.level < levels.length) {
-			for (int y = station.getY() - 1; y >= levels[this.level]; y--) {
-				StringBuilder row = new StringBuilder();
+		for (int i = levels.length - 1; i >= 0; i--) {
+			List<Tunnel> tunnels = plans.get(i);
 
-				for (int[] cell : RING) {
-					BlockPos pos = new BlockPos(pillar.getX() + cell[0], y, pillar.getZ() + cell[1]);
-
-					if (!isStair(pos) && !clear(level, pos)) {
-						BlockState state = level.getBlockState(pos);
-						row.append(' ').append(state.getBlock().getDescriptionId().replace("block.minecraft.", "")).append(wanted(level, pos) ? "" : "(nicht gewollt)")
-								.append(exposed(level, pos) ? "" : "(verdeckt)").append(free(pos) ? "" : skipped.containsKey(pos.asLong()) ? "(übersprungen)" : "(vergeben)");
-					}
-				}
-
-				if (!row.isEmpty()) {
-					out.append(" treppe y=").append(y).append(':').append(row);
-					break;
-				}
+			if (tunnels != null && tunnels.stream().anyMatch(t -> t.open > 0)) {
+				out.append(" y=").append(levels[i]).append(':').append(tunnels.stream().filter(t -> t.done).count()).append('/').append(tunnels.size())
+						.append('/').append(tunnels.stream().filter(working::containsValue).count());
 			}
 		}
 
-		if (plan != null) {
-			out.append(" gänge=").append(plan.stream().filter(t -> t.done).count()).append('/').append(plan.size()).append(" offen=")
-					.append(plan.stream().mapToInt(t -> t.open).sum());
+		if (shaft.blockedY != Integer.MIN_VALUE) {
+			int y = shaft.blockedY;
+			StringBuilder row = new StringBuilder();
+
+			for (int[] cell : RING) {
+				BlockPos pos = new BlockPos(pillar.getX() + cell[0], y, pillar.getZ() + cell[1]);
+
+				if (!isStair(pos) && !clear(level, pos)) {
+					BlockState state = level.getBlockState(pos);
+					row.append(' ').append(state.getBlock().getDescriptionId().replace("block.minecraft.", "")).append(wanted(level, pos) ? "" : "(nicht gewollt)")
+							.append(exposed(level, pos) ? "" : "(verdeckt)").append(free(pos) ? "" : skipped.containsKey(pos.asLong()) ? "(übersprungen)" : "(vergeben)");
+				}
+			}
+
+			out.append(" treppe y=").append(y).append(':').append(row);
 		}
 
 		return out.toString();
@@ -713,9 +761,14 @@ public final class OreJob implements DigJob {
 		return new BlockPos(pillar.getX() + cell[0], y, pillar.getZ() + cell[1]);
 	}
 
-	/** For the smoke test: tunnels finished on the level being worked on. */
+	/** For the smoke test: the way over the steps is open down to the deepest level. */
+	boolean staircaseOpen(ServerLevel level) {
+		return shaft(level).blockedY == Integer.MIN_VALUE;
+	}
+
+	/** For the smoke test: tunnels finished, on all levels. */
 	int tunnelsDone() {
-		return plan == null ? 0 : (int) plan.stream().filter(t -> t.done).count();
+		return plans.values().stream().mapToInt(tunnels -> (int) tunnels.stream().filter(t -> t.done).count()).sum();
 	}
 
 	/** For the smoke test: the heights of the mining levels, deepest first. */
