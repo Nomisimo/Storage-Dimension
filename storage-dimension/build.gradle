@@ -18,6 +18,7 @@ loom {
 		server {
 			// CI sets STORAGEDIM_SMOKETEST=true to boot a server once and check the mod loaded correctly.
 			vmArg "-Dstoragedim.smoketest=${System.getenv('STORAGEDIM_SMOKETEST') ?: 'false'}"
+			vmArg "-Dstoragedim.swarmtest=${System.getenv('STORAGEDIM_SWARMTEST') ?: 'false'}"
 		}
 	}
 

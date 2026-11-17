@@ -33,8 +33,20 @@ jobs:
         run: chmod +x ./gradlew
       - name: build
         run: ./gradlew build
+      - name: swarm smoke test (32 robots)
+        if: matrix.mod == 'storage-dimension'
+        env:
+          STORAGEDIM_SMOKETEST: 'true'
+          STORAGEDIM_SWARMTEST: 'true'
+        run: |
+          mkdir -p run
+          echo "eula=true" > run/eula.txt
+          echo "pause-when-empty-seconds=0" > run/server.properties
+          timeout 2400 ./gradlew runServer --args="nogui" 2>&1 | tee swarm.log
+          rm -rf run/world
+          grep -q "SMOKETEST OK" swarm.log
       - name: server smoke test
-        if: matrix.mod != 'storagedim-tb'
+        if: ${{ !cancelled() && matrix.mod != 'storagedim-tb' }}
         env:
           STORAGEDIM_SMOKETEST: 'true'
           BARDEN_SMOKETEST: 'true'

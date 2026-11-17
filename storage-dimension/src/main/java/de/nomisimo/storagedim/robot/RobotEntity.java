@@ -1794,6 +1794,11 @@ public class RobotEntity extends PathfinderMob {
 		}
 	}
 
+	/** For the smoke test: hacking at a block right now. */
+	public boolean isDigging() {
+		return minePhase == 3 && digTicks > 0;
+	}
+
 	/** For the smoke test: its tools and bag. */
 	public String describeMining() {
 		return "mining=" + mining + " phase=" + minePhase + " target=" + mineTarget + " idle=" + mineIdle + " finished=" + mineFinished
