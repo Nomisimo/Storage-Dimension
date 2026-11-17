@@ -134,7 +134,10 @@ public final class MiningSmokeTest {
 			for (int dx = -1; dx <= 1; dx++) {
 				for (int dz = -1; dz <= 1; dz++) {
 					BlockPos pos = station.offset(dx, dy, dz);
-					(job.isStair(pos) || job.onPlatform(pos) ? stairs : toDig).add(pos);
+
+					if (!level.getBlockState(pos).isAir()) {
+						(job.isStair(pos) || job.onPlatform(pos) ? stairs : toDig).add(pos);
+					}
 				}
 			}
 		}
