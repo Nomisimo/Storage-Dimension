@@ -68,11 +68,13 @@ public final class OreSmokeTest {
 
 		System.setProperty("storagedim.stripBottom", Integer.toString(Y - 14));
 
-		// a block of stone under the station, 35 wide and 14 deep
-		for (int dx = -17; dx <= 17; dx++) {
-			for (int dz = -17; dz <= 17; dz++) {
+		// a block of stone under the station, 14 deep, as wide as the chunks the robots dig
+		int[] square = RobotEntity.chunkSquare(station, 16);
+
+		for (int x = square[0]; x <= square[2]; x++) {
+			for (int z = square[1]; z <= square[3]; z++) {
 				for (int dy = -14; dy <= -1; dy++) {
-					level.setBlockAndUpdate(station.offset(dx, dy, dz), Blocks.STONE.defaultBlockState());
+					level.setBlockAndUpdate(new BlockPos(x, Y + dy, z), Blocks.STONE.defaultBlockState());
 				}
 			}
 		}

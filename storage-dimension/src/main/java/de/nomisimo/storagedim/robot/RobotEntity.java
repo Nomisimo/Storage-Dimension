@@ -1093,11 +1093,28 @@ public class RobotEntity extends PathfinderMob {
 			return !(below ? new AABB(box.minX, level().getMinY(), box.minZ, box.maxX, box.maxY, box.maxZ) : box).contains(pos);
 		}
 
+		if (mining && station != null) {
+			// the chunks it digs, all the way up and down
+			int[] square = chunkSquare(station, stationRange);
+			return pos.x < square[0] - 4 || pos.x > square[2] + 5 || pos.z < square[1] - 4 || pos.z > square[3] + 5;
+		}
+
 		BlockPos h = home();
 		double dx = pos.x - h.getX();
 		double dz = pos.z - h.getZ();
 		int reach = workRange();
 		return dx * dx + dz * dz > (reach + 4) * (reach + 4) || !below && Math.abs(pos.y - h.getY()) > VERTICAL_RANGE + 4;
+	}
+
+	/**
+	 * Where a station's robots dig without antennas, on chunk borders: the station's chunk and its range in chunks
+	 * (at least one) all round. {minX, minZ, maxX, maxZ}, inclusive.
+	 */
+	public static int[] chunkSquare(BlockPos station, int range) {
+		int chunks = Math.max(1, Math.round(Math.clamp(range, MIN_RANGE, RANGE) / 16.0F));
+		int cx = station.getX() >> 4;
+		int cz = station.getZ() >> 4;
+		return new int[] {(cx - chunks) << 4, (cz - chunks) << 4, ((cx + chunks) << 4) + 15, ((cz + chunks) << 4) + 15};
 	}
 
 	private boolean inRange(Vec3 pos) {
@@ -1411,10 +1428,11 @@ public class RobotEntity extends PathfinderMob {
 			maxY = (int) Math.ceil(area.maxY) - 1;
 			maxZ = (int) Math.ceil(area.maxZ) - 1;
 		} else {
-			minX = station.getX() - stationRange;
-			maxX = station.getX() + stationRange;
-			minZ = station.getZ() - stationRange;
-			maxZ = station.getZ() + stationRange;
+			int[] square = chunkSquare(station, stationRange);
+			minX = square[0];
+			minZ = square[1];
+			maxX = square[2];
+			maxZ = square[3];
 			// the whole square, from the top of the ground down to the bedrock (the ore search only looks below the station)
 			minY = Math.max(level().getMinY(), Integer.getInteger("storagedim.mineBottom", level().getMinY()));
 			maxY = level().getMaxY();
@@ -2799,7 +2817,9 @@ public class RobotEntity extends PathfinderMob {
 	 */
 	private void applyRange() {
 		int depth = mining && station != null ? Math.max(0, station.getY() - level().getMinY()) : 0;
-		getAttribute(Attributes.FOLLOW_RANGE).setBaseValue((area != null ? areaReach : workRange()) + 16 + depth);
+		// to the far corner of the chunks it digs
+		int reach = area != null ? areaReach : mining ? Math.max(range, (int) Math.ceil((Math.round(stationRange / 16.0F) + 1) * 16 * 1.42)) : workRange();
+		getAttribute(Attributes.FOLLOW_RANGE).setBaseValue(reach + 16 + depth);
 		getNavigation().updatePathfinderMaxVisitedNodes();
 	}
 

@@ -135,8 +135,8 @@ public final class DeepOreSmokeTest {
 	}
 
 	private static OreJob job() {
-		return OreJob.get(Rooms.id(level), station, station.getX() - RANGE, station.getZ() - RANGE, station.getX() + RANGE, station.getZ() + RANGE,
-				level.getMinY(), level.getGameTime());
+		int[] square = RobotEntity.chunkSquare(station, RANGE);
+		return OreJob.get(Rooms.id(level), station, square[0], square[1], square[2], square[3], level.getMinY(), level.getGameTime());
 	}
 
 	private static void tick() {
