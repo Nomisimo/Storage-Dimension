@@ -37,6 +37,8 @@ public final class DeepOreSmokeTest {
 	private static int ticks;
 	private static int deepest;
 	private static int reachedAt = -1;
+	private static RobotEntity trapped;
+	private static int trappedAt;
 	private static final java.util.Map<RobotEntity, Integer> idle = new java.util.HashMap<>();
 	/** A robot with a pickaxe that waits this long while there is still work has lost its way. */
 	private static final int IDLE_LIMIT = 2400;
@@ -183,10 +185,34 @@ public final class DeepOreSmokeTest {
 		// then the tunnels there: several finished, and the robots that took ores home came back down for them
 		long below = robots.stream().filter(r -> !r.tool(0).isEmpty() && r.getY() < bottom + 8).count();
 
+		if (trapped != null) {
+			// the robot walled in deep down digs itself out and comes home
+			if (Math.abs(trapped.getX() - station.getX() - 0.5) < 5 && Math.abs(trapped.getZ() - station.getZ() - 0.5) < 5 && trapped.getY() >= station.getY() - 1) {
+				StorageDimensionMod.LOGGER.info("SMOKETEST Tiefe Erzsuche: eingemauerter Roboter nach {} Ticks frei und daheim", ticks - trappedAt);
+				StationMining.toggle(level, Rooms.id(level), station);
+				finish(List.of());
+			} else if (ticks - trappedAt > 3000) {
+				finish(List.of("Tiefe Erzsuche: eingemauerter Roboter kam nicht frei: " + trapped.describeMining() + " " + trapped.status().getString() + " at " + trapped.blockPosition()));
+			}
+
+			return;
+		}
+
 		if (reachedAt >= 0 && job.tunnelsDone() >= 6 && below >= 2) {
 			StorageDimensionMod.LOGGER.info("SMOKETEST Tiefe Erzsuche: {} Gänge fertig nach {} Ticks, {} Roboter unten", job.tunnelsDone(), ticks, below);
-			StationMining.toggle(level, Rooms.id(level), station);
-			finish(List.of());
+			// then one robot walled in, 12 blocks down and 8 to the side: it has to dig itself out
+			trapped = robots.stream().filter(r -> !r.tool(0).isEmpty()).findFirst().orElse(robots.get(0));
+			BlockPos pocket = station.offset(8, -12, 8);
+
+			for (BlockPos pos : BlockPos.betweenClosed(pocket.offset(-1, -1, -1), pocket.offset(1, 2, 1))) {
+				level.setBlockAndUpdate(pos, Blocks.STONE.defaultBlockState());
+			}
+
+			level.setBlockAndUpdate(pocket, Blocks.AIR.defaultBlockState());
+			level.setBlockAndUpdate(pocket.above(), Blocks.AIR.defaultBlockState());
+			trapped.snapTo(pocket.getX() + 0.5, pocket.getY(), pocket.getZ() + 0.5, 0, 0);
+			trappedAt = ticks;
+			return;
 		} else if (!robots.isEmpty() && robots.stream().allMatch(r -> !r.isAlive())) {
 			finish(List.of("Tiefe Erzsuche: alle Roboter sind weg (gestorben?)"));
 		} else if (ticks > TIMEOUT) {

@@ -175,6 +175,8 @@ public class RobotEntity extends PathfinderMob {
 	private BlockPos delivery;
 	/** Ticks since it last stood or swam. */
 	private int airTicks;
+	/** Ticks it has been stuck away from its station (waiting with no way to anything). */
+	private int strandedTicks;
 	private int idleTicks;
 	private int range = RANGE;
 	/** Items it collects; empty = everything. */
@@ -293,6 +295,7 @@ public class RobotEntity extends PathfinderMob {
 
 	@Override
 	protected void registerGoals() {
+		goalSelector.addGoal(-1, new RescueGoal());
 		goalSelector.addGoal(0, new MineGoal());
 		goalSelector.addGoal(1, new WorkGoal());
 		goalSelector.addGoal(6, new LookAtPlayerGoal(this, Player.class, 6));
@@ -2089,6 +2092,239 @@ public class RobotEntity extends PathfinderMob {
 					getNavigation().moveTo(path, 1.0);
 				} else {
 					getMoveControl().setWantedPosition(centre.x, centre.y, centre.z, 1.0);
+				}
+			}
+		}
+	}
+
+	/**
+	 * When it is stuck down in the mine (no way home, nothing it can get to), it digs itself out with its pickaxe: a
+	 * staircase towards its station, up to the station's height and then on along the ground, with cobblestone where a
+	 * step or the floor is missing and over water or lava beside the way. As soon as there is a way home again it
+	 * stops and walks.
+	 */
+	private class RescueGoal extends Goal {
+		private static final int STRANDED_TICKS = 200;
+		private static final int MAX_STEPS = 400;
+		private BlockPos digging;
+		private int digTicks;
+		private int digTotal;
+		private BlockPos stepTo;
+		private int stepTicks;
+		private int steps;
+		private int checkCooldown;
+
+		RescueGoal() {
+			setFlags(EnumSet.of(Flag.MOVE, Flag.LOOK));
+		}
+
+		private boolean stranded() {
+			long now = level().getGameTime();
+			boolean stuck = now < homeUnreachableUntil || mineIdle && !mineFinished && minePhase == 0;
+			strandedTicks = mining && !tools[PICKAXE].isEmpty() && station != null && !nearHome() && stuck && getAction() == 0 ? strandedTicks + 1 : 0;
+			return strandedTicks >= STRANDED_TICKS;
+		}
+
+		@Override
+		public boolean canUse() {
+			if (level().isClientSide() || !stranded() || !standing()) {
+				return false;
+			}
+
+			// a way home after all: nothing to dig
+			Path home = getNavigation().createPath(home(), 2);
+			strandedTicks = home != null && home.canReach() ? 0 : strandedTicks;
+			return strandedTicks > 0;
+		}
+
+		@Override
+		public boolean canContinueToUse() {
+			return mining && !tools[PICKAXE].isEmpty() && steps < MAX_STEPS && !nearHome() && getAction() == 0;
+		}
+
+		@Override
+		public void start() {
+			getNavigation().stop();
+			dropMineTarget();
+			digging = null;
+			stepTo = null;
+			steps = 0;
+			checkCooldown = 0;
+		}
+
+		@Override
+		public void stop() {
+			if (digging != null) {
+				level().destroyBlockProgress(getId(), digging, -1);
+			}
+
+			digging = null;
+			stepTo = null;
+			strandedTicks = 0;
+			homeUnreachableUntil = 0;
+			mineIdle = false;
+		}
+
+		@Override
+		public boolean requiresUpdateEveryTick() {
+			return true;
+		}
+
+		@Override
+		public void tick() {
+			ServerLevel server = (ServerLevel) level();
+
+			if (digging != null) {
+				BlockState state = server.getBlockState(digging);
+				getLookControl().setLookAt(Vec3.atCenterOf(digging));
+
+				if (state.getCollisionShape(server, digging).isEmpty() && !MiningJob.isWater(state)) {
+					digging = null;
+					return;
+				}
+
+				digTicks++;
+				server.destroyBlockProgress(getId(), digging, Math.min(9, digTicks * 10 / Math.max(1, digTotal)));
+
+				if (digTicks % 4 == 1) {
+					var sound = state.getSoundType();
+					server.playSound(null, digging, sound.getHitSound(), net.minecraft.sounds.SoundSource.BLOCKS, sound.getVolume() * 0.25F, sound.getPitch() * 0.5F);
+				}
+
+				if (digTicks >= digTotal) {
+					breakFree(server, digging, state);
+					digging = null;
+				}
+
+				return;
+			}
+
+			if (stepTo != null) {
+				Vec3 goal = Vec3.atBottomCenterOf(stepTo);
+				getMoveControl().setWantedPosition(goal.x, goal.y, goal.z, 1.0);
+
+				if (stepTo.getY() > getBlockY() && onGround()) {
+					getJumpControl().jump();
+				}
+
+				if (position().distanceToSqr(goal) < 0.2 || ++stepTicks > 60) {
+					stepTo = null;
+				}
+
+				return;
+			}
+
+			// now and then: is there a way home again?
+			if (--checkCooldown <= 0 && standing()) {
+				checkCooldown = 20;
+				Path home = getNavigation().createPath(home(), 2);
+
+				if (home != null && home.canReach()) {
+					getNavigation().moveTo(home, 1.0);
+					steps = MAX_STEPS;
+					return;
+				}
+			}
+
+			if (!standing()) {
+				return;
+			}
+
+			planStep(server);
+		}
+
+		/** The next step towards the station: what is in the way is dug, a missing step or floor filled. */
+		private void planStep(ServerLevel server) {
+			BlockPos at = blockPosition();
+			BlockPos h = home();
+			int dx = h.getX() - at.getX();
+			int dz = h.getZ() - at.getZ();
+			Direction dir = Math.abs(dx) >= Math.abs(dz) ? (dx >= 0 ? Direction.EAST : Direction.WEST) : (dz >= 0 ? Direction.SOUTH : Direction.NORTH);
+			boolean up = at.getY() < h.getY();
+			boolean down = at.getY() > h.getY() + 1;
+
+			if (dx == 0 && dz == 0 && !up) {
+				steps = MAX_STEPS;
+				return;
+			}
+
+			BlockPos next = at.relative(dir).above(up ? 1 : down ? -1 : 0);
+			List<BlockPos> clearing = new ArrayList<>(List.of(next, next.above()));
+
+			if (up) {
+				// room to jump up
+				clearing.add(at.above(2));
+			} else if (down) {
+				clearing.add(next.above(2));
+			}
+
+			for (BlockPos pos : clearing) {
+				sealLiquid(server, pos);
+				BlockState state = server.getBlockState(pos);
+
+				if (!state.getCollisionShape(server, pos).isEmpty()) {
+					if (!mayBreak(server, pos, state)) {
+						// in the way for good (bedrock, a chest): try another way round next time
+						steps += 10;
+						stepTo = at.relative(dir.getClockWise());
+						stepTicks = 0;
+						return;
+					}
+
+					digging = pos.immutable();
+					digTicks = 0;
+					digTotal = digTime(pos, state);
+					return;
+				}
+			}
+
+			// something to stand on there
+			BlockPos floor = next.below();
+
+			if (server.getBlockState(floor).canBeReplaced() || server.getBlockState(floor).getCollisionShape(server, floor).isEmpty()) {
+				server.setBlockAndUpdate(floor, Blocks.COBBLESTONE.defaultBlockState());
+				playSound(SoundEvents.STONE_PLACE, 0.5F, 1.0F);
+			}
+
+			steps++;
+			stepTo = next.immutable();
+			stepTicks = 0;
+		}
+
+		/** Water or lava there or right beside it becomes cobblestone, so it does not run onto the way out. */
+		private void sealLiquid(ServerLevel server, BlockPos pos) {
+			for (BlockPos near : List.of(pos, pos.north(), pos.south(), pos.east(), pos.west(), pos.above())) {
+				if (server.getBlockState(near).getBlock() instanceof net.minecraft.world.level.block.LiquidBlock) {
+					server.setBlockAndUpdate(near, Blocks.COBBLESTONE.defaultBlockState());
+				}
+			}
+		}
+
+		private boolean mayBreak(ServerLevel server, BlockPos pos, BlockState state) {
+			return state.getDestroySpeed(server, pos) >= 0 && !state.hasBlockEntity() && !state.is(RobotStationBlock.BLOCK) && !state.is(AntennaBlock.BLOCK)
+					&& !state.is(RobotBarrierBlock.BLOCK) && !(miningJob() instanceof OreJob ores && ores.isStair(pos)) && !(miningJob() instanceof MiningJob area && area.isStair(pos));
+		}
+
+		/** Breaks the block; ores go into its bag (with the tool's enchantments), the rest is left. */
+		private void breakFree(ServerLevel server, BlockPos pos, BlockState state) {
+			int kind = bestTool(state);
+			ItemStack tool = kind < 0 ? ItemStack.EMPTY : tools[kind];
+			List<ItemStack> drops = OreJob.isOre(state) ? Block.getDrops(state, server, pos, null, RobotEntity.this, tool) : List.of();
+			server.destroyBlock(pos, false, RobotEntity.this);
+
+			for (ItemStack drop : drops) {
+				if (!addToBag(drop)) {
+					Block.popResource(server, pos, drop);
+				}
+			}
+
+			if (!tool.isEmpty() && state.getDestroySpeed(server, pos) > 0) {
+				tool.hurtAndBreak(1, server, (ServerPlayer) null, item -> {
+				});
+
+				if (tool.isEmpty()) {
+					tools[kind] = ItemStack.EMPTY;
+					playSound(SoundEvents.ITEM_PICKUP, 0.6F, 0.5F);
 				}
 			}
 		}
