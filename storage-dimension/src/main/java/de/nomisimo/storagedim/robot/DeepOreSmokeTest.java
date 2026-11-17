@@ -28,7 +28,8 @@ import net.minecraft.world.level.levelgen.Heightmap;
  */
 public final class DeepOreSmokeTest {
 	private static final int TIMEOUT = 24000;
-	private static final int RANGE = 5;
+	/** The smallest range a station has (smaller ones count as this), so the test looks at the same job as the robots. */
+	private static final int RANGE = 16;
 
 	private static ServerLevel level;
 	private static BlockPos station;
