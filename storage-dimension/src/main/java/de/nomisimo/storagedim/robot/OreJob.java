@@ -485,7 +485,10 @@ public final class OreJob implements DigJob {
 				if (isStair(pos)) {
 					fill(level, pos);
 				} else if (!clear(level, pos) && wanted(level, pos)) {
-					left = true;
+					// the staircase is open once there is room to walk over every step; the rest of the ring around
+					// the pillar is dug where a robot gets at it, but a block left there (no way to it, out of sight)
+					// does not hold up the tunnels
+					left |= walkway(pos);
 
 					if (free(pos) && exposed(level, pos)) {
 						found.add(pos);
@@ -494,7 +497,24 @@ public final class OreJob implements DigJob {
 			}
 		}
 
+		// further down only looked at: is the way over the steps still to dig?
+		for (int y = station.getY() - 1; y >= bottom && !left; y--) {
+			for (int[] cell : RING) {
+				BlockPos pos = new BlockPos(pillar.getX() + cell[0], y, pillar.getZ() + cell[1]);
+
+				if (level.isLoaded(pos) && !isStair(pos) && walkway(pos) && !clear(level, pos) && wanted(level, pos)) {
+					left = true;
+					break;
+				}
+			}
+		}
+
 		return left ? found : null;
+	}
+
+	/** Where a robot walks down the staircase: the two blocks above a step. */
+	private boolean walkway(BlockPos pos) {
+		return isStair(pos.below()) && !isStair(pos) || isStair(pos.below(2)) && !isStair(pos.below());
 	}
 
 	/** The next blocks of the robot's tunnel: what fell back into it first, then the next place along it. */
