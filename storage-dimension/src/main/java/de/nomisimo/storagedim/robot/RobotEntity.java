@@ -2320,7 +2320,7 @@ public class RobotEntity extends PathfinderMob {
 
 		private boolean mayBreak(ServerLevel server, BlockPos pos, BlockState state) {
 			return state.getDestroySpeed(server, pos) >= 0 && !state.hasBlockEntity() && !state.is(RobotStationBlock.BLOCK) && !state.is(AntennaBlock.BLOCK)
-					&& !state.is(RobotBarrierBlock.BLOCK) && !(miningJob() instanceof OreJob ores && ores.isStair(pos)) && !(miningJob() instanceof MiningJob area && area.isStair(pos));
+					&& !state.is(RobotBarrierBlock.BLOCK) && !(miningJob() instanceof OreJob ores && ores.isStair(pos)) && !(miningJob() instanceof MiningJob area && (area.isStair(pos) || area.onPlatform(pos)));
 		}
 
 		/** Breaks the block; ores go into its bag (with the tool's enchantments), the rest is left. */

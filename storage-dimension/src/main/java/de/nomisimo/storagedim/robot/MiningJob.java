@@ -40,6 +40,8 @@ import net.minecraft.world.level.block.state.BlockState;
  */
 public final class MiningJob implements DigJob {
 	/** The eight columns around the pillar, in walking order; corners are even, so no step sits right on a chest beside the station. */
+	/** How far the platform reaches from the station. */
+	static final int PLATFORM = 4;
 	static final int[][] RING = {{-1, -1}, {0, -1}, {1, -1}, {1, 0}, {1, 1}, {0, 1}, {-1, 1}, {-1, 0}};
 	/** How long a block no robot found a way to is left out (ticks). */
 	private static final int SKIP_TICKS = 1200;
@@ -192,13 +194,30 @@ public final class MiningJob implements DigJob {
 		return Math.floorMod(pos.getY() - station.getY() - 1, RING.length) == index;
 	}
 
+	/**
+	 * The platform around the station: {@value #PLATFORM} blocks all round (9 by 9), one block thick under the
+	 * station's floor, and everything on it (chests, a house, waystones) stays. Only the way down to the staircase is
+	 * opened: the ring around the pillar in the platform itself.
+	 */
+	public boolean onPlatform(BlockPos pos) {
+		int dx = pos.getX() - station.getX();
+		int dz = pos.getZ() - station.getZ();
+
+		if (Math.abs(dx) > PLATFORM || Math.abs(dz) > PLATFORM || pos.getY() < station.getY() - 1) {
+			return false;
+		}
+
+		boolean ring = Math.abs(pos.getX() - pillar.getX()) <= 1 && Math.abs(pos.getZ() - pillar.getZ()) <= 1;
+		return !(ring && pos.getY() == station.getY() - 1);
+	}
+
 	/** A block the robots never dig: the staircase and what holds it up, storage and other block entities, mod blocks. */
 	public boolean isProtected(ServerLevel level, BlockPos pos, BlockState state) {
 		if (state.hasBlockEntity() || state.is(RobotStationBlock.BLOCK) || state.is(AntennaBlock.BLOCK) || state.is(RobotBarrierBlock.BLOCK)) {
 			return true;
 		}
 
-		if (isStair(pos)) {
+		if (isStair(pos) || onPlatform(pos)) {
 			return true;
 		}
 
