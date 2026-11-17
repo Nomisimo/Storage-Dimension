@@ -181,6 +181,8 @@ public final class DeepOreSmokeTest {
 			reachedAt = ticks;
 		}
 
+		long below = robots.stream().filter(r -> !r.tool(0).isEmpty() && r.getY() < bottom + 8).count();
+
 		if (trapped != null) {
 			// the robot walled in deep down digs itself out and comes home
 			if (Math.abs(trapped.getX() - station.getX() - 0.5) < 5 && Math.abs(trapped.getZ() - station.getZ() - 0.5) < 5 && trapped.getY() >= station.getY() - 1) {
