@@ -173,6 +173,8 @@ public class RobotEntity extends PathfinderMob {
 	private BlockPos home;
 	private ItemEntity target;
 	private BlockPos delivery;
+	/** Ticks since it last stood or swam. */
+	private int airTicks;
 	private int idleTicks;
 	private int range = RANGE;
 	/** Items it collects; empty = everything. */
@@ -558,6 +560,7 @@ public class RobotEntity extends PathfinderMob {
 	/** Called back, it keeps its eyes on the player who called until it works again. */
 	@Override
 	protected void customServerAiStep(ServerLevel level) {
+		airTicks = onGround() || isInLiquid() ? 0 : airTicks + 1;
 		super.customServerAiStep(level);
 		Player player = watchedPlayer();
 
@@ -1112,7 +1115,7 @@ public class RobotEntity extends PathfinderMob {
 	 */
 	private ItemEntity findItem() {
 		// a way can only be worked out standing (or swimming); try again on the next search
-		if (!onGround() && !isInLiquid()) {
+		if (!standing()) {
 			return null;
 		}
 
@@ -1165,9 +1168,17 @@ public class RobotEntity extends PathfinderMob {
 	}
 
 	/** Picks the closest chest for what it carries that it can walk to; unreachable ones are left alone for a minute. */
+	/**
+	 * It can work out a way: standing or swimming, or not falling for a while (wedged on a ledge or on gravel, where
+	 * the game does not count it as on the ground; it would otherwise never plan again).
+	 */
+	private boolean standing() {
+		return onGround() || isInLiquid() || airTicks > 40;
+	}
+
 	private BlockPos planDelivery() {
 		// a way can only be worked out standing (or swimming); try again on the next search
-		if (!onGround() && !isInLiquid()) {
+		if (!standing()) {
 			return null;
 		}
 
@@ -1841,7 +1852,7 @@ public class RobotEntity extends PathfinderMob {
 		/** Works out what to do next; false when there is nothing (then it waits at the station). */
 		private boolean plan() {
 			// a way can only be worked out standing (or swimming); try again on the next search
-			if (!onGround() && !isInLiquid()) {
+			if (!standing()) {
 				return false;
 			}
 
