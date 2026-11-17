@@ -689,7 +689,7 @@ public final class OreJob implements DigJob {
 		int dir = Integer.signum(dy);
 		int far = from.getY() + dir * Math.min(Math.abs(dy) - 1, WAYPOINT_SPAN);
 
-		for (int y = far; y != from.getY() && found.size() < 4; y -= dir) {
+		for (int y = far; (y - from.getY()) * dir > 0 && found.size() < 4; y -= dir) {
 			if (y >= station.getY() || y < minY) {
 				continue;
 			}
