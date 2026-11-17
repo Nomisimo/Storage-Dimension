@@ -202,84 +202,56 @@ public final class DeepOreSmokeTest {
 		}
 	}
 
-	/**
-	 * For a robot up at the station: how deep down the staircase a way can be worked out, standing on each step in
-	 * turn, and what the staircase looks like where it ends.
-	 */
+	/** For each waiting robot: the ways to the blocks handed out, home, and over the staircase, and what is around it. */
 	private static void pathProbe() {
-		RobotEntity robot = robots.stream().filter(r -> r.getY() >= station.getY() - 1 && !r.tool(0).isEmpty() && r.describeMining().contains("idle=true"))
-				.findFirst().orElse(null);
-
-		if (robot == null) {
-			return;
-		}
-
-		BlockPos at = robot.blockPosition();
-		BlockPos aside = at.relative(net.minecraft.core.Direction.SOUTH, 3);
-		net.minecraft.world.level.pathfinder.Path flat = robot.getNavigation().createPath(aside, 0);
-		StorageDimensionMod.LOGGER.info("SMOKETEST Tief-Weg Roboter {} ({}) onGround={} unten={} follow={} Weg 3 zur Seite: {}", robot.position(), at, robot.onGround(),
-				level.getBlockState(at.below()), robot.getAttributeValue(net.minecraft.world.entity.ai.attributes.Attributes.FOLLOW_RANGE),
-				flat == null ? "null" : flat.canReach() + "/" + flat.getNodeCount());
-
-		for (int dx = -2; dx <= 2; dx++) {
-			StringBuilder row = new StringBuilder();
-
-			for (int dz = -2; dz <= 2; dz++) {
-				for (int dy = -2; dy <= 1; dy++) {
-					row.append(level.getBlockState(at.offset(dx, dy, dz)).getBlock().getDescriptionId().replace("block.minecraft.", "").replace("block.storagedim.", "")).append(dy == 1 ? " | " : ",");
-				}
-			}
-
-			StorageDimensionMod.LOGGER.info("SMOKETEST Tief-Umgebung dx={} (dz -2..2, je dy -2..1): {}", dx, row);
-		}
-
 		OreJob job = job();
-		StringBuilder dig = new StringBuilder();
 
-		for (BlockPos pos : job.candidates(level, at, robot.getUUID(), 8, level.getGameTime())) {
-			net.minecraft.world.level.pathfinder.Path path = robot.getNavigation().createPath(java.util.Set.of(pos), 4);
-			dig.append(' ').append(pos.toShortString()).append(path == null ? "->null" : "->" + path.canReach() + "/" + path.getNodeCount() + "@" + path.getEndNode().asBlockPos().toShortString());
-		}
-
-		StorageDimensionMod.LOGGER.info("SMOKETEST Tief-Grabweg von {}:{}", at, dig);
-		StringBuilder out = new StringBuilder();
-		Integer failed = null;
-
-		for (int y = station.getY() - 1; y > job.levels()[0]; y -= 4) {
-			BlockPos feet = job.step(y).above();
-
-			if (!level.getBlockState(feet).getCollisionShape(level, feet).isEmpty()) {
-				// not dug down to here yet
-				break;
+		for (RobotEntity robot : robots) {
+			if (robot.tool(0).isEmpty() || !robot.describeMining().contains("idle=true")) {
+				continue;
 			}
 
-			net.minecraft.world.level.pathfinder.Path path = robot.getNavigation().createPath(feet, 0);
-			boolean ok = path != null && path.canReach();
-			out.append(' ').append(y).append(ok ? ":ok" : path == null ? ":null" : ":bis" + path.getEndNode().asBlockPos().getY() + "(" + path.getNodeCount() + ")");
+			BlockPos at = robot.blockPosition();
+			StringBuilder out = new StringBuilder();
+			out.append(" onGround=").append(robot.onGround()).append(" unten=").append(name(at.below()));
 
-			if (!ok && failed == null) {
-				failed = y;
+			for (BlockPos pos : job.candidates(level, at, robot.getUUID(), 4, level.getGameTime())) {
+				out.append(" grab ").append(pos.toShortString()).append(describe(robot.getNavigation().createPath(java.util.Set.of(pos), 4)));
 			}
-		}
 
-		StorageDimensionMod.LOGGER.info("SMOKETEST Tief-Weg von {}:{}", robot.blockPosition(), out);
+			out.append(" heim").append(describe(robot.getNavigation().createPath(station, 2)));
 
-		if (failed != null) {
-			for (int y = failed + 6; y >= failed - 2; y--) {
+			for (BlockPos waypoint : job.waypoints(level, at, station.getY())) {
+				out.append(" hoch ").append(waypoint.toShortString()).append(describe(robot.getNavigation().createPath(waypoint, 1)));
+			}
+
+			for (BlockPos waypoint : job.waypoints(level, at, job.levels()[0])) {
+				out.append(" runter ").append(waypoint.toShortString()).append(describe(robot.getNavigation().createPath(waypoint, 1)));
+			}
+
+			StorageDimensionMod.LOGGER.info("SMOKETEST Tief-Weg {} at {}:{}", robot.getUUID().toString().substring(0, 4), at, out);
+
+			for (int dy = 2; dy >= -2; dy--) {
 				StringBuilder row = new StringBuilder();
 
-				for (int dz = -1; dz <= 1; dz++) {
-					for (int dx = -1; dx <= 1; dx++) {
-						BlockPos pos = new BlockPos(station.getX() + dx, y, station.getZ() + dz);
-						BlockPos stepPos = job.step(y);
-						String name = level.getBlockState(pos).getBlock().getDescriptionId().replace("block.minecraft.", "");
-						row.append(pos.equals(stepPos) ? "[" + name + "]" : name).append(dx == 1 ? " | " : " ");
+				for (int dz = -2; dz <= 2; dz++) {
+					for (int dx = -2; dx <= 2; dx++) {
+						row.append(name(at.offset(dx, dy, dz))).append(dx == 2 ? " | " : ",");
 					}
 				}
 
-				StorageDimensionMod.LOGGER.info("SMOKETEST Tief-Treppe y={}: {}", y, row);
+				StorageDimensionMod.LOGGER.info("SMOKETEST Tief-Umgebung dy={} (Zeilen dz -2..2, je dx -2..2): {}", dy, row);
 			}
 		}
+	}
+
+	private static String name(BlockPos pos) {
+		String id = level.getBlockState(pos).getBlock().getDescriptionId().replace("block.minecraft.", "").replace("block.storagedim.", "");
+		return pos.getX() == station.getX() && pos.getZ() == station.getZ() ? id.toUpperCase(java.util.Locale.ROOT) : id;
+	}
+
+	private static String describe(net.minecraft.world.level.pathfinder.Path path) {
+		return path == null ? "->null" : "->" + (path.canReach() ? "ok" : "nein") + "/" + path.getNodeCount() + "@" + path.getEndNode().asBlockPos().toShortString();
 	}
 
 	private static void finish(List<String> errors) {
