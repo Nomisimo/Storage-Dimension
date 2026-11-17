@@ -71,7 +71,7 @@ public final class MiningSmokeTest {
 		// a little hill to dig: stone on top, then dirt and logs, ores at the bottom
 		Block[] bottom = {Blocks.IRON_ORE, Blocks.COAL_ORE, Blocks.STONE};
 
-		for (int dx = 3; dx <= 5; dx++) {
+		for (int dx = 6; dx <= 8; dx++) {
 			for (int dz = -1; dz <= 1; dz++) {
 				put(station.offset(dx, 0, dz), bottom[Math.floorMod(dx + dz, 3)]);
 				put(station.offset(dx, 1, dz), (dx + dz) % 2 == 0 ? Blocks.DIRT : Blocks.OAK_LOG);
@@ -80,16 +80,16 @@ public final class MiningSmokeTest {
 		}
 
 		// sand that falls when the block below it goes
-		put(station.offset(-4, 0, 3), Blocks.COBBLESTONE);
-		put(station.offset(-4, 1, 3), Blocks.SAND);
-		put(station.offset(-4, 2, 3), Blocks.SAND);
+		put(station.offset(-6, 0, 3), Blocks.COBBLESTONE);
+		put(station.offset(-6, 1, 3), Blocks.SAND);
+		put(station.offset(-6, 2, 3), Blocks.SAND);
 
 		// a pond in a stone rim: the robots pump its water away
-		for (int dx = -7; dx <= -4; dx++) {
-			for (int dz = -7; dz <= -4; dz++) {
+		for (int dx = -9; dx <= -6; dx++) {
+			for (int dz = -9; dz <= -6; dz++) {
 				BlockPos pos = station.offset(dx, 0, dz);
 
-				if (dx == -7 || dx == -4 || dz == -7 || dz == -4) {
+				if (dx == -9 || dx == -6 || dz == -9 || dz == -6) {
 					put(pos, Blocks.STONE);
 				} else {
 					put(pos, Blocks.WATER);
@@ -102,6 +102,12 @@ public final class MiningSmokeTest {
 			for (int dx = -1; dx <= 1; dx++) {
 				for (int dz = -1; dz <= 1; dz++) {
 					BlockPos pos = station.offset(dx, dy, dz);
+
+					if (dx == 1 && dz == 0) {
+						// not on the loot chest: it could not be opened
+						continue;
+					}
+
 					level.setBlockAndUpdate(pos, Blocks.STONE.defaultBlockState());
 				}
 			}
@@ -128,14 +134,24 @@ public final class MiningSmokeTest {
 			for (int dx = -1; dx <= 1; dx++) {
 				for (int dz = -1; dz <= 1; dz++) {
 					BlockPos pos = station.offset(dx, dy, dz);
-					(job.isStair(pos) ? stairs : toDig).add(pos);
+
+					if (!level.getBlockState(pos).isAir()) {
+						(job.isStair(pos) || job.onPlatform(pos) ? stairs : toDig).add(pos);
+					}
 				}
 			}
 		}
 
-		if (stairs.size() != 4) {
+		if (stairs.stream().filter(job::isStair).count() != 4) {
 			// the pillar at two heights, one step at each
-			errors.add("Treppe hat " + stairs.size() + " statt 4 Blöcke: " + stairs);
+			errors.add("Treppe hat " + stairs.stream().filter(job::isStair).count() + " statt 4 Blöcke: " + stairs);
+		}
+
+		// a little house on the platform around the station: it stays
+		for (int dy = 0; dy <= 2; dy++) {
+			BlockPos wall = station.offset(3, dy, -3);
+			level.setBlockAndUpdate(wall, Blocks.OAK_PLANKS.defaultBlockState());
+			stairs.add(wall);
 		}
 
 		Container tools = (Container) level.getBlockEntity(config.toolChest().get());

@@ -31,11 +31,11 @@ import net.minecraft.world.level.block.ChestBlock;
  * walls, floor and ceiling (iron, diamond, a vein of two coal ores, a far iron, a gold ore behind a pocket of lava),
  * but not an emerald ore deep in the rock between the tunnels: they cannot see through the rock. The lava next to a
  * tunnel and a pocket of water become cobblestone. Only the ores come home (no stone), torches go up in the tunnels.
- * Their only tools are two pickaxes, taken with the torches from a filter chest west of the station (out of its ME
+ * Their only tools are two diamond pickaxes, taken with the torches from a filter chest west of the station (out of its ME
  * storage). Switched back to collecting, the pickaxes go back into the ME storage.
  */
 public final class OreSmokeTest {
-	private static final int TIMEOUT = 12000;
+	private static final int TIMEOUT = 16000;
 	private static StorageNetwork network;
 	private static final int Y = 290;
 
@@ -68,11 +68,13 @@ public final class OreSmokeTest {
 
 		System.setProperty("storagedim.stripBottom", Integer.toString(Y - 14));
 
-		// a block of stone under the station, 35 wide and 14 deep
-		for (int dx = -17; dx <= 17; dx++) {
-			for (int dz = -17; dz <= 17; dz++) {
+		// a block of stone under the station, 14 deep, as wide as the chunks the robots dig
+		int[] square = RobotEntity.chunkSquare(station, 16);
+
+		for (int x = square[0]; x <= square[2]; x++) {
+			for (int z = square[1]; z <= square[3]; z++) {
 				for (int dy = -14; dy <= -1; dy++) {
-					level.setBlockAndUpdate(station.offset(dx, dy, dz), Blocks.STONE.defaultBlockState());
+					level.setBlockAndUpdate(new BlockPos(x, Y + dy, z), Blocks.STONE.defaultBlockState());
 				}
 			}
 		}
@@ -103,12 +105,12 @@ public final class OreSmokeTest {
 		BlockPos filterPos = station.west();
 		level.setBlockAndUpdate(filterPos, Blocks.CHEST.defaultBlockState().setValue(ChestBlock.FACING, net.minecraft.core.Direction.WEST));
 		FilterChests.FilterChest filterChest = FilterChests.FilterChest.empty(player);
-		filterChest.filters().set(0, new ItemStack(Items.IRON_PICKAXE));
+		filterChest.filters().set(0, new ItemStack(Items.DIAMOND_PICKAXE));
 		filterChest.filters().set(1, new ItemStack(Items.TORCH));
 		data.setFilterChest(dim, filterPos, filterChest);
 		network = data.networkFor(player);
-		network.insert(new ItemStack(Items.IRON_PICKAXE));
-		network.insert(new ItemStack(Items.IRON_PICKAXE));
+		network.insert(new ItemStack(Items.DIAMOND_PICKAXE));
+		network.insert(new ItemStack(Items.DIAMOND_PICKAXE));
 		network.insert(new ItemStack(Items.TORCH, 64));
 		data.setStation(dim, station, data.station(dim, station).withRange(16).withName("Erzi").withStationName("Erzgrube"));
 		List<String> errors = new ArrayList<>();
@@ -230,7 +232,7 @@ public final class OreSmokeTest {
 			int pickaxes = 0;
 
 			for (StorageNetwork.StoredItem entry : network.entries()) {
-				pickaxes += entry.prototype.is(Items.IRON_PICKAXE) ? (int) entry.count : 0;
+				pickaxes += entry.prototype.is(Items.DIAMOND_PICKAXE) ? (int) entry.count : 0;
 			}
 
 			if (pickaxes != 2) {

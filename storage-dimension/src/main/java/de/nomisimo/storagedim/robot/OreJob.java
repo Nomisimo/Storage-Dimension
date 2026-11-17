@@ -40,6 +40,8 @@ public final class OreJob implements DigJob {
 	private static final int[][] RING = MiningJob.RING;
 	private static final int SKIP_TICKS = 1200;
 	private static final int FORGET_TICKS = 6000;
+	/** A robot that has not asked for work this long is gone; what it had taken is free again. */
+	private static final int CLAIM_TICKS = 1200;
 	/** Distance between two side tunnels of a level. */
 	static final int SPACING = 4;
 	/** Height between two mining levels; with the side tunnels moved by {@code SPACING / 2} each level, this covers every block. */
@@ -52,6 +54,8 @@ public final class OreJob implements DigJob {
 	static final int TORCH_GAP = 8;
 	/** Tunnel places a robot goes through per call. */
 	private static final int STEPS = 32;
+	/** How far up or down the staircase a robot goes in one stretch when no way to its goal is found. */
+	private static final int WAYPOINT_SPAN = 16;
 
 	private static final Map<String, OreJob> JOBS = new HashMap<>();
 
@@ -72,6 +76,8 @@ public final class OreJob implements DigJob {
 	/** Robots whose tunnel is finished: they take their ores home before the next one. */
 	private final Set<UUID> tunnelDone = new HashSet<>();
 	private final Map<Long, UUID> claimed = new HashMap<>();
+	/** When each robot last asked for work: claims of a robot that went away (picked up, unloaded) are let go. */
+	private final Map<UUID, Long> seen = new HashMap<>();
 	private final Map<Long, Long> skipped = new HashMap<>();
 	/** Places in the tunnels that get a torch once a robot with torches comes by. */
 	private final Set<Long> torchSpots = new HashSet<>();
@@ -400,6 +406,10 @@ public final class OreJob implements DigJob {
 	public List<BlockPos> candidates(ServerLevel level, BlockPos from, UUID robot, int count, long now) {
 		skipped.values().removeIf(until -> until < now);
 		claimed.values().removeIf(robot::equals);
+		seen.put(robot, now);
+		seen.values().removeIf(last -> now - last > CLAIM_TICKS);
+		claimed.values().removeIf(owner -> !seen.containsKey(owner));
+		working.keySet().removeIf(owner -> !seen.containsKey(owner));
 		List<BlockPos> found = seenOres(level, from);
 
 		if (found.isEmpty()) {
@@ -475,7 +485,10 @@ public final class OreJob implements DigJob {
 				if (isStair(pos)) {
 					fill(level, pos);
 				} else if (!clear(level, pos) && wanted(level, pos)) {
-					left = true;
+					// the staircase is open once there is room to walk over every step; the rest of the ring around
+					// the pillar is dug where a robot gets at it, but a block left there (no way to it, out of sight)
+					// does not hold up the tunnels
+					left |= walkway(pos);
 
 					if (free(pos) && exposed(level, pos)) {
 						found.add(pos);
@@ -484,7 +497,24 @@ public final class OreJob implements DigJob {
 			}
 		}
 
+		// further down only looked at: is the way over the steps still to dig?
+		for (int y = station.getY() - 1; y >= bottom && !left; y--) {
+			for (int[] cell : RING) {
+				BlockPos pos = new BlockPos(pillar.getX() + cell[0], y, pillar.getZ() + cell[1]);
+
+				if (level.isLoaded(pos) && !isStair(pos) && walkway(pos) && !clear(level, pos) && wanted(level, pos)) {
+					left = true;
+					break;
+				}
+			}
+		}
+
 		return left ? found : null;
+	}
+
+	/** Where a robot walks down the staircase: the two blocks above a step. */
+	private boolean walkway(BlockPos pos) {
+		return isStair(pos.below()) && !isStair(pos) || isStair(pos.below(2)) && !isStair(pos.below());
 	}
 
 	/** The next blocks of the robot's tunnel: what fell back into it first, then the next place along it. */
@@ -608,6 +638,84 @@ public final class OreJob implements DigJob {
 	public void skip(BlockPos pos, long now) {
 		skipped.put(pos.asLong(), now + SKIP_TICKS);
 		claimed.remove(pos.asLong());
+	}
+
+	/** For the smoke test: where the work stands, and the highest blocks of the staircase still to dig. */
+	String describe(ServerLevel level) {
+		StringBuilder out = new StringBuilder("level=" + this.level + "/" + levels.length + (this.level < levels.length ? " y=" + levels[this.level] : "")
+				+ " working=" + working.size() + " claimed=" + claimed.size() + " skipped=" + skipped.size());
+
+		if (this.level < levels.length) {
+			for (int y = station.getY() - 1; y >= levels[this.level]; y--) {
+				StringBuilder row = new StringBuilder();
+
+				for (int[] cell : RING) {
+					BlockPos pos = new BlockPos(pillar.getX() + cell[0], y, pillar.getZ() + cell[1]);
+
+					if (!isStair(pos) && !clear(level, pos)) {
+						BlockState state = level.getBlockState(pos);
+						row.append(' ').append(state.getBlock().getDescriptionId().replace("block.minecraft.", "")).append(wanted(level, pos) ? "" : "(nicht gewollt)")
+								.append(exposed(level, pos) ? "" : "(verdeckt)").append(free(pos) ? "" : skipped.containsKey(pos.asLong()) ? "(übersprungen)" : "(vergeben)");
+					}
+				}
+
+				if (!row.isEmpty()) {
+					out.append(" treppe y=").append(y).append(':').append(row);
+					break;
+				}
+			}
+		}
+
+		if (plan != null) {
+			out.append(" gänge=").append(plan.stream().filter(t -> t.done).count()).append('/').append(plan.size()).append(" offen=")
+					.append(plan.stream().mapToInt(t -> t.open).sum());
+		}
+
+		return out.toString();
+	}
+
+	/**
+	 * Places to stand on the staircase on the way from {@code from} up or down to the height {@code toY}, the
+	 * farthest (up to {@value #WAYPOINT_SPAN} blocks) first; none when it is close by in height.
+	 */
+	public List<BlockPos> waypoints(ServerLevel level, BlockPos from, int toY) {
+		List<BlockPos> found = new ArrayList<>();
+		int dy = toY - from.getY();
+
+		if (Math.abs(dy) <= 6) {
+			return found;
+		}
+
+		int dir = Integer.signum(dy);
+		int far = from.getY() + dir * Math.min(Math.abs(dy) - 1, WAYPOINT_SPAN);
+
+		for (int y = far; (y - from.getY()) * dir > 0 && found.size() < 4; y -= dir) {
+			if (y >= station.getY() || y < minY) {
+				continue;
+			}
+
+			BlockPos stepPos = step(y);
+			BlockPos feet = stepPos.above();
+
+			if (level.isLoaded(stepPos) && level.getBlockState(stepPos).isFaceSturdy(level, stepPos, Direction.UP) && clear(level, feet) && clear(level, feet.above())
+					&& !liquid(level.getBlockState(feet))) {
+				found.add(feet);
+				y -= dir * 3;
+			}
+		}
+
+		return found;
+	}
+
+	/** The step of the staircase at a height. */
+	BlockPos step(int y) {
+		int[] cell = RING[stepIndex(y)];
+		return new BlockPos(pillar.getX() + cell[0], y, pillar.getZ() + cell[1]);
+	}
+
+	/** For the smoke test: tunnels finished on the level being worked on. */
+	int tunnelsDone() {
+		return plan == null ? 0 : (int) plan.stream().filter(t -> t.done).count();
 	}
 
 	/** For the smoke test: the heights of the mining levels, deepest first. */

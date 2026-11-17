@@ -1,5 +1,7 @@
 Storage Dimension für **Minecraft 26.1.2** (Fabric).
 
+**Neu in 0.8.3:** Die **Erzsuche** kommt jetzt wirklich bis nach unten: Die Treppe wird bis knapp über das Grundgestein gegraben, und dort entstehen die Gänge. Vorher blieben die Roboter oft auf halber Höhe hängen und meldeten „kein Erz erreichbar“. In Höhlen, die die Treppe kreuzen, gehen sie die Treppe Stück für Stück entlang, und an Kisten stellen sie sich auf festen Boden statt über den Schacht. **Festgesteckte Roboter befreien sich selbst:** Wer im Fels steckt oder nicht mehr heimfindet, gräbt sich eine Treppe zurück zur Station. Dabei füllt er Löcher mit Bruchstein auf und dichtet Wasser und Lava ab. Kisten, Stationen, Antennen, Barrieren und die Treppen der Mine rührt er nicht an. **Ganze Chunks:** Abbau und Erzsuche richten sich an den Chunk-Grenzen aus, also der Chunk der Station und die Reichweite in Chunks rundherum (z. B. 21 × 21 Chunks = 336 × 336 Blöcke). Beim Abbau bleibt um die Station eine **9 × 9 Plattform** stehen, mit allem, was darauf steht (Kisten, Häuschen, Wegsteine usw.). Server und alle Spieler brauchen 0.8.3.
+
 **Neu in 0.8.2:** Die **Erzsuche** ist jetzt Strip Mining ohne Röntgenblick: Die Roboter graben eine Wendeltreppe bis knapp über das Grundgestein und von dort Ebene für Ebene Haupt- und Seitengänge durch den ganzen Bereich, so versetzt, dass jeder Block einmal angeschaut wird. Sie bauen die Erze ab, die sie in Spieler-Reichweite sehen, und folgen so jeder Ader. Amethyst-Cluster und Amethystblöcke zählen als Erz. Wasser und Lava an Treppe und Gängen werden zu Bruchstein. **Fackeln** sind freiwillig: Liegen welche in der Werkzeugkiste, kommt alle 8 Blöcke eine in die Gänge. Der **Abbau-Modus** trägt das ganze Quadrat von der Oberfläche bis zum Grundgestein ab, Wasser wird mit Bruchstein aufgefüllt und mit abgebaut. Jeder Roboter braucht nur noch eine **Spitzhacke**, Äxte und Schaufeln nimmt er mit, wenn welche da sind; eine **Filterkiste** direkt an der Station dient als Werkzeugkiste aus dem ME-Speicher. Behoben: Die Roboter arbeiteten nur nah an der Station statt im ganzen Bereich (Wege zu Blöcken im Fels, Suche hinter nicht geladenen Chunks). Der **Auto-Modus der Fernbedienung** wirkt jetzt auch, wenn sie in einem Bündel, einer Shulkerkiste oder einem Traveler's Backpack steckt. Die **Handelshalle** ist wieder die alte: Die Dorfbewohner stehen still an ihrem eigenen Stand mit Theke, Arbeitsblock und Schild, sortiert nach Beruf und Stufe. Server und alle Spieler brauchen 0.8.2.
 
 **Neu in 0.8.1:** Neuer Arbeitsmodus **Erzsuche** für die Roboter-Station (Knopf: Sammeln → Abbauen → Erzsuche): Die Roboter spüren die Erze unter der Station auf (Reichweite oder Antennen-Area, bis zum Grund der Welt, nächste zuerst, Diamant, Smaragd und antiker Schrott bevorzugt), graben eine Wendeltreppe nach unten und von dort eigene Gänge zu den Erzen, bauen jede Ader ganz ab und bringen nur die Erze in die Kisten, keinen Stein. Neben Lava wird nicht gegraben, Erze anderer Mods (`c:ores`) zählen mit. Neuer Knopf **„Bereich geladen halten“** im Stationsfenster (Standard aus): Eingeschaltet bleiben alle Chunks des Arbeitsbereichs geladen wie mit `/forceload`, sodass die Roboter weiterarbeiten, auch wenn kein Spieler in der Nähe ist; der Knopf zeigt, wie viele Chunks das sind. Ausschalten oder Abbauen der Station gibt sie wieder frei, von Hand geladene Chunks bleiben unberührt. Server und alle Spieler brauchen 0.8.1.
@@ -32,18 +34,18 @@ Storage Dimension für **Minecraft 26.1.2** (Fabric).
 
 **Neu in 0.4.1:** Im ME-Speicher (auch über das Rucksack-Upgrade) und im Filter-Fenster lassen sich Items im eigenen Inventar wieder ziehen und verteilen sowie per Doppelklick sammeln; vorher sprangen sie zurück in die Hand.
 
-**Neu in 0.4.0:** Sammelroboter, eigene Texturen für Dimensionskiste, Filterkiste, ME-Terminal und die ME-Items, Rezepte in JEI, Anbindung an Maschinen (z. B. Tech Reborn), doppelte Filterkisten mit 14 Filtern. Ab dieser Version brauchen **alle Spieler** `storage-dimension-0.8.2.jar`.
+**Neu in 0.4.0:** Sammelroboter, eigene Texturen für Dimensionskiste, Filterkiste, ME-Terminal und die ME-Items, Rezepte in JEI, Anbindung an Maschinen (z. B. Tech Reborn), doppelte Filterkisten mit 14 Filtern. Ab dieser Version brauchen **alle Spieler** `storage-dimension-0.8.3.jar`.
 
 ## Server, in den Ordner `mods`
 
-- `storage-dimension-0.8.2.jar`
-- `storagedim-tb-0.8.2.jar`
+- `storage-dimension-0.8.3.jar`
+- `storagedim-tb-0.8.3.jar`
 - dazu [Fabric API](https://modrinth.com/mod/fabric-api), [Traveler's Backpack](https://modrinth.com/mod/travelersbackpack) und [Forge Config API Port](https://modrinth.com/mod/forge-config-api-port), alle für 26.1.2
 
 ## Jeder Spieler, in den Ordner `mods`
 
-- `storage-dimension-0.8.2.jar`
-- `storagedim-tb-0.8.2.jar`
+- `storage-dimension-0.8.3.jar`
+- `storagedim-tb-0.8.3.jar`
 - dazu [Fabric API](https://modrinth.com/mod/fabric-api), [Traveler's Backpack](https://modrinth.com/mod/travelersbackpack), [Forge Config API Port](https://modrinth.com/mod/forge-config-api-port) und [JEI](https://modrinth.com/mod/jei), alle für 26.1.2
 
 ## Nur Storage Dimension, ohne Traveler's Backpack
