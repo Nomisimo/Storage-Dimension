@@ -383,7 +383,7 @@ public final class OreJob implements DigJob {
 			Tunnel best = null;
 
 			for (Tunnel next : plan(i)) {
-				if (!next.done && ready(next) && !working.containsValue(next)
+				if (!next.done && ready(next) && !working.containsValue(next) && free(next.cell(Math.min(next.open, next.length - 1)))
 						&& (best == null || next.cell(next.open).distSqr(from) < best.cell(best.open).distSqr(from))) {
 					best = next;
 				}
@@ -415,14 +415,25 @@ public final class OreJob implements DigJob {
 
 			if (own != null && !own.done) {
 				found = next(level, robot, own);
-			} else {
+			}
+
+			if (found.isEmpty() && (own == null || working.get(robot) == own)) {
+				// no tunnel, or nothing of its own one it can take now (a block of it no way was found to, say): it
+				// lets that one go and looks for other work, instead of waiting for it
 				working.remove(robot);
-				// without a tunnel it helps with the staircase first, as far as there are blocks to get at there;
-				// otherwise it takes a tunnel on a level the staircase has reached
+				// without a tunnel it helps with the staircase first, as far as there are blocks to get at there and
+				// room for one more robot; otherwise it takes a tunnel on a level the staircase has reached
 				Shaft shaft = shaft(level);
+				int onShaft = 0;
 
 				for (BlockPos pos : shaft.blocks) {
-					if (free(pos)) {
+					if (claimed.containsKey(pos.asLong())) {
+						onShaft++;
+					}
+				}
+
+				for (BlockPos pos : shaft.blocks) {
+					if (free(pos) && onShaft < SHAFT_ROBOTS) {
 						found.add(pos);
 					}
 				}
@@ -483,6 +494,9 @@ public final class OreJob implements DigJob {
 
 	/** Layers of the staircase that are dug at the same time, so more robots can help with it. */
 	private static final int SHAFT_LAYERS = 3;
+	/** Robots digging the staircase at the same time; there is not room for more. */
+	private static final int SHAFT_ROBOTS = 4;
+
 
 	private Shaft shaft(ServerLevel level) {
 		long now = level.getGameTime();

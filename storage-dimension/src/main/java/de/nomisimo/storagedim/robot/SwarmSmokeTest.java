@@ -185,11 +185,14 @@ public final class SwarmSmokeTest {
 
 		ticks++;
 
+		Map<RobotEntity, Boolean> busyNow = new HashMap<>();
+
 		if (ticks % 20 == 0) {
 			int working = 0;
 
 			for (RobotEntity robot : robots) {
 				boolean busy = working(robot);
+				busyNow.put(robot, busy);
 				working += busy ? 1 : 0;
 				stuckFor.put(robot, busy ? 0 : stuckFor.getOrDefault(robot, 0) + 20);
 				lastPos.put(robot, robot.position());
@@ -215,12 +218,23 @@ public final class SwarmSmokeTest {
 			for (RobotEntity robot : robots) {
 				String status = robot.status().getString();
 				String key = status.startsWith("Baut") ? "Baut" : status.startsWith("Bringt") && !status.contains("Werkzeug") ? "Bringt" : status;
-				histogram.merge(key + (working(robot) ? "" : " (steht)"), 1, Integer::sum);
+				histogram.merge(key + (busyNow.getOrDefault(robot, true) ? "" : " (steht)"), 1, Integer::sum);
 			}
 
 			long below = robots.stream().filter(r -> r.getY() < station.getY() - 4).count();
 			StorageDimensionMod.LOGGER.info("SMOKETEST {} {}: {} unten={} tiefster={} {}", name(), ticks, histogram, below,
 					robots.stream().mapToInt(r -> r.getBlockY()).min().orElse(0), jobInfo());
+			int shown = 0;
+
+			// the ones standing about, with the ways to what they would be handed
+			for (RobotEntity robot : robots) {
+				if (busyNow.getOrDefault(robot, true) || stuckFor.getOrDefault(robot, 0) < 200 || shown++ >= 6) {
+					continue;
+				}
+
+				StorageDimensionMod.LOGGER.info("SMOKETEST {} steht {}: {} {} at {} {}", name(), stuckFor.get(robot), robot.status().getString(), robot.describeMining(),
+						robot.blockPosition(), robot.describe());
+			}
 		}
 
 		if (ticks >= PHASE_TICKS || !robots.isEmpty() && robots.stream().noneMatch(RobotEntity::isAlive)) {

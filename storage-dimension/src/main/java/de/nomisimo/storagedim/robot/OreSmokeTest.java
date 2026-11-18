@@ -31,11 +31,13 @@ import net.minecraft.world.level.block.ChestBlock;
  * walls, floor and ceiling (iron, diamond, a vein of two coal ores, a far iron, a gold ore behind a pocket of lava),
  * but not an emerald ore deep in the rock between the tunnels: they cannot see through the rock. The lava next to a
  * tunnel and a pocket of water become cobblestone. Only the ores come home (no stone), torches go up in the tunnels.
- * Their only tools are two diamond pickaxes, taken with the torches from a filter chest west of the station (out of its ME
+ * Their only tools are six diamond pickaxes, taken with the torches from a filter chest west of the station (out of its ME
  * storage). Switched back to collecting, the pickaxes go back into the ME storage.
  */
 public final class OreSmokeTest {
 	private static final int TIMEOUT = 16000;
+	/** The levels are dug from the top down; the ores are on the deepest one, so there are a few robots. */
+	private static final int ROBOTS = 6;
 	private static StorageNetwork network;
 	private static final int Y = 290;
 
@@ -109,8 +111,10 @@ public final class OreSmokeTest {
 		filterChest.filters().set(1, new ItemStack(Items.TORCH));
 		data.setFilterChest(dim, filterPos, filterChest);
 		network = data.networkFor(player);
-		network.insert(new ItemStack(Items.DIAMOND_PICKAXE));
-		network.insert(new ItemStack(Items.DIAMOND_PICKAXE));
+		for (int i = 0; i < ROBOTS; i++) {
+			network.insert(new ItemStack(Items.DIAMOND_PICKAXE));
+		}
+
 		network.insert(new ItemStack(Items.TORCH, 64));
 		data.setStation(dim, station, data.station(dim, station).withRange(16).withName("Erzi").withStationName("Erzgrube"));
 		List<String> errors = new ArrayList<>();
@@ -132,9 +136,9 @@ public final class OreSmokeTest {
 			return;
 		}
 
-		for (int i = 0; i < 2; i++) {
+		for (int i = 0; i < ROBOTS; i++) {
 			RobotEntity robot = Robots.ROBOT.create(level, EntitySpawnReason.SPAWN_ITEM_USE);
-			robot.snapTo(station.getX() - 2.5 + i * 5, Y, station.getZ() + 3.5, 0, 0);
+			robot.snapTo(station.getX() - 2.5 + i % 2 * 5, Y, station.getZ() + 3.5 + i / 2, 0, 0);
 			robot.setup(null, station);
 			robot.applyConfig(config);
 			level.addFreshEntity(robot);
@@ -235,8 +239,8 @@ public final class OreSmokeTest {
 				pickaxes += entry.prototype.is(Items.DIAMOND_PICKAXE) ? (int) entry.count : 0;
 			}
 
-			if (pickaxes != 2) {
-				errors.add("Nach der Erzsuche sind " + pickaxes + " statt 2 Spitzhacken im ME-Speicher der Filterkiste");
+			if (pickaxes != ROBOTS) {
+				errors.add("Nach der Erzsuche sind " + pickaxes + " statt " + ROBOTS + " Spitzhacken im ME-Speicher der Filterkiste");
 			}
 
 			StorageDimensionMod.LOGGER.info("SMOKETEST Erzsuche: Werkzeug zurück nach {} Ticks", ticks);

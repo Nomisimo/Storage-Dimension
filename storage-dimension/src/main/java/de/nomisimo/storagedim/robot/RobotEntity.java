@@ -149,6 +149,11 @@ public class RobotEntity extends PathfinderMob {
 	/** How far from its eyes a mining robot digs, like a player. */
 	/** How far it reaches to dig: like a player. */
 	private static final double MINE_REACH = 4.5;
+	/**
+	 * A chest it sees this close is in reach: with many robots crowding round the station's chests it does not have to
+	 * squeeze right up to one (it used to stand behind the others with its load and wait for good).
+	 */
+	private static final double CROWD_REACH = 3.5;
 	/** Its tools, one of each: pickaxe, axe, shovel. */
 	private static final int PICKAXE = 0;
 	private static final int AXE = 1;
@@ -2080,7 +2085,7 @@ public class RobotEntity extends PathfinderMob {
 			getLookControl().setLookAt(goal.x, goal.y, goal.z);
 			double distance = position().distanceTo(goal);
 
-			if (distance <= 2.2 || canReachChest(goal) && seesChest(chest.pos())) {
+			if (distance <= 2.2 || (canReachChest(goal) || distance <= CROWD_REACH) && seesChest(chest.pos())) {
 				getNavigation().stop();
 
 				if (minePhase == 1) {
@@ -2657,7 +2662,7 @@ public class RobotEntity extends PathfinderMob {
 			steeredAt = level().getGameTime();
 			boolean arrived = recallPhase == RECALL_RETURNING ? atStationForRecall()
 					: goalKey == target ? standsOn(target)
-					: goalKey == delivery ? (distance <= reach || canReachChest(goal)) && seesChest(delivery) : distance <= reach;
+					: goalKey == delivery ? (distance <= reach || canReachChest(goal) || distance <= CROWD_REACH) && seesChest(delivery) : distance <= reach;
 
 			if (arrived) {
 				if (recallPhase == RECALL_RETURNING) {
