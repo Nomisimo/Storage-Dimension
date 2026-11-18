@@ -2141,6 +2141,15 @@ public class RobotEntity extends PathfinderMob {
 			if (getNavigation().isDone()) {
 				Path path = getNavigation().createPath(chest.pos(), 1);
 
+				if ((path == null || !path.canReach()) && station != null && getY() < station.getY() - 1) {
+					// still down in the strip mine: first up to the station, the chest stands next to it
+					Path home = getNavigation().createPath(station, 2);
+
+					if (home != null && home.getNodeCount() > 1) {
+						path = home;
+					}
+				}
+
 				if (path != null) {
 					getNavigation().moveTo(path, 1.0);
 				} else {
