@@ -2257,6 +2257,7 @@ public class RobotEntity extends PathfinderMob {
 		private int stepTicks;
 		private int steps;
 		private int checkCooldown;
+		private Vec3 strandedAt;
 
 		RescueGoal() {
 			setFlags(EnumSet.of(Flag.MOVE, Flag.LOOK));
@@ -2267,6 +2268,11 @@ public class RobotEntity extends PathfinderMob {
 			// also when mining was switched off and it cannot get its tools up to the chest
 			boolean stuck = now < homeUnreachableUntil || mineIdle && !mineFinished && minePhase == 0 || !mining && mineProblem != null;
 			strandedTicks = !tools[PICKAXE].isEmpty() && station != null && !nearHome() && stuck && getAction() == 0 ? strandedTicks + 1 : 0;
+
+			if (strandedTicks == 1) {
+				strandedAt = position();
+			}
+
 			return strandedTicks >= STRANDED_TICKS;
 		}
 
@@ -2276,9 +2282,11 @@ public class RobotEntity extends PathfinderMob {
 				return false;
 			}
 
-			// a way home after all: nothing to dig
+			// a way home after all: nothing to dig; unless it has not moved from the spot all the while (a way the
+			// game finds but the robot cannot go, out of a hole with its head under a step, say)
 			Path home = getNavigation().createPath(home(), 2);
-			strandedTicks = home != null && home.canReach() ? 0 : strandedTicks;
+			boolean moved = strandedAt == null || position().distanceTo(strandedAt) > 1.0;
+			strandedTicks = home != null && home.canReach() && moved ? 0 : strandedTicks;
 			return strandedTicks > 0;
 		}
 
@@ -2360,7 +2368,7 @@ public class RobotEntity extends PathfinderMob {
 			}
 
 			// now and then: is there a way home again?
-			if (--checkCooldown <= 0 && standing()) {
+			if (steps > 2 && --checkCooldown <= 0 && standing()) {
 				checkCooldown = 20;
 				Path home = getNavigation().createPath(home(), 2);
 
@@ -2397,7 +2405,8 @@ public class RobotEntity extends PathfinderMob {
 			List<BlockPos> clearing = new ArrayList<>(List.of(next, next.above()));
 
 			if (up) {
-				// room to jump up
+				// room to jump up (also right over its head: it is low enough to stand under a step of the staircase)
+				clearing.add(at.above());
 				clearing.add(at.above(2));
 			} else if (down) {
 				clearing.add(next.above(2));
