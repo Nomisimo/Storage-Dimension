@@ -295,6 +295,17 @@ public final class OreJob implements DigJob {
 		}
 	}
 
+	/**
+	 * Sand or gravel right over a tunnel or the way down the staircase becomes cobblestone before the place below it
+	 * is opened: in a desert the sand kept falling in, the tunnels near the top never got done and robots were
+	 * buried in them.
+	 */
+	private void prop(ServerLevel level, BlockPos pos) {
+		if (contains(pos) && level.isLoaded(pos) && level.getBlockState(pos).getBlock() instanceof FallingBlock) {
+			level.setBlockAndUpdate(pos, Blocks.COBBLESTONE.defaultBlockState());
+		}
+	}
+
 	/** Water or lava as a block of its own (not a waterlogged block). */
 	private static boolean liquid(BlockState state) {
 		return state.getBlock() instanceof LiquidBlock;
@@ -623,6 +634,8 @@ public final class OreJob implements DigJob {
 
 					if (isStair(pos)) {
 						fill(level, pos);
+					} else if (walkway(pos) && !walkway(pos.above()) && y < station.getY()) {
+						prop(level, pos.above());
 					}
 				}
 
@@ -701,6 +714,7 @@ public final class OreJob implements DigJob {
 
 			// water and lava around it become cobblestone first, so the tunnel goes on through or past them
 			seal(level, List.of(cell, cell.above()));
+			prop(level, cell.above(2));
 			boolean ready = true;
 
 			for (BlockPos pos : List.of(cell, cell.above())) {
