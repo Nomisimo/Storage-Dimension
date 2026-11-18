@@ -82,6 +82,9 @@ public final class OreJob implements DigJob {
 	/** When each robot last asked for work: claims of a robot that went away (picked up, unloaded) are let go. */
 	private final Map<UUID, Long> seen = new HashMap<>();
 	private final Map<Long, Long> skipped = new HashMap<>();
+	/** Blocks single robots found no way to, and until when; left out for all once {@value #SKIP_ROBOTS} robots found none. */
+	private final Map<Long, Map<UUID, Long>> failed = new HashMap<>();
+	private static final int SKIP_ROBOTS = 3;
 	/** Places in the tunnels that get a torch once a robot with torches comes by. */
 	private final Set<Long> torchSpots = new HashSet<>();
 	private long lastUsed;
@@ -383,7 +386,9 @@ public final class OreJob implements DigJob {
 			Tunnel best = null;
 
 			for (Tunnel next : plan(i)) {
-				if (!next.done && ready(next) && !working.containsValue(next) && free(next.cell(Math.min(next.open, next.length - 1)))
+				BlockPos head = next.cell(Math.min(next.open, next.length - 1));
+
+				if (!next.done && ready(next) && !working.containsValue(next) && free(head) && !failedFor(head, robot)
 						&& (best == null || next.cell(next.open).distSqr(from) < best.cell(best.open).distSqr(from))) {
 					best = next;
 				}
@@ -403,6 +408,8 @@ public final class OreJob implements DigJob {
 	@Override
 	public List<BlockPos> candidates(ServerLevel level, BlockPos from, UUID robot, int count, long now) {
 		skipped.values().removeIf(until -> until < now);
+		failed.values().forEach(robots -> robots.values().removeIf(until -> until < now));
+		failed.values().removeIf(Map::isEmpty);
 		claimed.values().removeIf(robot::equals);
 		seen.put(robot, now);
 		seen.values().removeIf(last -> now - last > CLAIM_TICKS);
@@ -433,7 +440,7 @@ public final class OreJob implements DigJob {
 				}
 
 				for (BlockPos pos : shaft.blocks) {
-					if (free(pos) && onShaft < SHAFT_ROBOTS) {
+					if (free(pos) && !failedFor(pos, robot) && onShaft < SHAFT_ROBOTS) {
 						found.add(pos);
 					}
 				}
@@ -448,6 +455,8 @@ public final class OreJob implements DigJob {
 			}
 		}
 
+		// what this robot found no way to (it may stand where others do get there) is left to the others
+		found.removeIf(pos -> failedFor(pos, robot));
 		found.sort(Comparator.comparingDouble(pos -> pos.distSqr(from)));
 		return found.size() > count ? new ArrayList<>(found.subList(0, count)) : found;
 	}
@@ -455,6 +464,11 @@ public final class OreJob implements DigJob {
 	@Override
 	public List<BlockPos> nearby(ServerLevel level, BlockPos from, UUID robot, int count, long now) {
 		return new ArrayList<>();
+	}
+
+	private boolean failedFor(BlockPos pos, UUID robot) {
+		Map<UUID, Long> robots = failed.get(pos.asLong());
+		return robots != null && robots.containsKey(robot);
 	}
 
 	private boolean free(BlockPos pos) {
@@ -509,7 +523,8 @@ public final class OreJob implements DigJob {
 		int bottom = levels.length == 0 ? station.getY() : levels[0];
 		int layers = 0;
 
-		for (int y = station.getY() - 1; y >= bottom; y--) {
+		// from the way in at the top (the two blocks over the highest step, on uneven ground they may be earth) down
+		for (int y = station.getY() + 1; y >= bottom; y--) {
 			// the highest layers still to dig are worked on: sealed, steps filled, blocks handed out
 			boolean active = layers < SHAFT_LAYERS;
 			boolean any = false;
@@ -517,7 +532,8 @@ public final class OreJob implements DigJob {
 			for (int[] cell : RING) {
 				BlockPos pos = new BlockPos(pillar.getX() + cell[0], y, pillar.getZ() + cell[1]);
 
-				if (!level.isLoaded(pos)) {
+				if (!level.isLoaded(pos) || y >= station.getY() && !walkway(pos)) {
+					// above the ground only the way in is dug, nothing else beside the station
 					continue;
 				}
 
@@ -697,7 +713,14 @@ public final class OreJob implements DigJob {
 
 	@Override
 	public void skip(BlockPos pos, UUID robot, long now) {
-		skipped.put(pos.asLong(), now + SKIP_TICKS);
+		Map<UUID, Long> robots = failed.computeIfAbsent(pos.asLong(), k -> new HashMap<>());
+		robots.put(robot, now + SKIP_TICKS);
+
+		if (robots.size() >= SKIP_ROBOTS) {
+			skipped.put(pos.asLong(), now + SKIP_TICKS);
+			failed.remove(pos.asLong());
+		}
+
 		claimed.remove(pos.asLong());
 	}
 
