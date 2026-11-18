@@ -154,6 +154,11 @@ public class RobotEntity extends PathfinderMob {
 	 * squeeze right up to one (it used to stand behind the others with its load and wait for good).
 	 */
 	private static final double CROWD_REACH = 3.5;
+	/**
+	 * A chest of its station this close that it cannot get any closer to (other robots in the way, no way found
+	 * up out of the mine right beside it): it hands its load or its tools in from where it is.
+	 */
+	private static final double HAND_IN_REACH = 6;
 	/** Its tools, one of each: pickaxe, axe, shovel. */
 	private static final int PICKAXE = 0;
 	private static final int AXE = 1;
@@ -1229,6 +1234,12 @@ public class RobotEntity extends PathfinderMob {
 				return chest;
 			}
 
+			// right below or beside it (up the staircase of the mine, crowded out): it hands its load in from there
+			if (position().distanceTo(Vec3.atCenterOf(chest)) <= HAND_IN_REACH) {
+				plannedPath = null;
+				return chest;
+			}
+
 			// down in deep water no walking path leads out; it swims up and towards the chest instead
 			if (isInWater()) {
 				plannedPath = path;
@@ -2099,7 +2110,22 @@ public class RobotEntity extends PathfinderMob {
 				return;
 			}
 
-			if (stuck(distance)) {
+			if (stuck(distance) && distance <= HAND_IN_REACH) {
+				// crowded out by the others right at the chest: it reaches over from here
+				getNavigation().stop();
+
+				if (minePhase == 1) {
+					takeTools(chest);
+				} else {
+					returnTools(chest);
+				}
+
+				minePhase = 0;
+				cooldown = 0;
+				return;
+			}
+
+			if (stuckTicks >= STUCK_TICKS) {
 				mineProblem = Component.literal("Fehler: Werkzeugkiste nicht erreichbar");
 				minePhase = 0;
 				cooldown = RETRY_HOME_TICKS / 2;
@@ -2662,7 +2688,9 @@ public class RobotEntity extends PathfinderMob {
 			steeredAt = level().getGameTime();
 			boolean arrived = recallPhase == RECALL_RETURNING ? atStationForRecall()
 					: goalKey == target ? standsOn(target)
-					: goalKey == delivery ? (distance <= reach || canReachChest(goal) || distance <= CROWD_REACH) && seesChest(delivery) : distance <= reach;
+					: goalKey == delivery ? (distance <= reach || canReachChest(goal) || distance <= CROWD_REACH) && seesChest(delivery)
+							|| distance <= HAND_IN_REACH && stuckTicks >= STUCK_TICKS / 2 && lastGoal == delivery
+					: distance <= reach;
 
 			if (arrived) {
 				if (recallPhase == RECALL_RETURNING) {
