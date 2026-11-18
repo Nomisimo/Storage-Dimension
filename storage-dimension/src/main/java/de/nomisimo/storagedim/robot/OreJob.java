@@ -376,7 +376,7 @@ public final class OreJob implements DigJob {
 	 * A tunnel for a robot that has none: on the highest level the staircase has reached that still has one ready
 	 * and free, so the robots start at the top and work their way down while the staircase goes on below them.
 	 */
-	private Tunnel newTunnel(UUID robot, Shaft shaft, BlockPos from) {
+	private Tunnel newTunnel(UUID robot, Shaft shaft, BlockPos from, Set<Tunnel> tried) {
 		for (int i = levels.length - 1; i >= 0; i--) {
 			if (levels[i] <= shaft.blockedY) {
 				// the staircase does not reach this level yet, nor the ones below
@@ -388,7 +388,7 @@ public final class OreJob implements DigJob {
 			for (Tunnel next : plan(i)) {
 				BlockPos head = next.cell(Math.min(next.open, next.length - 1));
 
-				if (!next.done && ready(next) && !working.containsValue(next) && free(head) && !failedFor(head, robot)
+				if (!next.done && ready(next) && !tried.contains(next) && !working.containsValue(next) && free(head) && !failedFor(head, robot)
 						&& (best == null || next.cell(next.open).distSqr(from) < best.cell(best.open).distSqr(from))) {
 					best = next;
 				}
@@ -422,6 +422,8 @@ public final class OreJob implements DigJob {
 
 			if (own != null && !own.done) {
 				found = next(level, robot, own);
+				// what it found no way to is no work for it: an empty list lets the tunnel go below
+				found.removeIf(pos -> failedFor(pos, robot));
 			}
 
 			if (found.isEmpty() && (own == null || working.get(robot) == own)) {
@@ -445,11 +447,22 @@ public final class OreJob implements DigJob {
 					}
 				}
 
-				if (found.isEmpty()) {
-					Tunnel tunnel = newTunnel(robot, shaft, from);
+				// a new tunnel; one with nothing in it it can get at now is left to the others and the next one tried
+				Set<Tunnel> tried = new HashSet<>();
 
-					if (tunnel != null) {
-						found = next(level, robot, tunnel);
+				while (found.isEmpty() && tried.size() < 8) {
+					Tunnel tunnel = newTunnel(robot, shaft, from, tried);
+
+					if (tunnel == null) {
+						break;
+					}
+
+					tried.add(tunnel);
+					found = next(level, robot, tunnel);
+					found.removeIf(pos -> failedFor(pos, robot));
+
+					if (found.isEmpty() && working.get(robot) == tunnel) {
+						working.remove(robot);
 					}
 				}
 			}
