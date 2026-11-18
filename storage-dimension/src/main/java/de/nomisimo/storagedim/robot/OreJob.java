@@ -447,6 +447,14 @@ public final class OreJob implements DigJob {
 					}
 				}
 
+				// a block of the staircase right beside it is its own, also when another robot has it (and gets no
+				// way to it) or all gave it up: one that got below a sealed step digs it open from there
+				for (BlockPos pos : shaft.reachable(from)) {
+					if (!found.contains(pos) && !failedFor(pos, robot)) {
+						found.add(pos);
+					}
+				}
+
 				// a new tunnel; one with nothing in it it can get at now is left to the others and the next one tried
 				Set<Tunnel> tried = new HashSet<>();
 
@@ -552,6 +560,28 @@ public final class OreJob implements DigJob {
 		 * Below the deepest level when the staircase is open all the way down.
 		 */
 		int blockedY = Integer.MIN_VALUE;
+
+		/** Blocks of it all robots gave up for a while. */
+		final List<BlockPos> given = new ArrayList<>();
+
+		/** Its blocks a robot standing here can dig without walking (within the robots' reach). */
+		List<BlockPos> reachable(BlockPos from) {
+			List<BlockPos> near = new ArrayList<>();
+
+			for (BlockPos pos : blocks) {
+				if (pos.distSqr(from) <= 9) {
+					near.add(pos);
+				}
+			}
+
+			for (BlockPos pos : given) {
+				if (pos.distSqr(from) <= 9) {
+					near.add(pos);
+				}
+			}
+
+			return near;
+		}
 	}
 
 	/** Layers of the staircase that are dug at the same time, so more robots can help with it. */
@@ -616,6 +646,8 @@ public final class OreJob implements DigJob {
 				if (active && exposed(level, pos) && !skipped.containsKey(pos.asLong())) {
 					result.blocks.add(pos);
 					any = true;
+				} else if (active && exposed(level, pos)) {
+					result.given.add(pos);
 				}
 			}
 
