@@ -460,7 +460,7 @@ public final class OreJob implements DigJob {
 
 				// a block of the staircase right beside it is its own, also when another robot has it (and gets no
 				// way to it) or all gave it up: one that got below a sealed step digs it open from there
-				for (BlockPos pos : shaft.reachable(from)) {
+				for (BlockPos pos : found.isEmpty() ? shaft.reachable(from) : List.<BlockPos>of()) {
 					if (!found.contains(pos) && !failedFor(pos, robot)) {
 						found.add(pos);
 					}
@@ -640,6 +640,12 @@ public final class OreJob implements DigJob {
 				}
 
 				if (isStair(pos) || clear(level, pos) || !wanted(level, pos)) {
+					continue;
+				}
+
+				if (!walkway(pos) && !clear(level, pos.above()) && !walkway(pos.above())) {
+					// the rest of the ring is dug from the top down only: not under sand, water sealed off with
+					// cobblestone or a step (a hole one block high under a step at the bottom traps robots)
 					continue;
 				}
 

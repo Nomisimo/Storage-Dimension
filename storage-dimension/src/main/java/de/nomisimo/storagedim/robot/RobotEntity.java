@@ -1914,6 +1914,7 @@ public class RobotEntity extends PathfinderMob {
 		private int lastNode;
 		/** How long it has been on its way to the block it is to dig. */
 		private int wayTicks;
+		private int stillTicks;
 
 		MineGoal() {
 			setFlags(EnumSet.of(Flag.MOVE, Flag.LOOK));
@@ -2047,6 +2048,7 @@ public class RobotEntity extends PathfinderMob {
 
 		private boolean startDigging(DigJob job, BlockPos pos) {
 			wayTicks = 0;
+			stillTicks = 0;
 			job.claim(pos, getUUID());
 			mineTarget = pos.immutable();
 			digTicks = 0;
@@ -2181,7 +2183,11 @@ public class RobotEntity extends PathfinderMob {
 			getLookControl().setLookAt(centre.x, centre.y, centre.z);
 			double distance = getEyePosition().distanceTo(centre);
 
-			if (distance <= MINE_REACH && (getNavigation().isDone() || distance <= 3)) {
+			// in reach and not getting any closer (crowded by the others on the staircase): it digs from where it is
+			boolean still = getDeltaMovement().horizontalDistanceSqr() < 1.0E-4;
+
+			if (distance <= MINE_REACH && (getNavigation().isDone() || distance <= 3 || still && digTicks == 0 && ++stillTicks > 20 || digTicks > 0)) {
+				stillTicks = 0;
 				getNavigation().stop();
 				BlockState state = server.getBlockState(mineTarget);
 
