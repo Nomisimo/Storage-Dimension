@@ -493,12 +493,47 @@ public final class OreJob implements DigJob {
 		List<BlockPos> found = new ArrayList<>();
 
 		for (BlockPos pos : BlockPos.betweenClosed(from.offset(-SIGHT, -SIGHT, -SIGHT), from.offset(SIGHT, SIGHT + 1, SIGHT))) {
-			if (free(pos) && isOre(level.getBlockState(pos)) && wanted(level, pos) && exposed(level, pos)) {
+			if (free(pos) && isOre(level.getBlockState(pos)) && wanted(level, pos) && exposed(level, pos) && inMine(pos)) {
 				found.add(pos.immutable());
 			}
 		}
 
 		return found;
+	}
+
+	/** How far beside the staircase or a tunnel an ore is still followed: a vein out into a cave is not. */
+	private static final int VEIN_REACH = 3;
+
+	/**
+	 * Close to the staircase or to a tunnel. An ore that touches a cave far from them is left alone: robots that
+	 * followed one vein after the other through a cave found no way back with what they had mined.
+	 */
+	private boolean inMine(BlockPos pos) {
+		if (Math.abs(pos.getX() - pillar.getX()) <= 1 + VEIN_REACH && Math.abs(pos.getZ() - pillar.getZ()) <= 1 + VEIN_REACH) {
+			return true;
+		}
+
+		for (List<Tunnel> tunnels : plans.values()) {
+			for (Tunnel tunnel : tunnels) {
+				if (tunnel.open == 0) {
+					continue;
+				}
+
+				BlockPos start = tunnel.start;
+				BlockPos end = tunnel.cell(Math.max(0, tunnel.open - 1));
+				int minX = Math.min(start.getX(), end.getX()) - VEIN_REACH;
+				int maxX = Math.max(start.getX(), end.getX()) + VEIN_REACH;
+				int minZ = Math.min(start.getZ(), end.getZ()) - VEIN_REACH;
+				int maxZ = Math.max(start.getZ(), end.getZ()) + VEIN_REACH;
+
+				if (pos.getX() >= minX && pos.getX() <= maxX && pos.getZ() >= minZ && pos.getZ() <= maxZ
+						&& pos.getY() >= start.getY() - VEIN_REACH && pos.getY() <= start.getY() + 1 + VEIN_REACH) {
+					return true;
+				}
+			}
+		}
+
+		return false;
 	}
 
 	/** Its tunnel is finished (once per tunnel): time to take the ores home before the next one. */

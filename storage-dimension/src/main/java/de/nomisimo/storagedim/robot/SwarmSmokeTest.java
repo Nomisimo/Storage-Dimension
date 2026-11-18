@@ -104,8 +104,9 @@ public final class SwarmSmokeTest {
 		String dim = Rooms.id(level);
 
 		for (int i = 0; i < 64 && station == null; i++) {
-			int x = x0 - (i % 8) * 96;
-			int z = x0 - (i / 8) * 96;
+			// a grid around (x0, x0), wide enough to get out of an ocean
+			int x = x0 + (i % 8 - 4) * 160;
+			int z = x0 + (i / 8 - 4) * 160;
 
 			for (int cx = -2; cx <= 2; cx++) {
 				for (int cz = -2; cz <= 2; cz++) {
@@ -120,6 +121,12 @@ public final class SwarmSmokeTest {
 			if (y > level.getSeaLevel() && level.getFluidState(ground).isEmpty() && level.getFluidState(ground.above()).isEmpty()
 					&& level.getBlockState(ground).isFaceSturdy(level, ground, Direction.UP)) {
 				station = ground.above();
+			} else {
+				for (int cx = -2; cx <= 2; cx++) {
+					for (int cz = -2; cz <= 2; cz++) {
+						level.setChunkForced((x >> 4) + cx, (z >> 4) + cz, false);
+					}
+				}
 			}
 		}
 
