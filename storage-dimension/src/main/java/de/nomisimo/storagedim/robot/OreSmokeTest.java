@@ -210,7 +210,7 @@ public final class OreSmokeTest {
 
 			int torchCount = 0;
 
-			for (BlockPos pos : BlockPos.betweenClosed(station.offset(-17, -8, -17), station.offset(17, -8, 17))) {
+			for (BlockPos pos : BlockPos.betweenClosed(station.offset(-17, -12, -17), station.offset(17, -1, 17))) {
 				torchCount += level.getBlockState(pos).is(Blocks.TORCH) ? 1 : 0;
 			}
 
@@ -255,7 +255,22 @@ public final class OreSmokeTest {
 			errors.add("Kiste: " + describe(loot));
 
 			for (RobotEntity robot : robots) {
-				errors.add("Roboter: " + robot.describeMining() + " " + robot.status().getString() + " " + robot.describe() + " at " + robot.blockPosition());
+				net.minecraft.world.level.pathfinder.Path home = robot.getNavigation().createPath(station, 2);
+				StringBuilder around = new StringBuilder();
+
+				for (int dy = 2; dy >= -1; dy--) {
+					around.append(" dy=").append(dy).append(':');
+
+					for (int dz = -1; dz <= 1; dz++) {
+						for (int dx = -1; dx <= 1; dx++) {
+							around.append(level.getBlockState(robot.blockPosition().offset(dx, dy, dz)).getBlock().getDescriptionId().replace("block.minecraft.", "").replace("block.storagedim.", "")).append(dx == 1 ? "|" : ",");
+						}
+					}
+				}
+
+				errors.add("Roboter: " + robot.describeMining() + " " + robot.status().getString() + " " + robot.describe() + " at " + robot.blockPosition()
+						+ " heim->" + (home == null ? "null" : (home.canReach() ? "ok" : "nein") + "/" + home.getNodeCount() + "@" + home.getEndNode().asBlockPos().toShortString())
+						+ " station=" + station.toShortString() + around);
 			}
 
 			errors.add(0, "Erzsuche-Test nach " + ticks + " Ticks nicht fertig (Stufe " + stage + ")");
