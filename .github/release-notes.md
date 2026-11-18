@@ -1,5 +1,7 @@
 Storage Dimension für **Minecraft 26.1.2** (Fabric).
 
+**Neu in 0.8.5:** In der Station steht beim **Abbau** und bei der **Erzsuche** jetzt, wie viel Prozent schon fertig sind, mit Fortschrittsbalken über der Roboterliste. Der Wert wird mit der Welt gespeichert und bleibt nach einem Neustart erhalten. **Erzsuche:** Gänge enden jetzt dort, wo sie aus dem Boden kommen (Tal, See, Meer), statt als Bruchsteinbrücke durch die Luft weiterzugehen; dort gibt es ohnehin keine Erze. Server und alle Spieler brauchen 0.8.5.
+
 **Neu in 0.8.4:** Bei der **Erzsuche** arbeiten jetzt alle Roboter gleichzeitig: Die Station plant das Strip Mining im ganzen Bereich, die Roboter fangen auf den **oberen Ebenen** an, sobald die Treppe sie erreicht, und arbeiten sich nach unten vor, während andere die Treppe weitergraben (bis zu vier an der Treppe, drei Lagen auf einmal). Ein Roboter, der zu einem Block keinen Weg findet, lässt nur diesen Block für sich aus, statt alle anderen aufzuhalten; erst wenn drei daran scheitern, wird er kurz für alle übersprungen. Erzadern folgen sie nur nahe an Treppe und Gängen, nicht mehr durch Höhlen, aus denen sie nicht zurückfanden. Sand oder Kies direkt über Gängen und Treppe wird zu Bruchstein, damit nichts nachrutscht und Roboter verschüttet; unter Wasser wird der Ring um die Säule nicht mehr endlos geöffnet. **Abbau:** Gefällte Bäume fallen ganz (Stamm und Krone), Roboter im Gedränge an der Kiste geben ihre Ladung über bis zu 6 Blöcke ab, und wer von Laub eingeschlossen ist, gräbt sich frei. Die Station hält 2 Chunks Rand mit geladen, damit Roboter am Rand nicht einfrieren. Wer in einem Loch festsitzt, in das der Weg nur scheinbar hinausführt, gräbt sich selbst frei, und Werkzeug aus der Tiefe wird zuerst zur Station hochgetragen. **Server pausiert nicht mehr:** Solange eine Station ihren Bereich geladen hält, pausiert ein Server ohne Spieler nicht (`pause-when-empty-seconds`). Abschaltbar in den Mod-Einstellungen (Mod Menu) unter „Server ohne Spieler: Läuft weiter / Pausiert“, das ändern nur Operatoren, gespeichert wird es auf dem Server. Server und alle Spieler brauchen 0.8.4.
 
 **Neu in 0.8.3:** Die **Erzsuche** kommt jetzt wirklich bis nach unten: Die Treppe wird bis knapp über das Grundgestein gegraben, und dort entstehen die Gänge. Vorher blieben die Roboter oft auf halber Höhe hängen und meldeten „kein Erz erreichbar“. In Höhlen, die die Treppe kreuzen, gehen sie die Treppe Stück für Stück entlang, und an Kisten stellen sie sich auf festen Boden statt über den Schacht. **Festgesteckte Roboter befreien sich selbst:** Wer im Fels steckt oder nicht mehr heimfindet, gräbt sich eine Treppe zurück zur Station. Dabei füllt er Löcher mit Bruchstein auf und dichtet Wasser und Lava ab. Kisten, Stationen, Antennen, Barrieren und die Treppen der Mine rührt er nicht an. **Ganze Chunks:** Abbau und Erzsuche richten sich an den Chunk-Grenzen aus, also der Chunk der Station und die Reichweite in Chunks rundherum (z. B. 21 × 21 Chunks = 336 × 336 Blöcke). Beim Abbau bleibt um die Station eine **9 × 9 Plattform** stehen, mit allem, was darauf steht (Kisten, Häuschen, Wegsteine usw.). Server und alle Spieler brauchen 0.8.3.
@@ -36,18 +38,18 @@ Storage Dimension für **Minecraft 26.1.2** (Fabric).
 
 **Neu in 0.4.1:** Im ME-Speicher (auch über das Rucksack-Upgrade) und im Filter-Fenster lassen sich Items im eigenen Inventar wieder ziehen und verteilen sowie per Doppelklick sammeln; vorher sprangen sie zurück in die Hand.
 
-**Neu in 0.4.0:** Sammelroboter, eigene Texturen für Dimensionskiste, Filterkiste, ME-Terminal und die ME-Items, Rezepte in JEI, Anbindung an Maschinen (z. B. Tech Reborn), doppelte Filterkisten mit 14 Filtern. Ab dieser Version brauchen **alle Spieler** `storage-dimension-0.8.4.jar`.
+**Neu in 0.4.0:** Sammelroboter, eigene Texturen für Dimensionskiste, Filterkiste, ME-Terminal und die ME-Items, Rezepte in JEI, Anbindung an Maschinen (z. B. Tech Reborn), doppelte Filterkisten mit 14 Filtern. Ab dieser Version brauchen **alle Spieler** `storage-dimension-0.8.5.jar`.
 
 ## Server, in den Ordner `mods`
 
-- `storage-dimension-0.8.4.jar`
-- `storagedim-tb-0.8.4.jar`
+- `storage-dimension-0.8.5.jar`
+- `storagedim-tb-0.8.5.jar`
 - dazu [Fabric API](https://modrinth.com/mod/fabric-api), [Traveler's Backpack](https://modrinth.com/mod/travelersbackpack) und [Forge Config API Port](https://modrinth.com/mod/forge-config-api-port), alle für 26.1.2
 
 ## Jeder Spieler, in den Ordner `mods`
 
-- `storage-dimension-0.8.4.jar`
-- `storagedim-tb-0.8.4.jar`
+- `storage-dimension-0.8.5.jar`
+- `storagedim-tb-0.8.5.jar`
 - dazu [Fabric API](https://modrinth.com/mod/fabric-api), [Traveler's Backpack](https://modrinth.com/mod/travelersbackpack), [Forge Config API Port](https://modrinth.com/mod/forge-config-api-port) und [JEI](https://modrinth.com/mod/jei), alle für 26.1.2
 
 ## Nur Storage Dimension, ohne Traveler's Backpack

@@ -351,7 +351,7 @@ public class StationMenu extends AbstractContainerMenu {
 		String areaState = area.connected() ? (area.enabled() ? Areas.autoPaused(dim, pos) ? "pausiert (Auto)" : "an" : "aus") : "";
 		StationNetworking.SyncPayload payload = new StationNetworking.SyncPayload(containerId, config.stationName(), config.name(),
 				config.range(), config.color(), config.exclude(), antennas, area.name(), area.connected() ? area.sizeText(pos) : "", areaState,
-				names, states, config.mining(), config.mining() && config.oreSearch(), StationChunks.loaded(dim, pos));
+				names, states, config.mining(), config.mining() && config.oreSearch(), StationChunks.loaded(dim, pos), StationProgress.shown(dim, pos, config));
 
 		if (force || !Objects.equals(payload, lastSync)) {
 			lastSync = payload;

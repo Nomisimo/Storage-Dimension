@@ -28,6 +28,8 @@ public final class StationMining {
 	public static Result toggle(ServerLevel level, String dim, BlockPos station) {
 		StorageData data = StorageData.get();
 		RobotConfig config = data.station(dim, station);
+		// every mode starts its progress afresh
+		StationProgress.clear(dim, station);
 
 		if (config.mining() && config.oreSearch()) {
 			data.setStation(dim, station, config.withMining(false).withOreSearch(false));

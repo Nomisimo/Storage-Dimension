@@ -65,6 +65,8 @@ public final class StorageData {
 	public final Map<String, Map<Long, Map<UUID, String>>> stationRobots = new HashMap<>();
 	/** The antenna area of each robot station per dimension (antennas, area name, switched on or off). */
 	public final Map<String, Map<Long, de.nomisimo.storagedim.robot.StationArea>> stationAreas = new HashMap<>();
+	/** How far the mining of each robot station per dimension is, for its screen. */
+	public final Map<String, Map<Long, de.nomisimo.storagedim.robot.StationProgress.Entry>> stationProgress = new HashMap<>();
 	/** Robot stations per dimension that keep their work area loaded (switched on at the station). */
 	public final Map<String, Set<Long>> loadedStations = new HashMap<>();
 	/** Chunks per dimension this mod force-loads for those stations, so only these are released again. */
@@ -498,6 +500,20 @@ public final class StorageData {
 			areaObj.add(dim, d);
 		});
 		root.add("stationAreas", areaObj);
+
+		JsonObject progressObj = new JsonObject();
+		stationProgress.forEach((dim, map) -> {
+			JsonObject d = new JsonObject();
+			map.forEach((pos, entry) -> {
+				JsonObject e = new JsonObject();
+				e.addProperty("key", entry.key());
+				e.addProperty("total", entry.total());
+				e.addProperty("permille", entry.permille());
+				d.add(Long.toString(pos), e);
+			});
+			progressObj.add(dim, d);
+		});
+		root.add("stationProgress", progressObj);
 		root.add("loadedStations", writeLongSets(loadedStations));
 		root.add("forcedChunks", writeLongSets(forcedChunks));
 
@@ -689,6 +705,18 @@ public final class StorageData {
 				dim.getValue().getAsJsonObject().entrySet().forEach(e -> de.nomisimo.storagedim.robot.StationArea.CODEC.parse(ops, e.getValue())
 						.resultOrPartial(StorageDimensionMod.LOGGER::warn).ifPresent(area -> map.put(Long.parseLong(e.getKey()), area)));
 				stationAreas.put(dim.getKey(), map);
+			});
+		}
+
+		if (root.has("stationProgress")) {
+			root.getAsJsonObject("stationProgress").entrySet().forEach(dim -> {
+				Map<Long, de.nomisimo.storagedim.robot.StationProgress.Entry> map = new HashMap<>();
+				dim.getValue().getAsJsonObject().entrySet().forEach(e -> {
+					JsonObject o = e.getValue().getAsJsonObject();
+					map.put(Long.parseLong(e.getKey()), new de.nomisimo.storagedim.robot.StationProgress.Entry(o.get("key").getAsString(),
+							o.get("total").getAsLong(), o.get("permille").getAsInt()));
+				});
+				stationProgress.put(dim.getKey(), map);
 			});
 		}
 
