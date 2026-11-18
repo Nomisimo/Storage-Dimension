@@ -643,9 +643,11 @@ public final class OreJob implements DigJob {
 					continue;
 				}
 
-				if (!walkway(pos) && !clear(level, pos.above()) && !walkway(pos.above())) {
-					// the rest of the ring is dug from the top down only: not under sand, water sealed off with
-					// cobblestone or a step (a hole one block high under a step at the bottom traps robots)
+				BlockState over = level.getBlockState(pos.above());
+
+				if (!walkway(pos) && (liquid(over) || over.getBlock() instanceof FallingBlock)) {
+					// the rest of the ring is not opened under water or sand: what runs or falls in was sealed off
+					// with cobblestone, dug again, and so on without end under the sea
 					continue;
 				}
 
