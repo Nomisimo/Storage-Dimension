@@ -1457,7 +1457,8 @@ public class RobotEntity extends PathfinderMob {
 		if (oreSearch) {
 			// the smoke test strip-mines a block of stone high up instead of the whole ground
 			int bottom = Math.max(level().getMinY(), Integer.getInteger("storagedim.stripBottom", level().getMinY()));
-			return OreJob.get(Rooms.id(level()), station, minX, minZ, maxX, maxZ, bottom, level().getGameTime());
+			lastOres = OreJob.get(Rooms.id(level()), station, minX, minZ, maxX, maxZ, bottom, level().getGameTime());
+			return lastOres;
 		}
 
 		minY = Math.max(minY, level().getMinY());
@@ -2241,8 +2242,9 @@ public class RobotEntity extends PathfinderMob {
 
 		private boolean stranded() {
 			long now = level().getGameTime();
-			boolean stuck = now < homeUnreachableUntil || mineIdle && !mineFinished && minePhase == 0;
-			strandedTicks = mining && !tools[PICKAXE].isEmpty() && station != null && !nearHome() && stuck && getAction() == 0 ? strandedTicks + 1 : 0;
+			// also when mining was switched off and it cannot get its tools up to the chest
+			boolean stuck = now < homeUnreachableUntil || mineIdle && !mineFinished && minePhase == 0 || !mining && mineProblem != null;
+			strandedTicks = !tools[PICKAXE].isEmpty() && station != null && !nearHome() && stuck && getAction() == 0 ? strandedTicks + 1 : 0;
 			return strandedTicks >= STRANDED_TICKS;
 		}
 
@@ -2260,7 +2262,7 @@ public class RobotEntity extends PathfinderMob {
 
 		@Override
 		public boolean canContinueToUse() {
-			return mining && !tools[PICKAXE].isEmpty() && steps < MAX_STEPS && !nearHome() && getAction() == 0;
+			return !tools[PICKAXE].isEmpty() && steps < MAX_STEPS && !nearHome() && getAction() == 0;
 		}
 
 		@Override
@@ -2928,6 +2930,9 @@ public class RobotEntity extends PathfinderMob {
 		getNavigation().updatePathfinderMaxVisitedNodes();
 	}
 
+	/** The strip mine it last worked in: its staircase still leads it up when the ore search is switched off. */
+	private OreJob lastOres;
+
 	/** Walks like any mob, but treats robot barriers as walls when working out a way. */
 	@Override
 	protected PathNavigation createNavigation(Level level) {
@@ -2948,8 +2953,14 @@ public class RobotEntity extends PathfinderMob {
 			protected Path createPath(Set<BlockPos> targets, int regionOffset, boolean offsetUpward, int reachRange, float maxPathLength) {
 				Path path = super.createPath(targets, regionOffset, offsetUpward, reachRange, maxPathLength);
 
-				if (path != null && path.canReach() || targets.isEmpty() || !oreSearch || station == null || !(level() instanceof ServerLevel server)
-						|| !(miningJob() instanceof OreJob ores)) {
+				if (path != null && path.canReach() || targets.isEmpty() || station == null || !(level() instanceof ServerLevel server)) {
+					return path;
+				}
+
+				// also when the ore search was just switched off and it is still down the staircase with its tools
+				OreJob ores = oreSearch && miningJob() instanceof OreJob current ? current : lastOres;
+
+				if (ores == null || getY() >= station.getY() && targets.iterator().next().getY() >= station.getY()) {
 					return path;
 				}
 
