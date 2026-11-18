@@ -565,6 +565,12 @@ public final class OreJob implements DigJob {
 					continue;
 				}
 
+				if (!walkway(pos) && isStair(pos.above()) && !clear(level, pos.below())) {
+					// right under a step with rock below (at the bottom of the staircase): dug out it would be a hole
+					// one block high, a robot walks in and then hits its head on the step when it jumps out again
+					continue;
+				}
+
 				// the staircase is open once there is room to walk over every step; the rest of the ring around the
 				// pillar is dug where a robot gets at it, but a block left there (no way to it, out of sight) does
 				// not hold up the tunnels
