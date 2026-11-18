@@ -139,6 +139,12 @@ final class SmokeTest {
 	}
 
 	private static void run(MinecraftServer server) {
+		// CI runs the test with 32 robots on its own, it takes long
+		if (Boolean.getBoolean("storagedim.swarmtest")) {
+			de.nomisimo.storagedim.robot.SwarmSmokeTest.start(server, swarmErrors -> report(server, swarmErrors));
+			return;
+		}
+
 		List<String> errors = new ArrayList<>();
 
 		try {

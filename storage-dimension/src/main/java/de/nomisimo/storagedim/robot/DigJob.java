@@ -25,8 +25,8 @@ public interface DigJob {
 
 	void release(BlockPos pos, UUID robot);
 
-	/** No robot found a way there: left out for a while. */
-	void skip(BlockPos pos, long now);
+	/** This robot found no way there: left out for it for a while (and for all once several robots found none). */
+	void skip(BlockPos pos, UUID robot, long now);
 
 	/** Nothing is left to dig. */
 	boolean finished();

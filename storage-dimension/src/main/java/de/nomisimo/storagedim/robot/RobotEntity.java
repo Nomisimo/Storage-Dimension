@@ -97,6 +97,8 @@ public class RobotEntity extends PathfinderMob {
 
 	/** Ticks without getting closer before it gives up on an item or chest for a while. */
 	private static final int STUCK_TICKS = 100;
+	/** Longest it goes for one block to dig before it gives up on it (it may take the long way round, but not forever). */
+	private static final int WAY_TICKS = 600;
 	private static final int IGNORE_TICKS = 1200;
 	/** How many of the closest items or chests it checks for a way per search. */
 	private static final int PATH_CHECKS = 4;
@@ -149,6 +151,16 @@ public class RobotEntity extends PathfinderMob {
 	/** How far from its eyes a mining robot digs, like a player. */
 	/** How far it reaches to dig: like a player. */
 	private static final double MINE_REACH = 4.5;
+	/**
+	 * A chest it sees this close is in reach: with many robots crowding round the station's chests it does not have to
+	 * squeeze right up to one (it used to stand behind the others with its load and wait for good).
+	 */
+	private static final double CROWD_REACH = 3.5;
+	/**
+	 * A chest of its station this close that it cannot get any closer to (other robots in the way, no way found
+	 * up out of the mine right beside it): it hands its load or its tools in from where it is.
+	 */
+	private static final double HAND_IN_REACH = 6;
 	/** Its tools, one of each: pickaxe, axe, shovel. */
 	private static final int PICKAXE = 0;
 	private static final int AXE = 1;
@@ -1224,6 +1236,12 @@ public class RobotEntity extends PathfinderMob {
 				return chest;
 			}
 
+			// right below or beside it (up the staircase of the mine, crowded out): it hands its load in from there
+			if (position().distanceTo(Vec3.atCenterOf(chest)) <= HAND_IN_REACH) {
+				plannedPath = null;
+				return chest;
+			}
+
 			// down in deep water no walking path leads out; it swims up and towards the chest instead
 			if (isInWater()) {
 				plannedPath = path;
@@ -1441,7 +1459,8 @@ public class RobotEntity extends PathfinderMob {
 		if (oreSearch) {
 			// the smoke test strip-mines a block of stone high up instead of the whole ground
 			int bottom = Math.max(level().getMinY(), Integer.getInteger("storagedim.stripBottom", level().getMinY()));
-			return OreJob.get(Rooms.id(level()), station, minX, minZ, maxX, maxZ, bottom, level().getGameTime());
+			lastOres = OreJob.get(Rooms.id(level()), station, minX, minZ, maxX, maxZ, bottom, level().getGameTime());
+			return lastOres;
 		}
 
 		minY = Math.max(minY, level().getMinY());
@@ -1733,10 +1752,77 @@ public class RobotEntity extends PathfinderMob {
 		mend(server, pos);
 		server.destroyBlockProgress(getId(), pos, -1);
 		job.dug(server, pos);
+
+		if (job instanceof MiningJob area && state.is(net.minecraft.tags.BlockTags.LOGS)) {
+			fell(server, area, pos);
+		}
+
 		mineTarget = null;
 		digTicks = 0;
 		digTotal = 0;
 		minePhase = 0;
+	}
+
+	/** Blocks of a tree a robot fells at once: more are left for the next log. */
+	private static final int TREE_BLOCKS = 256;
+
+	/**
+	 * Mining: a log it cut fells the whole tree above it, the logs and leaves joined to it (also those far above
+	 * its reach, which no robot could get at otherwise). What they drop goes into its bag.
+	 */
+	private void fell(ServerLevel server, MiningJob area, BlockPos cut) {
+		java.util.ArrayDeque<BlockPos> open = new java.util.ArrayDeque<>();
+		Set<BlockPos> seen = new HashSet<>();
+		open.add(cut);
+		seen.add(cut);
+		int felled = 0;
+
+		while (!open.isEmpty() && felled < TREE_BLOCKS) {
+			BlockPos from = open.poll();
+
+			for (BlockPos next : BlockPos.betweenClosed(from.offset(-1, 0, -1), from.offset(1, 1, 1))) {
+				if (next.getY() < cut.getY() || !seen.add(next.immutable())) {
+					continue;
+				}
+
+				BlockState state = server.getBlockState(next);
+				boolean log = state.is(net.minecraft.tags.BlockTags.LOGS);
+
+				int dx = next.getX() - cut.getX();
+				int dz = next.getZ() - cut.getZ();
+				int far = dx * dx + dz * dz;
+
+				// the tree's own crown and branches, not the next tree of a forest whose leaves touch it
+				if (!(log ? far <= 64 : state.is(net.minecraft.tags.BlockTags.LEAVES) && far <= 36) || !area.wanted(server, next)) {
+					continue;
+				}
+
+				BlockPos pos = next.immutable();
+				int kind = bestTool(state);
+				ItemStack tool = kind < 0 ? ItemStack.EMPTY : tools[kind];
+
+				for (ItemStack drop : Block.getDrops(state, server, pos, null, this, tool)) {
+					if (!addToBag(drop)) {
+						Block.popResource(server, pos, drop);
+					}
+				}
+
+				server.destroyBlock(pos, false, this);
+				area.dug(server, pos);
+				felled++;
+
+				if (log && !tool.isEmpty()) {
+					tool.hurtAndBreak(1, server, (ServerPlayer) null, item -> {
+					});
+
+					if (tool.isEmpty()) {
+						tools[kind] = ItemStack.EMPTY;
+					}
+				}
+
+				open.add(pos);
+			}
+		}
 	}
 
 	/** Into its bag, onto stacks of the same kind first; false when the bag is full. */
@@ -1794,6 +1880,11 @@ public class RobotEntity extends PathfinderMob {
 		}
 	}
 
+	/** For the smoke test: hacking at a block right now. */
+	public boolean isDigging() {
+		return minePhase == 3 && digTicks > 0;
+	}
+
 	/** For the smoke test: its tools and bag. */
 	public String describeMining() {
 		return "mining=" + mining + " phase=" + minePhase + " target=" + mineTarget + " idle=" + mineIdle + " finished=" + mineFinished
@@ -1821,6 +1912,9 @@ public class RobotEntity extends PathfinderMob {
 		private int stuckTicks;
 		private Path lastPath;
 		private int lastNode;
+		/** How long it has been on its way to the block it is to dig. */
+		private int wayTicks;
+		private int stillTicks;
 
 		MineGoal() {
 			setFlags(EnumSet.of(Flag.MOVE, Flag.LOOK));
@@ -1935,7 +2029,7 @@ public class RobotEntity extends PathfinderMob {
 					return startDigging(job, pos);
 				}
 
-				job.skip(pos, now);
+				job.skip(pos, getUUID(), now);
 			}
 
 			mineIdle = true;
@@ -1953,6 +2047,8 @@ public class RobotEntity extends PathfinderMob {
 		}
 
 		private boolean startDigging(DigJob job, BlockPos pos) {
+			wayTicks = 0;
+			stillTicks = 0;
 			job.claim(pos, getUUID());
 			mineTarget = pos.immutable();
 			digTicks = 0;
@@ -2008,7 +2104,7 @@ public class RobotEntity extends PathfinderMob {
 			getLookControl().setLookAt(goal.x, goal.y, goal.z);
 			double distance = position().distanceTo(goal);
 
-			if (distance <= 2.2 || canReachChest(goal) && seesChest(chest.pos())) {
+			if (distance <= 2.2 || (canReachChest(goal) || distance <= CROWD_REACH) && seesChest(chest.pos())) {
 				getNavigation().stop();
 
 				if (minePhase == 1) {
@@ -2022,7 +2118,22 @@ public class RobotEntity extends PathfinderMob {
 				return;
 			}
 
-			if (stuck(distance)) {
+			if (stuck(distance) && distance <= HAND_IN_REACH) {
+				// crowded out by the others right at the chest: it reaches over from here
+				getNavigation().stop();
+
+				if (minePhase == 1) {
+					takeTools(chest);
+				} else {
+					returnTools(chest);
+				}
+
+				minePhase = 0;
+				cooldown = 0;
+				return;
+			}
+
+			if (stuckTicks >= STUCK_TICKS) {
 				mineProblem = Component.literal("Fehler: Werkzeugkiste nicht erreichbar");
 				minePhase = 0;
 				cooldown = RETRY_HOME_TICKS / 2;
@@ -2031,6 +2142,15 @@ public class RobotEntity extends PathfinderMob {
 
 			if (getNavigation().isDone()) {
 				Path path = getNavigation().createPath(chest.pos(), 1);
+
+				if ((path == null || !path.canReach()) && station != null && getY() < station.getY() - 1) {
+					// still down in the strip mine: first up to the station, the chest stands next to it
+					Path home = getNavigation().createPath(station, 2);
+
+					if (home != null && home.getNodeCount() > 1) {
+						path = home;
+					}
+				}
 
 				if (path != null) {
 					getNavigation().moveTo(path, 1.0);
@@ -2063,7 +2183,11 @@ public class RobotEntity extends PathfinderMob {
 			getLookControl().setLookAt(centre.x, centre.y, centre.z);
 			double distance = getEyePosition().distanceTo(centre);
 
-			if (distance <= MINE_REACH && (getNavigation().isDone() || distance <= 3)) {
+			// in reach and not getting any closer (crowded by the others on the staircase): it digs from where it is
+			boolean still = getDeltaMovement().horizontalDistanceSqr() < 1.0E-4;
+
+			if (distance <= MINE_REACH && (getNavigation().isDone() || distance <= 3 || still && digTicks == 0 && ++stillTicks > 20 || digTicks > 0)) {
+				stillTicks = 0;
 				getNavigation().stop();
 				BlockState state = server.getBlockState(mineTarget);
 
@@ -2094,8 +2218,10 @@ public class RobotEntity extends PathfinderMob {
 				server.destroyBlockProgress(getId(), mineTarget, -1);
 			}
 
-			if (stuck(distance)) {
-				job.skip(mineTarget, level().getGameTime());
+			// jostled about by the others it may seem to get on along ever new ways and never get there: after a while it
+			// leaves that block too
+			if (stuck(distance) || ++wayTicks > WAY_TICKS) {
+				job.skip(mineTarget, getUUID(), level().getGameTime());
 				dropMineTarget();
 				return;
 			}
@@ -2131,6 +2257,7 @@ public class RobotEntity extends PathfinderMob {
 		private int stepTicks;
 		private int steps;
 		private int checkCooldown;
+		private Vec3 strandedAt;
 
 		RescueGoal() {
 			setFlags(EnumSet.of(Flag.MOVE, Flag.LOOK));
@@ -2138,8 +2265,14 @@ public class RobotEntity extends PathfinderMob {
 
 		private boolean stranded() {
 			long now = level().getGameTime();
-			boolean stuck = now < homeUnreachableUntil || mineIdle && !mineFinished && minePhase == 0;
-			strandedTicks = mining && !tools[PICKAXE].isEmpty() && station != null && !nearHome() && stuck && getAction() == 0 ? strandedTicks + 1 : 0;
+			// also when mining was switched off and it cannot get its tools up to the chest
+			boolean stuck = now < homeUnreachableUntil || mineIdle && !mineFinished && minePhase == 0 || !mining && mineProblem != null;
+			strandedTicks = !tools[PICKAXE].isEmpty() && station != null && !nearHome() && stuck && getAction() == 0 ? strandedTicks + 1 : 0;
+
+			if (strandedTicks == 1) {
+				strandedAt = position();
+			}
+
 			return strandedTicks >= STRANDED_TICKS;
 		}
 
@@ -2149,15 +2282,17 @@ public class RobotEntity extends PathfinderMob {
 				return false;
 			}
 
-			// a way home after all: nothing to dig
+			// a way home after all: nothing to dig; unless it has not moved from the spot all the while (a way the
+			// game finds but the robot cannot go, out of a hole with its head under a step, say)
 			Path home = getNavigation().createPath(home(), 2);
-			strandedTicks = home != null && home.canReach() ? 0 : strandedTicks;
+			boolean moved = strandedAt == null || position().distanceTo(strandedAt) > 1.0;
+			strandedTicks = home != null && home.canReach() && moved ? 0 : strandedTicks;
 			return strandedTicks > 0;
 		}
 
 		@Override
 		public boolean canContinueToUse() {
-			return mining && !tools[PICKAXE].isEmpty() && steps < MAX_STEPS && !nearHome() && getAction() == 0;
+			return !tools[PICKAXE].isEmpty() && steps < MAX_STEPS && !nearHome() && getAction() == 0;
 		}
 
 		@Override
@@ -2233,7 +2368,7 @@ public class RobotEntity extends PathfinderMob {
 			}
 
 			// now and then: is there a way home again?
-			if (--checkCooldown <= 0 && standing()) {
+			if (steps > 2 && --checkCooldown <= 0 && standing()) {
 				checkCooldown = 20;
 				Path home = getNavigation().createPath(home(), 2);
 
@@ -2270,7 +2405,8 @@ public class RobotEntity extends PathfinderMob {
 			List<BlockPos> clearing = new ArrayList<>(List.of(next, next.above()));
 
 			if (up) {
-				// room to jump up
+				// room to jump up (also right over its head: it is low enough to stand under a step of the staircase)
+				clearing.add(at.above());
 				clearing.add(at.above(2));
 			} else if (down) {
 				clearing.add(next.above(2));
@@ -2585,7 +2721,9 @@ public class RobotEntity extends PathfinderMob {
 			steeredAt = level().getGameTime();
 			boolean arrived = recallPhase == RECALL_RETURNING ? atStationForRecall()
 					: goalKey == target ? standsOn(target)
-					: goalKey == delivery ? (distance <= reach || canReachChest(goal)) && seesChest(delivery) : distance <= reach;
+					: goalKey == delivery ? (distance <= reach || canReachChest(goal) || distance <= CROWD_REACH) && seesChest(delivery)
+							|| distance <= HAND_IN_REACH && stuckTicks >= STUCK_TICKS / 2 && lastGoal == delivery
+					: distance <= reach;
 
 			if (arrived) {
 				if (recallPhase == RECALL_RETURNING) {
@@ -2823,6 +2961,9 @@ public class RobotEntity extends PathfinderMob {
 		getNavigation().updatePathfinderMaxVisitedNodes();
 	}
 
+	/** The strip mine it last worked in: its staircase still leads it up when the ore search is switched off. */
+	private OreJob lastOres;
+
 	/** Walks like any mob, but treats robot barriers as walls when working out a way. */
 	@Override
 	protected PathNavigation createNavigation(Level level) {
@@ -2843,8 +2984,14 @@ public class RobotEntity extends PathfinderMob {
 			protected Path createPath(Set<BlockPos> targets, int regionOffset, boolean offsetUpward, int reachRange, float maxPathLength) {
 				Path path = super.createPath(targets, regionOffset, offsetUpward, reachRange, maxPathLength);
 
-				if (path != null && path.canReach() || targets.isEmpty() || !oreSearch || station == null || !(level() instanceof ServerLevel server)
-						|| !(miningJob() instanceof OreJob ores)) {
+				if (path != null && path.canReach() || targets.isEmpty() || station == null || !(level() instanceof ServerLevel server)) {
+					return path;
+				}
+
+				// also when the ore search was just switched off and it is still down the staircase with its tools
+				OreJob ores = oreSearch && miningJob() instanceof OreJob current ? current : lastOres;
+
+				if (ores == null || getY() >= station.getY() && targets.iterator().next().getY() >= station.getY()) {
 					return path;
 				}
 

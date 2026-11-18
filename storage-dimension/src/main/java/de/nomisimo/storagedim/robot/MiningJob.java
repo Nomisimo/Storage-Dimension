@@ -43,8 +43,10 @@ public final class MiningJob implements DigJob {
 	/** How far the platform reaches from the station. */
 	static final int PLATFORM = 4;
 	static final int[][] RING = {{-1, -1}, {0, -1}, {1, -1}, {1, 0}, {1, 1}, {0, 1}, {-1, 1}, {-1, 0}};
-	/** How long a block no robot found a way to is left out (ticks). */
+	/** How long a block a robot found no way to is left out for it (ticks). */
 	private static final int SKIP_TICKS = 1200;
+	/** Once this many robots found no way to a block, it is left out for all of them. */
+	private static final int SKIP_ROBOTS = 3;
 	/** A job nobody asked for in this long is forgotten. */
 	private static final int FORGET_TICKS = 6000;
 	/** Block checks per call while the columns are looked at for the first time. */
@@ -77,7 +79,13 @@ public final class MiningJob implements DigJob {
 	private final ArrayDeque<Long> unloaded = new ArrayDeque<>();
 	/** Blocks a robot is on its way to or digging (packed position to robot). */
 	private final Map<Long, UUID> claimed = new HashMap<>();
+	/** When each robot last asked for work: what a robot that went away (picked up, unloaded) had taken is free again. */
+	private final Map<UUID, Long> seen = new HashMap<>();
+	private static final int CLAIM_TICKS = 1200;
+	/** Blocks left out for all robots, until when. */
 	private final Map<Long, Long> skipped = new HashMap<>();
+	/** Blocks single robots found no way to: the robot and until when. One robot standing in a hole does not keep the others away from them. */
+	private final Map<Long, Map<UUID, Long>> failed = new HashMap<>();
 	/** How often water at a place was turned into cobblestone: where it keeps coming back, the cobblestone stays as a wall. */
 	private final Map<Long, Integer> pumped = new HashMap<>();
 	private long lastUsed;
@@ -442,8 +450,11 @@ public final class MiningJob implements DigJob {
 	@Override
 	public List<BlockPos> candidates(ServerLevel level, BlockPos from, UUID robot, int count, long now) {
 		scan(level);
-		skipped.values().removeIf(until -> until < now);
+		forget(now);
 		claimed.values().removeIf(robot::equals);
+		seen.put(robot, now);
+		seen.values().removeIf(last -> now - last > CLAIM_TICKS);
+		claimed.values().removeIf(owner -> !seen.containsKey(owner));
 		List<BlockPos> found = new ArrayList<>();
 		List<long[]> moved = new ArrayList<>();
 		Integer firstLayer = null;
@@ -461,7 +472,7 @@ public final class MiningJob implements DigJob {
 				BlockPos pos = new BlockPos(columnX(column), y, columnZ(column));
 				checks++;
 
-				if (claimed.containsKey(pos.asLong()) || skipped.containsKey(pos.asLong())) {
+				if (claimed.containsKey(pos.asLong()) || skippedFor(pos, robot)) {
 					continue;
 				}
 
@@ -508,11 +519,11 @@ public final class MiningJob implements DigJob {
 	 */
 	@Override
 	public List<BlockPos> nearby(ServerLevel level, BlockPos from, UUID robot, int count, long now) {
-		skipped.values().removeIf(until -> until < now);
+		forget(now);
 		List<BlockPos> found = new ArrayList<>();
 
 		for (BlockPos pos : BlockPos.betweenClosed(from.offset(-6, -1, -6), from.offset(6, 5, 6))) {
-			if (!contains(pos) || claimed.containsKey(pos.asLong()) && !robot.equals(claimed.get(pos.asLong())) || skipped.containsKey(pos.asLong())) {
+			if (!contains(pos) || claimed.containsKey(pos.asLong()) && !robot.equals(claimed.get(pos.asLong())) || skippedFor(pos, robot)) {
 				continue;
 			}
 
@@ -521,7 +532,10 @@ public final class MiningJob implements DigJob {
 			}
 		}
 
-		found.sort(Comparator.<BlockPos>comparingInt(pos -> -pos.getY()).thenComparingDouble(pos -> pos.distSqr(from)));
+		// what it reaches from where it stands first (needs no way: a robot shut in by leaves digs itself free),
+		// then from the top down
+		found.sort(Comparator.<BlockPos>comparingInt(pos -> pos.distSqr(from) <= 12 && pos.getY() >= from.getY() ? 0 : 1).thenComparingInt(pos -> -pos.getY())
+				.thenComparingDouble(pos -> pos.distSqr(from)));
 		return found.size() > count ? new ArrayList<>(found.subList(0, count)) : found;
 	}
 
@@ -535,11 +549,43 @@ public final class MiningJob implements DigJob {
 		claimed.remove(pos.asLong(), robot);
 	}
 
-	/** No robot found a way there: left out for a minute, so the others go on below. */
+	/**
+	 * The robot found no way there: left out for it for a minute, so it goes on with others. Once several robots
+	 * found none, it is left out for all of them, so they go on below.
+	 */
 	@Override
-	public void skip(BlockPos pos, long now) {
-		skipped.put(pos.asLong(), now + SKIP_TICKS);
+	public void skip(BlockPos pos, UUID robot, long now) {
+		Map<UUID, Long> robots = failed.computeIfAbsent(pos.asLong(), k -> new HashMap<>());
+		robots.put(robot, now + SKIP_TICKS);
+
+		if (robots.size() >= SKIP_ROBOTS) {
+			skipped.put(pos.asLong(), now + SKIP_TICKS);
+			failed.remove(pos.asLong());
+		}
+
 		claimed.remove(pos.asLong());
+	}
+
+	private boolean skippedFor(BlockPos pos, UUID robot) {
+		if (skipped.containsKey(pos.asLong())) {
+			return true;
+		}
+
+		Map<UUID, Long> robots = failed.get(pos.asLong());
+		return robots != null && robots.containsKey(robot);
+	}
+
+	private void forget(long now) {
+		skipped.values().removeIf(until -> until < now);
+
+		for (Iterator<Map<UUID, Long>> it = failed.values().iterator(); it.hasNext(); ) {
+			Map<UUID, Long> robots = it.next();
+			robots.values().removeIf(until -> until < now);
+
+			if (robots.isEmpty()) {
+				it.remove();
+			}
+		}
 	}
 
 	/** For the smoke test: the layers and their columns. */

@@ -113,6 +113,20 @@ public final class StationChunks {
 			return chunks;
 		}
 
+		if (config.mining()) {
+			// the square they dig in and two chunks more all round: a robot that walks round a tree or a hill on the
+			// edge of it does not stop dead in a chunk that is not loaded
+			int[] square = RobotEntity.chunkSquare(station, config.range());
+
+			for (int cx = (square[0] >> 4) - 2; cx <= (square[2] >> 4) + 2; cx++) {
+				for (int cz = (square[1] >> 4) - 2; cz <= (square[3] >> 4) + 2; cz++) {
+					chunks.add(pack(cx, cz));
+				}
+			}
+
+			return chunks;
+		}
+
 		int range = Math.clamp(config.range(), 16, RobotEntity.RANGE) + MARGIN;
 		int sx = station.getX();
 		int sz = station.getZ();
@@ -123,7 +137,7 @@ public final class StationChunks {
 				long dx = Math.max(0, Math.max((cx << 4) - sx, sx - ((cx << 4) + 15)));
 				long dz = Math.max(0, Math.max((cz << 4) - sz, sz - ((cz << 4) + 15)));
 
-				if (config.mining() || dx * dx + dz * dz <= (long) range * range) {
+				if (dx * dx + dz * dz <= (long) range * range) {
 					chunks.add(pack(cx, cz));
 				}
 			}

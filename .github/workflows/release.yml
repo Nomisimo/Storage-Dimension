@@ -7,7 +7,7 @@ on:
       tag:
         description: 'Release tag'
         required: true
-        default: 'v0.8.3'
+        default: 'v0.8.4'
 
 jobs:
   release:

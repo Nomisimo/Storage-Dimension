@@ -30,6 +30,7 @@ public final class DeepOreSmokeTest {
 	private static final int TIMEOUT = 24000;
 	/** The smallest range a station has (smaller ones count as this), so the test looks at the same job as the robots. */
 	private static final int RANGE = 16;
+	private static final int ROBOTS = 8;
 
 	private static ServerLevel level;
 	private static BlockPos station;
@@ -90,7 +91,7 @@ public final class DeepOreSmokeTest {
 		filterChest.filters().set(0, new ItemStack(Items.DIAMOND_PICKAXE));
 		data.setFilterChest(dim, filterPos, filterChest);
 
-		for (int i = 0; i < 4; i++) {
+		for (int i = 0; i < ROBOTS; i++) {
 			data.networkFor(player).insert(new ItemStack(Items.DIAMOND_PICKAXE));
 		}
 
@@ -105,10 +106,10 @@ public final class DeepOreSmokeTest {
 			return;
 		}
 
-		for (int i = 0; i < 4; i++) {
+		for (int i = 0; i < ROBOTS; i++) {
 			RobotEntity robot = Robots.ROBOT.create(level, EntitySpawnReason.SPAWN_ITEM_USE);
 			int x = station.getX() + (i % 2 == 0 ? -3 : 3);
-			int z = station.getZ() + (i < 2 ? -3 : 3);
+			int z = station.getZ() + (i % 4 < 2 ? -3 : 3) + i / 4;
 			robot.snapTo(x + 0.5, level.getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, x, z), z + 0.5, 0, 0);
 			robot.setup(null, station);
 			robot.applyConfig(config);
@@ -174,15 +175,12 @@ public final class DeepOreSmokeTest {
 			pathProbe();
 		}
 
-		// the first place of the main tunnel north on the deepest level is open: the robots got all the way down
-		BlockPos tunnel = new BlockPos(station.getX(), bottom, station.getZ() - 2);
-
-		if (reachedAt < 0 && level.getBlockState(tunnel).isAir() && level.getBlockState(tunnel.above()).isAir() && deepest <= bottom + 1) {
-			StorageDimensionMod.LOGGER.info("SMOKETEST Tiefe Erzsuche: unterste Ebene y={} nach {} Ticks erreicht", bottom, ticks);
+		// the staircase goes all the way down while the robots work on the tunnels of the levels above
+		if (reachedAt < 0 && job.staircaseOpen(level) && deepest <= bottom + 8) {
+			StorageDimensionMod.LOGGER.info("SMOKETEST Tiefe Erzsuche: Treppe bis zur untersten Ebene y={} offen nach {} Ticks", bottom, ticks);
 			reachedAt = ticks;
 		}
 
-		// then the tunnels there: several finished, and the robots that took ores home came back down for them
 		long below = robots.stream().filter(r -> !r.tool(0).isEmpty() && r.getY() < bottom + 8).count();
 
 		if (trapped != null) {
@@ -198,7 +196,7 @@ public final class DeepOreSmokeTest {
 			return;
 		}
 
-		if (reachedAt >= 0 && job.tunnelsDone() >= 6 && below >= 2) {
+		if (reachedAt >= 0 && job.tunnelsDone() >= 6) {
 			StorageDimensionMod.LOGGER.info("SMOKETEST Tiefe Erzsuche: {} Gänge fertig nach {} Ticks, {} Roboter unten", job.tunnelsDone(), ticks, below);
 			// then one robot walled in, 12 blocks down and 8 to the side: it has to dig itself out
 			trapped = robots.stream().filter(r -> !r.tool(0).isEmpty()).findFirst().orElse(robots.get(0));

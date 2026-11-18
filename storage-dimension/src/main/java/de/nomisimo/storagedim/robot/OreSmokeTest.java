@@ -31,11 +31,13 @@ import net.minecraft.world.level.block.ChestBlock;
  * walls, floor and ceiling (iron, diamond, a vein of two coal ores, a far iron, a gold ore behind a pocket of lava),
  * but not an emerald ore deep in the rock between the tunnels: they cannot see through the rock. The lava next to a
  * tunnel and a pocket of water become cobblestone. Only the ores come home (no stone), torches go up in the tunnels.
- * Their only tools are two diamond pickaxes, taken with the torches from a filter chest west of the station (out of its ME
+ * Their only tools are six diamond pickaxes, taken with the torches from a filter chest west of the station (out of its ME
  * storage). Switched back to collecting, the pickaxes go back into the ME storage.
  */
 public final class OreSmokeTest {
 	private static final int TIMEOUT = 16000;
+	/** The levels are dug from the top down; the ores are on the deepest one, so there are a few robots. */
+	private static final int ROBOTS = 6;
 	private static StorageNetwork network;
 	private static final int Y = 290;
 
@@ -109,8 +111,10 @@ public final class OreSmokeTest {
 		filterChest.filters().set(1, new ItemStack(Items.TORCH));
 		data.setFilterChest(dim, filterPos, filterChest);
 		network = data.networkFor(player);
-		network.insert(new ItemStack(Items.DIAMOND_PICKAXE));
-		network.insert(new ItemStack(Items.DIAMOND_PICKAXE));
+		for (int i = 0; i < ROBOTS; i++) {
+			network.insert(new ItemStack(Items.DIAMOND_PICKAXE));
+		}
+
 		network.insert(new ItemStack(Items.TORCH, 64));
 		data.setStation(dim, station, data.station(dim, station).withRange(16).withName("Erzi").withStationName("Erzgrube"));
 		List<String> errors = new ArrayList<>();
@@ -132,9 +136,9 @@ public final class OreSmokeTest {
 			return;
 		}
 
-		for (int i = 0; i < 2; i++) {
+		for (int i = 0; i < ROBOTS; i++) {
 			RobotEntity robot = Robots.ROBOT.create(level, EntitySpawnReason.SPAWN_ITEM_USE);
-			robot.snapTo(station.getX() - 2.5 + i * 5, Y, station.getZ() + 3.5, 0, 0);
+			robot.snapTo(station.getX() - 2.5 + i % 2 * 5, Y, station.getZ() + 3.5 + i / 2, 0, 0);
 			robot.setup(null, station);
 			robot.applyConfig(config);
 			level.addFreshEntity(robot);
@@ -206,7 +210,7 @@ public final class OreSmokeTest {
 
 			int torchCount = 0;
 
-			for (BlockPos pos : BlockPos.betweenClosed(station.offset(-17, -8, -17), station.offset(17, -8, 17))) {
+			for (BlockPos pos : BlockPos.betweenClosed(station.offset(-17, -12, -17), station.offset(17, -1, 17))) {
 				torchCount += level.getBlockState(pos).is(Blocks.TORCH) ? 1 : 0;
 			}
 
@@ -235,8 +239,8 @@ public final class OreSmokeTest {
 				pickaxes += entry.prototype.is(Items.DIAMOND_PICKAXE) ? (int) entry.count : 0;
 			}
 
-			if (pickaxes != 2) {
-				errors.add("Nach der Erzsuche sind " + pickaxes + " statt 2 Spitzhacken im ME-Speicher der Filterkiste");
+			if (pickaxes != ROBOTS) {
+				errors.add("Nach der Erzsuche sind " + pickaxes + " statt " + ROBOTS + " Spitzhacken im ME-Speicher der Filterkiste");
 			}
 
 			StorageDimensionMod.LOGGER.info("SMOKETEST Erzsuche: Werkzeug zurück nach {} Ticks", ticks);
@@ -251,7 +255,22 @@ public final class OreSmokeTest {
 			errors.add("Kiste: " + describe(loot));
 
 			for (RobotEntity robot : robots) {
-				errors.add("Roboter: " + robot.describeMining() + " " + robot.status().getString() + " " + robot.describe() + " at " + robot.blockPosition());
+				net.minecraft.world.level.pathfinder.Path home = robot.getNavigation().createPath(station, 2);
+				StringBuilder around = new StringBuilder();
+
+				for (int dy = 2; dy >= -1; dy--) {
+					around.append(" dy=").append(dy).append(':');
+
+					for (int dz = -1; dz <= 1; dz++) {
+						for (int dx = -1; dx <= 1; dx++) {
+							around.append(level.getBlockState(robot.blockPosition().offset(dx, dy, dz)).getBlock().getDescriptionId().replace("block.minecraft.", "").replace("block.storagedim.", "")).append(dx == 1 ? "|" : ",");
+						}
+					}
+				}
+
+				errors.add("Roboter: " + robot.describeMining() + " " + robot.status().getString() + " " + robot.describe() + " at " + robot.blockPosition()
+						+ " heim->" + (home == null ? "null" : (home.canReach() ? "ok" : "nein") + "/" + home.getNodeCount() + "@" + home.getEndNode().asBlockPos().toShortString())
+						+ " station=" + station.toShortString() + around);
 			}
 
 			errors.add(0, "Erzsuche-Test nach " + ticks + " Ticks nicht fertig (Stufe " + stage + ")");
