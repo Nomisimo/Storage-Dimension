@@ -41,8 +41,10 @@ jobs:
         run: |
           mkdir -p run
           echo "eula=true" > run/eula.txt
-          echo "pause-when-empty-seconds=0" > run/server.properties
+          # the stations keep their areas loaded: the server must not pause after this minute without players
+          echo "pause-when-empty-seconds=60" > run/server.properties
           timeout 2400 ./gradlew runServer --args="nogui" 2>&1 | tee swarm.log
+          ! grep -q "pausing" swarm.log
           rm -rf run/world
           grep -q "SMOKETEST OK" swarm.log
       - name: server smoke test

@@ -24,6 +24,9 @@
 		],
 		"jade": [
 			"de.nomisimo.storagedim.compat.StorageJadePlugin"
+		],
+		"modmenu": [
+			"de.nomisimo.storagedim.client.StorageModMenu"
 		]
 	},
 	"mixins": [
@@ -36,6 +39,7 @@
 		"fabric-api": "*"
 	},
 	"suggests": {
-		"jei": "*"
+		"jei": "*",
+		"modmenu": "*"
 	}
 }

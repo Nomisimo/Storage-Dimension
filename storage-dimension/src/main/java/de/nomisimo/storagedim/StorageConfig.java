@@ -27,6 +27,12 @@ public final class StorageConfig {
 	/** Server. true: a chest a robot puts something into also makes its opening and closing sound (the lid moves either way). */
 	public boolean robotChestSound = false;
 
+	/**
+	 * Server. true: a dedicated server does not pause without players ({@code pause-when-empty-seconds}) while a robot
+	 * station keeps its work area loaded, so the robots go on working. Changed in the game in the mod settings.
+	 */
+	public boolean keepServerAwake = true;
+
 	/** Server. Port of the ME web view ({@code /storage web}); 0 switches it off. */
 	public int webPort = 8765;
 

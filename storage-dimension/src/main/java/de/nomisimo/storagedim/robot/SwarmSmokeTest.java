@@ -151,6 +151,9 @@ public final class SwarmSmokeTest {
 
 		RobotConfig config = data.station(dim, station);
 		StorageDimensionMod.LOGGER.info("SMOKETEST {} bei {}: {}", name(), station, result.message().getString());
+		// the area stays loaded like a player sets it up for the robots to go on alone; CI lets the server pause after
+		// a minute without players, which it must not do now
+		StationChunks.toggle(level, dim, station);
 
 		if (!result.ok() || !config.mining() || config.oreSearch() != oreSearch) {
 			errors.add(name() + " ließ sich nicht einschalten: " + result.message().getString());
