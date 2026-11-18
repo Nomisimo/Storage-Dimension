@@ -59,6 +59,7 @@ public final class MiningJob implements DigJob {
 
 	private static final Map<String, MiningJob> JOBS = new HashMap<>();
 
+	private final String dim;
 	private final BlockPos station;
 	private final int minX;
 	private final int minY;
@@ -89,8 +90,15 @@ public final class MiningJob implements DigJob {
 	/** How often water at a place was turned into cobblestone: where it keeps coming back, the cobblestone stays as a wall. */
 	private final Map<Long, Integer> pumped = new HashMap<>();
 	private long lastUsed;
+	/** Blocks from the highest one to dig of each column down to the bottom, when it was first looked at: the work at the start. */
+	private long initial;
+	/** The same for the columns now: what is left. */
+	private long remaining;
+	/** When the progress was last saved for the station screen. */
+	private long progressTick = Long.MIN_VALUE;
 
-	private MiningJob(BlockPos station, int minX, int minY, int minZ, int maxX, int maxY, int maxZ) {
+	private MiningJob(String dim, BlockPos station, int minX, int minY, int minZ, int maxX, int maxY, int maxZ) {
+		this.dim = dim;
 		this.station = station.immutable();
 		this.minX = minX;
 		this.minY = minY;
@@ -139,7 +147,7 @@ public final class MiningJob implements DigJob {
 		MiningJob job = JOBS.get(key);
 
 		if (job == null || job.minX != minX || job.minY != minY || job.minZ != minZ || job.maxX != maxX || job.maxY != maxY || job.maxZ != maxZ) {
-			job = new MiningJob(station, minX, minY, minZ, maxX, maxY, maxZ);
+			job = new MiningJob(dim, station, minX, minY, minZ, maxX, maxY, maxZ);
 			JOBS.put(key, job);
 		}
 
@@ -150,6 +158,50 @@ public final class MiningJob implements DigJob {
 	/** Mining switched off or on again at a station: what was known is looked at afresh (blocks may have been placed since). */
 	public static void reset(String dim, BlockPos station) {
 		JOBS.remove(dim + "@" + station.asLong());
+	}
+
+	/** The job of a station while its robots are at it, or null; for the station screen. */
+	public static MiningJob peek(String dim, BlockPos station) {
+		return JOBS.get(dim + "@" + station.asLong());
+	}
+
+	/** Which quarry this is, for the saved progress: a changed area starts again at zero. */
+	private String key() {
+		return "mine:" + minX + "," + minY + "," + minZ + "," + maxX + "," + maxY + "," + maxZ;
+	}
+
+	/**
+	 * How far the quarry is, in tenths of a percent: of all the blocks from the top of each column down to the
+	 * bottom, how many are gone. -1 while not every column has been looked at yet. The work at the start is kept
+	 * with the world, so after a restart the count goes on from there.
+	 */
+	int progress() {
+		if (finished()) {
+			return 1000;
+		}
+
+		if (scanned < order.length || !unloaded.isEmpty()) {
+			return -1;
+		}
+
+		StationProgress.Entry saved = StationProgress.get(dim, station);
+		long total = saved != null && saved.key().equals(key()) ? Math.max(saved.total(), initial) : initial;
+		return total <= 0 ? 0 : (int) Math.clamp((total - remaining) * 1000 / total, 0, 999);
+	}
+
+	private void saveProgress(long now) {
+		if (now - progressTick < 100) {
+			return;
+		}
+
+		progressTick = now;
+		int permille = progress();
+
+		if (permille >= 0) {
+			StationProgress.Entry saved = StationProgress.get(dim, station);
+			long total = saved != null && saved.key().equals(key()) ? Math.max(saved.total(), initial) : initial;
+			StationProgress.put(dim, station, new StationProgress.Entry(key(), total, permille));
+		}
 	}
 
 	public BlockPos pillar() {
@@ -357,6 +409,7 @@ public final class MiningJob implements DigJob {
 		Integer old = tops.remove(column);
 
 		if (old != null) {
+			remaining -= old - minY + 1;
 			Set<Long> layer = layers.get(old);
 
 			if (layer != null) {
@@ -369,6 +422,7 @@ public final class MiningJob implements DigJob {
 		}
 
 		if (y != CLEARED) {
+			remaining += y - minY + 1;
 			tops.put(column, y);
 			layers.computeIfAbsent(y, k -> new LinkedHashSet<>()).add(column);
 		}
@@ -392,6 +446,7 @@ public final class MiningJob implements DigJob {
 				budget[0] += 16;
 			} else {
 				setTop(column, top);
+				initial += top == CLEARED ? 0 : top - minY + 1;
 			}
 		}
 
@@ -404,6 +459,7 @@ public final class MiningJob implements DigJob {
 				budget[0] += 16;
 			} else {
 				setTop(column, top);
+				initial += top == CLEARED ? 0 : top - minY + 1;
 			}
 		}
 	}
@@ -450,6 +506,7 @@ public final class MiningJob implements DigJob {
 	@Override
 	public List<BlockPos> candidates(ServerLevel level, BlockPos from, UUID robot, int count, long now) {
 		scan(level);
+		saveProgress(now);
 		forget(now);
 		claimed.values().removeIf(robot::equals);
 		seen.put(robot, now);

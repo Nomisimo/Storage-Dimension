@@ -32,6 +32,8 @@ public class StationScreen extends AbstractContainerScreen<StationMenu> {
 	private static final int LIST_WIDTH = 150;
 	private static final int ENTRY_HEIGHT = 21;
 	private static final int LIST_TOP = 20;
+	/** Room for the progress line and bar above the robot list while mining. */
+	private static final int PROGRESS_HEIGHT = 18;
 	private static final int TEXT = 0xFF404040;
 
 	private StationNetworking.SyncPayload data;
@@ -175,7 +177,7 @@ public class StationScreen extends AbstractContainerScreen<StationMenu> {
 
 		// the robot list: a darker inset with one entry per robot
 		int x = l + imageWidth + LIST_GAP + 6;
-		int y = t + LIST_TOP;
+		int y = t + listTop();
 		graphics.fill(x - 1, y - 1, x + LIST_WIDTH - 11, t + imageHeight - 6, 0xFF8B8B8B);
 		graphics.fill(x, y, x + LIST_WIDTH - 12, t + imageHeight - 7, 0xFF2B2B2B);
 	}
@@ -209,10 +211,11 @@ public class StationScreen extends AbstractContainerScreen<StationMenu> {
 		int x = imageWidth + LIST_GAP;
 		List<Component> names = data.names();
 		graphics.text(font, "Roboter (" + names.size() + "/" + StationMenu.MAX_ROBOTS + ")", x + 6, 6, TEXT, false);
+		progress(graphics, x + 6, LIST_TOP - 2);
 
 		if (names.isEmpty()) {
 			graphics.textWithWordWrap(font, Component.literal("Noch keine Roboter. Leg einen Roboter in den Eingang und stell ihn hin.")
-					.withStyle(ChatFormatting.GRAY), x + 9, LIST_TOP + 4, LIST_WIDTH - 18, 0xFFAAAAAA, false);
+					.withStyle(ChatFormatting.GRAY), x + 9, listTop() + 4, LIST_WIDTH - 18, 0xFFAAAAAA, false);
 			return;
 		}
 
@@ -221,7 +224,7 @@ public class StationScreen extends AbstractContainerScreen<StationMenu> {
 
 		for (int i = 0; i < visible && scroll + i < names.size(); i++) {
 			int index = scroll + i;
-			int y = LIST_TOP + 2 + i * ENTRY_HEIGHT;
+			int y = listTop() + 2 + i * ENTRY_HEIGHT;
 			Component name = names.get(index);
 			// too long for the list: cut, keeping the colour of the robot's name
 			graphics.text(font, font.width(name) <= LIST_WIDTH - 20 ? name
@@ -248,7 +251,42 @@ public class StationScreen extends AbstractContainerScreen<StationMenu> {
 	}
 
 	private int visibleEntries() {
-		return (imageHeight - LIST_TOP - 10) / ENTRY_HEIGHT;
+		return (imageHeight - listTop() - 10) / ENTRY_HEIGHT;
+	}
+
+	/** While mining the progress line sits above the robot list. */
+	private int listTop() {
+		return data != null && data.mining() ? LIST_TOP + PROGRESS_HEIGHT : LIST_TOP;
+	}
+
+	/** How far the quarry or the ore search is: a line of text and a bar under it, the width of the list. */
+	private void progress(GuiGraphicsExtractor graphics, int x, int y) {
+		if (!data.mining()) {
+			return;
+		}
+
+		int permille = data.progress();
+		String mode = data.oreSearch() ? "Erzsuche" : "Abbau";
+		String text;
+
+		if (permille >= 1000) {
+			text = mode + ": fertig (100 %)";
+		} else if (permille >= 0) {
+			text = mode + ": " + permille / 10 + "," + permille % 10 + " % fertig";
+		} else {
+			text = mode + (data.oreSearch() ? ": noch nicht begonnen" : ": Bereich wird vermessen …");
+		}
+
+		int width = LIST_WIDTH - 12;
+		graphics.text(font, font.plainSubstrByWidth(text, width), x, y, TEXT, false);
+		int barY = y + 10;
+		graphics.fill(x - 1, barY - 1, x + width + 1, barY + 5, 0xFF373737);
+		graphics.fill(x, barY, x + width, barY + 4, 0xFF8B8B8B);
+
+		if (permille > 0) {
+			int filled = (int) Math.round(width * Math.min(permille, 1000) / 1000.0);
+			graphics.fill(x, barY, x + filled, barY + 4, permille >= 1000 ? 0xFF55CC55 : data.oreSearch() ? 0xFF3FB8D8 : 0xFFE0A030);
+		}
 	}
 
 	@Override

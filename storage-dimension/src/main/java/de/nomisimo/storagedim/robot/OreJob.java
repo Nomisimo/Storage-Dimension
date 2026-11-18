@@ -19,6 +19,7 @@ import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.FallingBlock;
 import net.minecraft.world.level.block.LiquidBlock;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.levelgen.Heightmap;
 
 /**
  * Strip mining below a station, like a player would do it, without seeing through the rock: the robots dig a spiral
@@ -36,6 +37,8 @@ import net.minecraft.world.level.block.state.BlockState;
  * tunnel of its own, up to 32 work at the same time; after each tunnel it takes its ores home. Missing steps and the floor over caves and lava are filled with cobblestone, and before a robot opens a block
  * of the staircase or a tunnel, water and lava in it and around it become cobblestone, so the mine is never flooded.
  * A torch goes up every {@value #TORCH_GAP} blocks of a tunnel when the robots have torches.
+ * A tunnel ends where it comes out of the ground (into a valley, a lake or the sea): there are no ores in the open,
+ * and it is not built on as a cobblestone bridge through the air.
  */
 public final class OreJob implements DigJob {
 	private static final int[][] RING = MiningJob.RING;
@@ -60,6 +63,7 @@ public final class OreJob implements DigJob {
 
 	private static final Map<String, OreJob> JOBS = new HashMap<>();
 
+	private final String dim;
 	private final BlockPos station;
 	private final int minX;
 	private final int minY;
@@ -88,6 +92,8 @@ public final class OreJob implements DigJob {
 	/** Places in the tunnels that get a torch once a robot with torches comes by. */
 	private final Set<Long> torchSpots = new HashSet<>();
 	private long lastUsed;
+	/** When the progress was last saved for the station screen. */
+	private long progressTick = Long.MIN_VALUE;
 
 	/** One straight tunnel of a level, two blocks high. */
 	static final class Tunnel {
@@ -114,7 +120,8 @@ public final class OreJob implements DigJob {
 		}
 	}
 
-	private OreJob(BlockPos station, int minX, int minY, int minZ, int maxX, int maxZ) {
+	private OreJob(String dim, BlockPos station, int minX, int minY, int minZ, int maxX, int maxZ) {
+		this.dim = dim;
 		this.station = station.immutable();
 		this.minX = minX;
 		this.minY = minY;
@@ -159,7 +166,7 @@ public final class OreJob implements DigJob {
 		OreJob job = JOBS.get(key);
 
 		if (job == null || job.minX != minX || job.minZ != minZ || job.maxX != maxX || job.maxZ != maxZ || job.minY != bottom) {
-			job = new OreJob(station, minX, bottom, minZ, maxX, maxZ);
+			job = new OreJob(dim, station, minX, bottom, minZ, maxX, maxZ);
 			JOBS.put(key, job);
 		}
 
@@ -169,6 +176,54 @@ public final class OreJob implements DigJob {
 
 	public static void reset(String dim, BlockPos station) {
 		JOBS.remove(dim + "@" + station.asLong());
+	}
+
+	/** The job of a station while its robots are at it, or null; for the station screen. */
+	public static OreJob peek(String dim, BlockPos station) {
+		return JOBS.get(dim + "@" + station.asLong());
+	}
+
+	/** Which ore search this is, for the saved progress: a changed area starts again at zero. */
+	private String key() {
+		return "ore:" + minX + "," + minZ + "," + maxX + "," + maxZ + "," + minY;
+	}
+
+	/**
+	 * How far the ore search is, in tenths of a percent: the staircase (each height counted like the eight blocks
+	 * around the pillar) and every place of every tunnel. Never less than what was saved before: after a restart
+	 * the robots walk through the tunnels that are already open again before they count.
+	 */
+	int progress() {
+		long total = 0;
+		long done = 0;
+		int depth = levels.length == 0 ? 0 : station.getY() - levels[0];
+		total += depth * 8L;
+
+		if (shaft != null) {
+			done += (shaft.blockedY == Integer.MIN_VALUE ? depth : Math.clamp(station.getY() - shaft.blockedY, 0, depth)) * 8L;
+		}
+
+		for (int i = 0; i < levels.length; i++) {
+			for (Tunnel tunnel : plan(i)) {
+				total += tunnel.length;
+				done += tunnel.done ? tunnel.length : Math.min(tunnel.open, tunnel.length);
+			}
+		}
+
+		if (finished()) {
+			return 1000;
+		}
+
+		int permille = total == 0 ? 0 : (int) Math.min(999, done * 1000 / total);
+		StationProgress.Entry saved = StationProgress.get(dim, station);
+		return saved != null && saved.key().equals(key()) ? Math.max(permille, Math.min(999, saved.permille())) : permille;
+	}
+
+	private void saveProgress(long now) {
+		if (now - progressTick >= 100) {
+			progressTick = now;
+			StationProgress.put(dim, station, new StationProgress.Entry(key(), 0, progress()));
+		}
 	}
 
 	// ---- what an ore is ----
@@ -426,6 +481,7 @@ public final class OreJob implements DigJob {
 		seen.values().removeIf(last -> now - last > CLAIM_TICKS);
 		claimed.values().removeIf(owner -> !seen.containsKey(owner));
 		working.keySet().removeIf(owner -> !seen.containsKey(owner));
+		saveProgress(now);
 		List<BlockPos> found = seenOres(level, from);
 
 		if (found.isEmpty()) {
@@ -720,6 +776,13 @@ public final class OreJob implements DigJob {
 				return found;
 			}
 
+			if (inTheOpen(level, cell)) {
+				// out of the ground (a valley, a lake, the sea beside a hill): there are no ores in the air, and the
+				// tunnel would only go on as a bridge of cobblestone through it
+				finish(robot, tunnel);
+				return found;
+			}
+
 			// water and lava around it become cobblestone first, so the tunnel goes on through or past them
 			seal(level, List.of(cell, cell.above()));
 			prop(level, cell.above(2));
@@ -787,6 +850,42 @@ public final class OreJob implements DigJob {
 		tunnel.done = true;
 		working.remove(robot);
 		tunnelDone.add(robot);
+		dropBranches(tunnel);
+	}
+
+	/**
+	 * A tunnel that ended early (out of the ground, at bedrock or a chest): the side tunnels that branch off beyond
+	 * its end can never be got at, they are done too; otherwise the ore search would never be finished.
+	 */
+	private void dropBranches(Tunnel tunnel) {
+		for (List<Tunnel> tunnels : plans.values()) {
+			for (Tunnel branch : tunnels) {
+				if (branch.parent == tunnel && !branch.done && branch.parentCell >= tunnel.open) {
+					branch.done = true;
+					dropBranches(branch);
+				}
+			}
+		}
+	}
+
+	/**
+	 * No ground over this place of a tunnel: from its ceiling up there is only air, water, leaves and tree trunks.
+	 * Caves (with rock over them) are not in the open; their floor is bridged with cobblestone as before.
+	 */
+	private static boolean inTheOpen(ServerLevel level, BlockPos pos) {
+		int top = level.getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, pos.getX(), pos.getZ());
+		BlockPos.MutableBlockPos above = pos.mutable();
+
+		for (int y = pos.getY() + 2; y < top; y++) {
+			above.setY(y);
+			BlockState state = level.getBlockState(above);
+
+			if (!liquid(state) && !state.is(BlockTags.LOGS) && !state.is(BlockTags.LEAVES) && !state.getCollisionShape(level, above).isEmpty()) {
+				return false;
+			}
+		}
+
+		return true;
 	}
 
 	@Override
