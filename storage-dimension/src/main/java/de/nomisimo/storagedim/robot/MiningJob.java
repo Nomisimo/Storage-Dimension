@@ -532,7 +532,10 @@ public final class MiningJob implements DigJob {
 			}
 		}
 
-		found.sort(Comparator.<BlockPos>comparingInt(pos -> -pos.getY()).thenComparingDouble(pos -> pos.distSqr(from)));
+		// what it reaches from where it stands first (needs no way: a robot shut in by leaves digs itself free),
+		// then from the top down
+		found.sort(Comparator.<BlockPos>comparingInt(pos -> pos.distSqr(from) <= 12 && pos.getY() >= from.getY() ? 0 : 1).thenComparingInt(pos -> -pos.getY())
+				.thenComparingDouble(pos -> pos.distSqr(from)));
 		return found.size() > count ? new ArrayList<>(found.subList(0, count)) : found;
 	}
 
