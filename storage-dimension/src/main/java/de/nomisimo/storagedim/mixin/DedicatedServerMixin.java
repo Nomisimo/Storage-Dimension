@@ -14,7 +14,7 @@ abstract class DedicatedServerMixin {
 	 * A dedicated server pauses after {@code pause-when-empty-seconds} without players, and with it the robots of
 	 * stations that keep their area loaded. While such a station is there (and the setting is on), it does not pause.
 	 */
-	@Inject(method = "pauseWhileEmptySeconds", at = @At("HEAD"), cancellable = true)
+	@Inject(method = "pauseWhileEmptySeconds", at = @At("HEAD"), cancellable = true, require = 0)
 	private void storagedim$keepAwake(CallbackInfoReturnable<Integer> cir) {
 		if (ServerSettings.keepsAwake()) {
 			cir.setReturnValue(0);
