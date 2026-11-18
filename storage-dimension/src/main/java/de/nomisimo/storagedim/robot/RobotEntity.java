@@ -97,6 +97,8 @@ public class RobotEntity extends PathfinderMob {
 
 	/** Ticks without getting closer before it gives up on an item or chest for a while. */
 	private static final int STUCK_TICKS = 100;
+	/** Longest it goes for one block to dig before it gives up on it (it may take the long way round, but not forever). */
+	private static final int WAY_TICKS = 600;
 	private static final int IGNORE_TICKS = 1200;
 	/** How many of the closest items or chests it checks for a way per search. */
 	private static final int PATH_CHECKS = 4;
@@ -1910,6 +1912,8 @@ public class RobotEntity extends PathfinderMob {
 		private int stuckTicks;
 		private Path lastPath;
 		private int lastNode;
+		/** How long it has been on its way to the block it is to dig. */
+		private int wayTicks;
 
 		MineGoal() {
 			setFlags(EnumSet.of(Flag.MOVE, Flag.LOOK));
@@ -2042,6 +2046,7 @@ public class RobotEntity extends PathfinderMob {
 		}
 
 		private boolean startDigging(DigJob job, BlockPos pos) {
+			wayTicks = 0;
 			job.claim(pos, getUUID());
 			mineTarget = pos.immutable();
 			digTicks = 0;
@@ -2198,7 +2203,9 @@ public class RobotEntity extends PathfinderMob {
 				server.destroyBlockProgress(getId(), mineTarget, -1);
 			}
 
-			if (stuck(distance)) {
+			// jostled about by the others it may seem to get on along ever new ways and never get there: after a while it
+			// leaves that block too
+			if (stuck(distance) || ++wayTicks > WAY_TICKS) {
 				job.skip(mineTarget, getUUID(), level().getGameTime());
 				dropMineTarget();
 				return;

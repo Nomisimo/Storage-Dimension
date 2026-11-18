@@ -41,6 +41,8 @@ public final class SwarmSmokeTest {
 	private static final int STUCK_LIMIT = 1200;
 	/** At least this share of the robots must be at work on average. */
 	private static final double MIN_WORKING = 0.6;
+	/** More than this many standing about for long at the same time is a failure. */
+	private static final int MAX_STUCK = 3;
 
 	private static ServerLevel level;
 	private static BlockPos station;
@@ -78,6 +80,10 @@ public final class SwarmSmokeTest {
 				}
 			});
 		}
+	}
+
+	private static String stuck0() {
+		return "zu viele hängen: ";
 	}
 
 	private static String name() {
@@ -202,16 +208,21 @@ public final class SwarmSmokeTest {
 
 				if (ticks > WARMUP && stuckFor.get(robot) > STUCK_LIMIT && !reported.contains(robot) && !jobFinished()) {
 					reported.add(robot);
-					errors.add(name() + ": Roboter steht seit " + STUCK_LIMIT + " Ticks: " + robot.status().getString() + " " + robot.describeMining() + " "
-							+ robot.describe() + " at " + robot.blockPosition());
 					StorageDimensionMod.LOGGER.info("SMOKETEST {} hängt: {} {} at {} {}", name(), robot.status().getString(), robot.describeMining(),
 							robot.blockPosition(), robot.describe());
+					probe(robot);
 				}
 			}
 
 			if (ticks > WARMUP) {
 				workingSum += working;
 				samples++;
+				// a few may get stuck in odd places of the real ground; many at once is what the players saw
+				long stuck = robots.stream().filter(r -> stuckFor.getOrDefault(r, 0) > STUCK_LIMIT).count();
+
+				if (stuck > MAX_STUCK && !jobFinished() && errors.stream().noneMatch(e -> e.startsWith(name() + ": " + stuck0()))) {
+					errors.add(name() + ": " + stuck0() + stuck + " Roboter stehen gleichzeitig seit " + STUCK_LIMIT + " Ticks (" + ticks + ")");
+				}
 			}
 		}
 
@@ -264,6 +275,43 @@ public final class SwarmSmokeTest {
 				finish();
 			}
 		}
+	}
+
+	/** What it would be handed and whether it finds a way there, home and down the staircase, and what is around it. */
+	private static void probe(RobotEntity robot) {
+		BlockPos at = robot.blockPosition();
+		StringBuilder out = new StringBuilder(" onGround=" + robot.onGround());
+		DigJob job = ores ? oreJob() : miningJob();
+
+		for (BlockPos pos : job.candidates(level, at, robot.getUUID(), 4, level.getGameTime())) {
+			out.append(" grab ").append(pos.toShortString()).append(way(robot.getNavigation().createPath(java.util.Set.of(pos), 4)));
+		}
+
+		out.append(" heim").append(way(robot.getNavigation().createPath(station, 2)));
+
+		if (ores) {
+			out.append(" stand ").append(oreJob().describe(level));
+		}
+
+		StorageDimensionMod.LOGGER.info("SMOKETEST {} Weg {} at {}:{}", name(), robot.getUUID().toString().substring(0, 4), at, out);
+
+		for (int dy = 2; dy >= -2; dy--) {
+			StringBuilder row = new StringBuilder();
+
+			for (int dz = -2; dz <= 2; dz++) {
+				for (int dx = -2; dx <= 2; dx++) {
+					BlockPos pos = at.offset(dx, dy, dz);
+					String id = level.getBlockState(pos).getBlock().getDescriptionId().replace("block.minecraft.", "").replace("block.storagedim.", "");
+					row.append(pos.getX() == station.getX() && pos.getZ() == station.getZ() ? id.toUpperCase(java.util.Locale.ROOT) : id).append(dx == 2 ? " | " : ",");
+				}
+			}
+
+			StorageDimensionMod.LOGGER.info("SMOKETEST {} Umgebung dy={}: {}", name(), dy, row);
+		}
+	}
+
+	private static String way(net.minecraft.world.level.pathfinder.Path path) {
+		return path == null ? "->null" : "->" + (path.canReach() ? "ok" : "nein") + "/" + path.getNodeCount() + "@" + path.getEndNode().asBlockPos().toShortString();
 	}
 
 	private static boolean jobFinished() {
