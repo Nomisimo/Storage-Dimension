@@ -79,7 +79,7 @@ Der Server zeigt den ME-Speicher und die Projekte auch als Webseite, z. B. auf d
 - **ME-Speicher:** alle Items mit Bild, Menge, Abteilung, Verzauberungen und Trank-Wirkung, mit Suche, Sortierung nach Menge oder A–Z und Filter nach Abteilung. Herausnehmen oder einlagern geht dort nicht.
 - **Projekte:** zeigt alle Projekte deines Speichers mit Fortschritt, was da ist und was fehlt. Du kannst dort neue Projekte anlegen, umbenennen, „Im ME blocken“ umschalten, Items über die Suche hinzufügen (Items im Speicher zuerst, dann alle Items des Spiels samt jedem Trank und Verzauberungsbuch), Mengen ändern und Items entfernen. Ein neues Projekt steht auch gleich in der Eingangshalle der Bibliothek.
 - Jeder Spieler sieht den Speicher, den er auch im Spiel benutzt. Der Link ist geheim: Wer ihn hat, sieht deinen Speicher und kann deine Projekte ändern. `/storage web neu` macht einen neuen Link, der alte geht dann nicht mehr. Die Links liegen in `world/storagedim-web.json`.
-- **Für den Server:** Der Port (`webPort`, Standard 8765) muss von außen erreichbar sein, bei einem Hoster also als zusätzlicher Port freigegeben. In `webAddress` gehört die Adresse, unter der die Spieler den Server erreichen (ohne Port), sonst steht im Link `localhost`. Mit `webPort = 0` ist die Webseite aus.
+- **Für den Server:** Der Port (`webPort`, Standard 8765) muss von außen erreichbar sein, bei einem Hoster also als zusätzlicher Port freigegeben. In `webAddress` gehört die Adresse, unter der die Spieler den Server erreichen (ohne Port), sonst steht im Link `localhost`. Läuft die Seite hinter einem Reverse-Proxy oder Tunnel mit HTTPS (z. B. Caddy, Tailscale Funnel), trägt man in `webAddress` den kompletten Anfang des Links ein, z. B. `https://mc.example.de:10000`; der wird dann genau so benutzt, ohne `http://` und `webPort` davor bzw. dahinter. Mit `webPort = 0` ist die Webseite aus.
 - Bilder von Minecraft-Items kommen aus einer öffentlichen Kopie der Spieltexturen (jsDelivr bzw. GitHub), die der Mod liefert der Server selbst. Ohne Internet oder bei Items anderer Mods steht statt des Bilds der Anfangsbuchstabe. Item-Namen sind auf Englisch, weil der Server nur die englischen Namen kennt.
 
 ![ME-Speicher im Browser](docs/screenshots/web-me.png)
@@ -375,7 +375,7 @@ In `config/storagedim.json`:
 | `sharedStorage` | `true` | Alle Spieler teilen sich einen Speicher und eine Bibliothek. Mit `false` bekommt jeder seinen eigenen, der sich per `/storage teilen` freigeben lässt (auf dem Server). |
 | `robotChestSound` | `false` | Geht eine Kiste beim Einlagern durch einen Roboter auf, ist sie standardmäßig still (nur der Deckel bewegt sich). Mit `true` macht sie dabei das Öffnen- und Schließen-Geräusch (auf dem Server). |
 | `webPort` | `8765` | Port der [Webansicht](#me-speicher-im-browser) (auf dem Server). `0` schaltet sie aus. |
-| `webAddress` | `""` | Adresse des Servers für den Link von `/storage web`, z. B. `mc.example.de` (ohne Port). Leer: `localhost`. |
+| `webAddress` | `""` | Adresse des Servers für den Link von `/storage web`, z. B. `mc.example.de` (ohne Port). Mit `http://` oder `https://` davor der komplette Anfang des Links, z. B. `https://mc.example.de:10000` (hinter Reverse-Proxy/Tunnel). Leer: `localhost`. |
 | `jeiSearchSync` | `false` | Schalter **J**: Suche im ME-Speicher mit der JEI-Suchleiste koppeln (beim Spieler, lässt sich im Fenster umschalten). |
 
 ## Selbst bauen

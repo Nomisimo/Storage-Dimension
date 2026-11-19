@@ -131,8 +131,7 @@ public final class WebView {
 			saveTokens();
 		}
 
-		String address = StorageConfig.get().webAddress.isBlank() ? "localhost" : StorageConfig.get().webAddress.strip();
-		String link = "http://" + address + ":" + port() + "/#" + token;
+		String link = baseUrl() + "/#" + token;
 
 		player.sendSystemMessage(Component.literal(renew ? "Neuer Link zu deinem ME-Speicher (der alte geht nicht mehr):" : "Dein ME-Speicher im Browser:")
 				.withStyle(ChatFormatting.AQUA));
@@ -153,6 +152,25 @@ public final class WebView {
 		byte[] bytes = new byte[16];
 		RANDOM.nextBytes(bytes);
 		return bytes;
+	}
+
+	/**
+	 * Start of the link without "/#token". A webAddress with "http://" or "https://" is used as it is, without adding
+	 * the port, e.g. behind a reverse proxy or tunnel with HTTPS ("https://mc.example.de:10000").
+	 * Otherwise "http://<webAddress or localhost>:<webPort>".
+	 */
+	static String baseUrl() {
+		String address = StorageConfig.get().webAddress.strip();
+
+		if (address.startsWith("http://") || address.startsWith("https://")) {
+			while (address.endsWith("/")) {
+				address = address.substring(0, address.length() - 1);
+			}
+
+			return address;
+		}
+
+		return "http://" + (address.isEmpty() ? "localhost" : address) + ":" + port();
 	}
 
 	private static String tokenOf(UUID player) {
