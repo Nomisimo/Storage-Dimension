@@ -16,5 +16,8 @@
 	"item.storagedim.project_chest": "Projektkiste",
 	"item.storagedim.me_terminal": "ME-Terminal",
 	"item.storagedim.me_upgrade": "ME-Upgrade",
-	"item.storagedim.me_backpack": "ME-Rucksack"
+	"item.storagedim.me_backpack": "ME-Rucksack",
+	"block.storagedim.mailbox": "Briefkasten",
+	"item.storagedim.mailbox": "Briefkasten",
+	"config.jade.plugin_storagedim.mailbox": "Briefkasten"
 }

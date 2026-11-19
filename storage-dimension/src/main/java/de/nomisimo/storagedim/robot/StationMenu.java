@@ -378,7 +378,7 @@ public class StationMenu extends AbstractContainerMenu {
 		StationNetworking.SyncPayload payload = new StationNetworking.SyncPayload(containerId, config.stationName(), config.name(),
 				config.range(), config.color(), config.exclude(), antennas, area.name(), area.connected() ? area.sizeText(pos) : "", areaState,
 				names, states, config.mining(), config.mining() && config.oreSearch(), StationChunks.loaded(dim, pos), StationProgress.shown(dim, pos, config),
-				StationCluster.members(viewer.level(), pos).size(), StationCluster.maxRobots(groupSize()));
+				StationCluster.members(viewer.level(), pos).size(), StationCluster.maxRobots(groupSize()), config.courier());
 
 		if (force || !Objects.equals(payload, lastSync)) {
 			lastSync = payload;

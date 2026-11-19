@@ -251,7 +251,20 @@ final class SmokeTest {
 
 						// and the ore search from the surface of the real ground down to the bedrock
 						try {
-							de.nomisimo.storagedim.robot.DeepOreSmokeTest.start(server, deepErrors -> report(server, deepErrors));
+							de.nomisimo.storagedim.robot.DeepOreSmokeTest.start(server, deepErrors -> {
+								if (!deepErrors.isEmpty()) {
+									report(server, deepErrors);
+									return;
+								}
+
+								// last the parcel post: a courier carries a chest's worth from one mailbox to another
+								try {
+									de.nomisimo.storagedim.robot.PostSmokeTest.start(server, postErrors -> report(server, postErrors));
+								} catch (Throwable t) {
+									StorageDimensionMod.LOGGER.error("SMOKETEST Ausnahme", t);
+									report(server, List.of(t.toString()));
+								}
+							});
 						} catch (Throwable t) {
 							StorageDimensionMod.LOGGER.error("SMOKETEST Ausnahme", t);
 							report(server, List.of(t.toString()));

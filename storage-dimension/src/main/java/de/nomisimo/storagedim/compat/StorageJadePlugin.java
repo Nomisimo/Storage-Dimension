@@ -30,16 +30,75 @@ import snownee.jade.api.config.IPluginConfig;
 public class StorageJadePlugin implements IWailaPlugin {
 	static final Identifier ROBOT = StorageDimensionMod.id("robot");
 	static final Identifier STATION = StorageDimensionMod.id("robot_station");
+	static final Identifier MAILBOX = StorageDimensionMod.id("mailbox");
 
 	@Override
 	public void register(IWailaCommonRegistration registration) {
 		registration.registerBlockDataProvider(StationData.INSTANCE, RobotStationBlock.class);
+		registration.registerBlockDataProvider(MailboxData.INSTANCE, de.nomisimo.storagedim.robot.MailboxBlock.class);
 	}
 
 	@Override
 	public void registerClient(IWailaClientRegistration registration) {
 		registration.registerEntityComponent(RobotInfo.INSTANCE, RobotEntity.class);
 		registration.registerBlockComponent(StationInfo.INSTANCE, RobotStationBlock.class);
+		registration.registerBlockComponent(MailboxInfo.INSTANCE, de.nomisimo.storagedim.robot.MailboxBlock.class);
+	}
+
+	/** A mailbox: its address, where it sends to and how much post waits in the chest beside it. */
+	enum MailboxData implements IServerDataProvider<BlockAccessor> {
+		INSTANCE;
+
+		@Override
+		public void appendServerData(CompoundTag tag, BlockAccessor accessor) {
+			StorageData data = StorageData.get();
+
+			if (data == null || !(accessor.getLevel() instanceof net.minecraft.server.level.ServerLevel level)) {
+				return;
+			}
+
+			de.nomisimo.storagedim.robot.Mailbox mailbox = data.mailbox(Rooms.id(level), accessor.getPosition());
+
+			if (mailbox != null) {
+				tag.putString("Address", mailbox.address());
+				tag.putString("Destination", mailbox.destination());
+				tag.putInt("Waiting", de.nomisimo.storagedim.robot.Mailbox.waiting(level, accessor.getPosition(), de.nomisimo.storagedim.robot.Mailbox.MAX_STACKS).size());
+			}
+		}
+
+		@Override
+		public Identifier getUid() {
+			return MAILBOX;
+		}
+	}
+
+	enum MailboxInfo implements IBlockComponentProvider {
+		INSTANCE;
+
+		@Override
+		public void appendTooltip(ITooltip tooltip, BlockAccessor accessor, IPluginConfig config) {
+			CompoundTag data = accessor.getServerData();
+
+			if (!data.contains("Address")) {
+				return;
+			}
+
+			tooltip.add(Component.literal("Adresse: ").withStyle(ChatFormatting.GRAY).append(Component.literal(data.getStringOr("Address", "")).withStyle(ChatFormatting.WHITE)));
+			String destination = data.getStringOr("Destination", "");
+			tooltip.add(destination.isEmpty() ? Component.literal("Empfängt nur").withStyle(ChatFormatting.GRAY)
+					: Component.literal("Schickt an: ").withStyle(ChatFormatting.GRAY).append(Component.literal(destination).withStyle(ChatFormatting.WHITE)));
+			int waiting = data.getIntOr("Waiting", 0);
+
+			if (!destination.isEmpty() && waiting > 0) {
+				tooltip.add(Component.literal("Post wartet: " + waiting + (waiting >= de.nomisimo.storagedim.robot.Mailbox.MAX_STACKS ? "+" : "") + " Stapel")
+						.withStyle(ChatFormatting.GOLD));
+			}
+		}
+
+		@Override
+		public Identifier getUid() {
+			return MAILBOX;
+		}
 	}
 
 	enum RobotInfo implements IEntityComponentProvider {

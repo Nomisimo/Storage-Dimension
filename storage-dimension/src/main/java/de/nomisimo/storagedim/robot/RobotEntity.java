@@ -265,6 +265,20 @@ public class RobotEntity extends PathfinderMob {
 	private Component mineProblem;
 	/** Nothing is left to dig in its area. */
 	private boolean mineFinished;
+	/** Its station is in courier mode: it carries the post from mailbox to mailbox (taken from the station). */
+	private boolean courier;
+	/** The mailbox it is on its way to, to fetch the post waiting there. */
+	private BlockPos pickupBox;
+	/** The mailbox the post it carries goes to, or null (then it goes to the chests at its station). */
+	private BlockPos courierTo;
+	/** Since when the mailbox it brings post to has had no room or no way there (game time), or 0. */
+	private long courierBlockedSince;
+	/** The mailbox it brings post to has no room right now: it waits at its station. */
+	private boolean courierFull;
+	/** Mailboxes it found no way to, with the game time until which it leaves them alone. */
+	private final Map<BlockPos, Long> ignoredMailboxes = new HashMap<>();
+	/** A mailbox without room for a minute: the post goes to the chests at its station instead. */
+	private static final int COURIER_GIVE_UP_TICKS = 1200;
 
 	public RobotEntity(EntityType<? extends PathfinderMob> type, Level level) {
 		super(type, level);
@@ -480,6 +494,18 @@ public class RobotEntity extends PathfinderMob {
 		boolean wasOres = oreSearch;
 		mining = stationConfig.mining();
 		oreSearch = mining && stationConfig.oreSearch();
+		boolean wasCourier = courier;
+		courier = !mining && stationConfig.courier();
+
+		if (wasCourier != courier) {
+			release();
+
+			// switched off: what it carries goes to the chests at its station
+			if (!courier) {
+				courierTo = null;
+				courierFull = false;
+			}
+		}
 		toolChest = stationConfig.toolChest().orElse(null);
 		int wasRange = workRange();
 		stationRange = Math.clamp(stationConfig.range(), MIN_RANGE, Math.max(MIN_RANGE, groupRange));
@@ -612,7 +638,7 @@ public class RobotEntity extends PathfinderMob {
 
 	/** Safety net: a station robot that wants home but has not got closer for 3 minutes teleports there. */
 	private void tickHomeStuck() {
-		boolean wantsHome = station != null && recallPhase == RECALL_NONE && !nearHome() && target == null
+		boolean wantsHome = station != null && recallPhase == RECALL_NONE && !nearHome() && target == null && pickupBox == null
 				&& (getCarried().isEmpty() || delivery == null) && getAction() == 0 && minePhase == 0 && !stationMissing();
 
 		if (!wantsHome) {
@@ -701,7 +727,7 @@ public class RobotEntity extends PathfinderMob {
 	/** Its own settings (each robot keeps those of the item it was placed from), for the item it turns into when picked up. */
 	public RobotConfig config() {
 		RobotConfig config = new RobotConfig(range, getColor(), getCustomName() == null ? "" : getCustomName().getString(), List.copyOf(filter),
-				Optional.empty(), Optional.empty(), excludeFilter, stationName, false, Optional.empty(), false);
+				Optional.empty(), Optional.empty(), excludeFilter, stationName, false, Optional.empty(), false, false);
 		return station == null ? config : config.withStation(Rooms.id(level()), station);
 	}
 
@@ -729,8 +755,21 @@ public class RobotEntity extends PathfinderMob {
 		}
 
 		// while it is busy it shows what it does; an old error from before does not count
+		if (!getCarried().isEmpty() && delivery != null && courierTo != null && delivery.equals(courierTo)) {
+			return Component.literal("Bringt ").append(getCarried().getHoverName()).append(" zu " + Mailbox.label((ServerLevel) level(), courierTo))
+					.withStyle(ChatFormatting.GREEN);
+		}
+
 		if (!getCarried().isEmpty() && delivery != null) {
 			return Component.literal("Bringt ").append(getCarried().getHoverName()).append(" weg").withStyle(ChatFormatting.GREEN);
+		}
+
+		if (pickupBox != null) {
+			return Component.literal("Holt Post bei " + Mailbox.label((ServerLevel) level(), pickupBox)).withStyle(ChatFormatting.GREEN);
+		}
+
+		if (courierFull && courierTo != null && !getCarried().isEmpty()) {
+			return Component.literal("Fehler: Briefkasten " + Mailbox.label((ServerLevel) level(), courierTo) + " voll").withStyle(ChatFormatting.RED);
 		}
 
 		if (target != null) {
@@ -777,6 +816,10 @@ public class RobotEntity extends PathfinderMob {
 			return Component.literal(oreSearch ? "Fertig: keine Erze mehr" : "Fertig: alles abgebaut").withStyle(ChatFormatting.GREEN);
 		}
 
+		if (courier) {
+			return Component.literal(isSitting() ? "Kurier: wartet fröhlich auf Post" : "Kurier: wartet auf Post").withStyle(ChatFormatting.YELLOW);
+		}
+
 		if (mining && mineIdle) {
 			return Component.literal(oreSearch ? "Erzsuche: kein Erz erreichbar, wartet" : "Abbau: nichts erreichbar, wartet").withStyle(ChatFormatting.YELLOW);
 		}
@@ -792,12 +835,12 @@ public class RobotEntity extends PathfinderMob {
 				.append(RobotConfig.describeFilter(filter, excludeFilter).withStyle(ChatFormatting.WHITE)));
 		entityData.set(INFO_STATUS, status());
 		entityData.set(ERROR, recallPhase == RECALL_NONE && (stationMissing()
-				|| !isBusy() && (noChest || chestsFull || level().getGameTime() < homeUnreachableUntil || mining && mineProblem != null)));
+				|| !isBusy() && (noChest || chestsFull || courierFull && courierTo != null || level().getGameTime() < homeUnreachableUntil || mining && mineProblem != null)));
 	}
 
 	/** On its way to an item or a chest, or picking up / putting in right now. */
 	private boolean isBusy() {
-		return target != null || delivery != null || getAction() != 0 || minePhase != 0;
+		return target != null || delivery != null || pickupBox != null || getAction() != 0 || minePhase != 0;
 	}
 
 	public boolean hasError() {
@@ -851,7 +894,7 @@ public class RobotEntity extends PathfinderMob {
 
 	/** Has nothing to do right now, so another robot may take an item this one would otherwise get. */
 	private boolean isFree() {
-		return target == null && getCarried().isEmpty() && getAction() == 0;
+		return target == null && pickupBox == null && getCarried().isEmpty() && getAction() == 0;
 	}
 
 	/** Would collect this item: in range and allowed by the filter. */
@@ -909,7 +952,7 @@ public class RobotEntity extends PathfinderMob {
 		return !state.is(NOT_STORAGE) && (state.is(Blocks.ENDER_CHEST) || looksLikeStorage(state) && ItemStorage.SIDED.find(level(), pos, side) != null);
 	}
 
-	private static boolean looksLikeStorage(BlockState state) {
+	static boolean looksLikeStorage(BlockState state) {
 		if (state.is(STORAGE)) {
 			return true;
 		}
@@ -923,6 +966,11 @@ public class RobotEntity extends PathfinderMob {
 	 * that is. ME storage takes everything; a plain ender chest is the robot owner's, so only while they are online.
 	 */
 	private int store(BlockPos pos, ItemStack stack, boolean simulate) {
+		// a mailbox of the parcel post puts it into the chest beside it
+		if (level().getBlockState(pos).is(MailboxBlock.BLOCK)) {
+			return Mailbox.insert((ServerLevel) level(), pos, stack, simulate);
+		}
+
 		StorageNetwork network = networkAt(pos, stack);
 
 		if (network != null) {
@@ -1017,6 +1065,8 @@ public class RobotEntity extends PathfinderMob {
 		if (time <= 0) {
 			if (getAction() == 1) {
 				finishPickup();
+			} else if (getAction() == 3) {
+				finishPost();
 			} else {
 				finishDelivery();
 			}
@@ -1241,6 +1291,12 @@ public class RobotEntity extends PathfinderMob {
 		}
 
 		long now = level().getGameTime();
+		BlockPos post = planPostDelivery(now);
+
+		if (post != null || courierTo != null) {
+			return post;
+		}
+
 		noChest = stationContainers().isEmpty();
 
 		for (int i = 0; i < PATH_CHECKS; i++) {
@@ -1278,6 +1334,163 @@ public class RobotEntity extends PathfinderMob {
 		}
 
 		return null;
+	}
+
+	/**
+	 * Courier: the mailbox the post it carries goes to, when it has room and a way leads there. With no room (or no
+	 * way) it waits at the station, and after a minute it gives up: the post goes to the chests at its station.
+	 */
+	private BlockPos planPostDelivery(long now) {
+		if (courierTo == null) {
+			return null;
+		}
+
+		if (!level().isLoaded(courierTo) || !level().getBlockState(courierTo).is(MailboxBlock.BLOCK)) {
+			// the mailbox is gone: to the station with it
+			courierTo = null;
+			courierFull = false;
+			return null;
+		}
+
+		if (store(courierTo, getCarried(), true) > 0) {
+			courierFull = false;
+			chestsFull = false;
+			Path path = getNavigation().createPath(courierTo, 3);
+
+			if (path != null && path.canReach()) {
+				plannedPath = path;
+				courierBlockedSince = 0;
+				return courierTo;
+			}
+
+			if (position().distanceTo(Vec3.atCenterOf(courierTo)) <= HAND_IN_REACH || isInWater()) {
+				plannedPath = isInWater() ? path : null;
+				courierBlockedSince = 0;
+				return courierTo;
+			}
+		} else {
+			courierFull = true;
+		}
+
+		if (courierBlockedSince == 0) {
+			courierBlockedSince = now;
+		}
+
+		if (now - courierBlockedSince >= COURIER_GIVE_UP_TICKS) {
+			courierTo = null;
+			courierFull = false;
+			courierBlockedSince = 0;
+		}
+
+		return null;
+	}
+
+	/**
+	 * Courier: the closest mailbox in its range with post waiting for a mailbox (also in its range) that has room,
+	 * which no other courier is fetching and to which it finds a way.
+	 */
+	private BlockPos findPost() {
+		StorageData data = StorageData.get();
+
+		if (!standing() || areaOff || data == null) {
+			return null;
+		}
+
+		ServerLevel server = (ServerLevel) level();
+		String dim = Rooms.id(server);
+		long now = server.getGameTime();
+		ignoredMailboxes.values().removeIf(until -> until < now);
+		List<BlockPos> boxes = new ArrayList<>();
+
+		for (Map.Entry<Long, Mailbox> entry : data.mailboxes(dim).entrySet()) {
+			BlockPos pos = BlockPos.of(entry.getKey());
+
+			if (!entry.getValue().destination().isEmpty() && !ignoredMailboxes.containsKey(pos) && inRange(Vec3.atCenterOf(pos)) && server.isLoaded(pos)
+					&& !Mailbox.claimedByOther(dim, pos, getUUID())) {
+				boxes.add(pos);
+			}
+		}
+
+		boxes.sort(java.util.Comparator.comparingDouble(pos -> distanceToSqr(Vec3.atCenterOf(pos))));
+		int checks = 0;
+
+		for (BlockPos pos : boxes) {
+			if (postTarget(server, pos) == null) {
+				continue;
+			}
+
+			if (checks++ >= PATH_CHECKS) {
+				break;
+			}
+
+			Path path = getNavigation().createPath(pos, 3);
+
+			if (path != null && path.canReach()) {
+				plannedPath = path;
+				return pos;
+			}
+
+			if (position().distanceTo(Vec3.atCenterOf(pos)) <= HAND_IN_REACH) {
+				plannedPath = null;
+				return pos;
+			}
+
+			ignoredMailboxes.put(pos, now + IGNORE_TICKS);
+		}
+
+		return null;
+	}
+
+	/** Where the post waiting at the mailbox goes: a mailbox in its range with room for it, or null (none, or no post). */
+	private BlockPos postTarget(ServerLevel server, BlockPos box) {
+		List<ItemStack> post = Mailbox.waiting(server, box, 1);
+
+		if (post.isEmpty()) {
+			return null;
+		}
+
+		return Mailbox.resolve(server, box, other -> inRange(Vec3.atCenterOf(other)) && Mailbox.insert(server, other, post.get(0), true) > 0);
+	}
+
+	/** At the mailbox: takes the post out of the chest beside it, one stack in the beak and the rest in its bag. */
+	private void finishPost() {
+		BlockPos box = pickupBox;
+		dropPickup();
+
+		if (box == null || !getCarried().isEmpty() || !bag.isEmpty() || !(level() instanceof ServerLevel server)
+				|| position().distanceTo(Vec3.atCenterOf(box)) > HAND_IN_REACH + 1) {
+			return;
+		}
+
+		BlockPos to = postTarget(server, box);
+
+		if (to == null) {
+			return;
+		}
+
+		List<ItemStack> taken = new ArrayList<>(Mailbox.take(server, box, Mailbox.MAX_STACKS));
+
+		if (taken.isEmpty()) {
+			return;
+		}
+
+		setItemSlot(EquipmentSlot.MAINHAND, taken.remove(0));
+		bag.addAll(taken);
+		courierTo = to;
+		courierBlockedSince = 0;
+		courierFull = false;
+		delivery = null;
+		nextSearch = 0;
+		playSound(SoundEvents.ITEM_PICKUP, 0.4F, 1.4F);
+	}
+
+	/** Gives up the mailbox it was going to fetch post from, so another courier may go there. */
+	private void dropPickup() {
+		if (pickupBox != null && !level().isClientSide()) {
+			Mailbox.release(Rooms.id(level()), pickupBox, getUUID());
+		}
+
+		pickupBox = null;
 	}
 
 	/** Some chest next to its station takes (some of) this stack, also one it cannot get to right now. */
@@ -1392,6 +1605,7 @@ public class RobotEntity extends PathfinderMob {
 
 	private void release() {
 		plannedPath = null;
+		dropPickup();
 
 		if (openLid != null) {
 			setLid(openLid, false);
@@ -2606,6 +2820,44 @@ public class RobotEntity extends PathfinderMob {
 				return (mineIdle || !mining) && (!nearHome() || isInWater()) && level().getGameTime() >= homeUnreachableUntil;
 			}
 
+			// couriers do not collect: they fetch the post from mailboxes and bring it to the mailbox it is for
+			if (courier) {
+				if (target != null) {
+					CLAIMED.remove(target.getUUID());
+					target = null;
+				}
+
+				// the rest of the post in its bag, stack by stack
+				if (!bag.isEmpty()) {
+					setItemSlot(EquipmentSlot.MAINHAND, bag.remove(0));
+					delivery = null;
+					nextSearch = 0;
+					return true;
+				}
+
+				courierTo = null;
+				courierFull = false;
+				// it needs no chest at its station as long as every post arrives
+				noChest = false;
+				chestsFull = false;
+
+				// the post was taken away or has nowhere to go any more (looked at twice a second)
+				if (pickupBox != null && level().getGameTime() % 10 == getId() % 10 && postTarget((ServerLevel) level(), pickupBox) == null) {
+					dropPickup();
+				}
+
+				if (pickupBox == null && level().getGameTime() >= nextSearch) {
+					nextSearch = level().getGameTime() + SEARCH_TICKS;
+					pickupBox = findPost();
+
+					if (pickupBox != null) {
+						Mailbox.claim(Rooms.id(level()), pickupBox, getUUID());
+					}
+				}
+
+				return pickupBox != null || (!nearHome() || isInWater()) && level().getGameTime() >= homeUnreachableUntil;
+			}
+
 			// an item that drifted out of its range (down a river, say) is not followed any further
 			if (target != null && target.isAlive() && !wants(target)) {
 				release();
@@ -2689,7 +2941,12 @@ public class RobotEntity extends PathfinderMob {
 				ignoredSides.put(failedSide, until);
 			}
 
-			if (failedSide != null && openSide(delivery) != null) {
+			if (goalKey == pickupBox) {
+				// no way to that mailbox: another one first, this one again in a minute
+				ignoredMailboxes.put(pickupBox, until);
+				dropPickup();
+				nextSearch = 0;
+			} else if (failedSide != null && openSide(delivery) != null) {
 				// on to the next side
 			} else if (goalKey == delivery) {
 				if (failedSide != null) {
@@ -2724,7 +2981,7 @@ public class RobotEntity extends PathfinderMob {
 		@Override
 		public void tick() {
 			if (getAction() != 0) {
-				Vec3 look = target != null ? target.position() : delivery != null ? Vec3.atCenterOf(delivery) : null;
+				Vec3 look = target != null ? target.position() : delivery != null ? Vec3.atCenterOf(delivery) : pickupBox != null ? Vec3.atCenterOf(pickupBox) : null;
 
 				if (look != null) {
 					getLookControl().setLookAt(look.x, look.y, look.z);
@@ -2745,6 +3002,10 @@ public class RobotEntity extends PathfinderMob {
 				goal = Vec3.atCenterOf(delivery);
 				reach = 1.2;
 				goalKey = delivery;
+			} else if (pickupBox != null && getCarried().isEmpty()) {
+				goal = Vec3.atCenterOf(pickupBox);
+				reach = 1.2;
+				goalKey = pickupBox;
 			} else if (target != null) {
 				goal = target.position();
 				reach = 1.8;
@@ -2765,8 +3026,8 @@ public class RobotEntity extends PathfinderMob {
 			steeredAt = level().getGameTime();
 			boolean arrived = recallPhase == RECALL_RETURNING ? atStationForRecall()
 					: goalKey == target ? standsOn(target)
-					: goalKey == delivery ? (distance <= reach || canReachChest(goal) || distance <= CROWD_REACH) && seesChest(delivery)
-							|| distance <= HAND_IN_REACH && stuckTicks >= STUCK_TICKS / 2 && lastGoal == delivery
+					: goalKey == delivery || goalKey == pickupBox ? (distance <= reach || canReachChest(goal) || distance <= CROWD_REACH) && seesChest((BlockPos) goalKey)
+							|| distance <= HAND_IN_REACH && stuckTicks >= STUCK_TICKS / 2 && lastGoal == goalKey
 					: distance <= reach;
 
 			if (arrived) {
@@ -2774,6 +3035,8 @@ public class RobotEntity extends PathfinderMob {
 					getNavigation().stop();
 				} else if (!getCarried().isEmpty() && delivery != null) {
 					startAction(2);
+				} else if (goalKey == pickupBox) {
+					startAction(3);
 				} else if (target != null) {
 					startAction(1);
 				} else {
@@ -2787,8 +3050,8 @@ public class RobotEntity extends PathfinderMob {
 			// and when it swims below a ceiling, first for open water where it can come up
 			Vec3 approach = goal;
 
-			if (goalKey == delivery && !seesChest(delivery)) {
-				BlockPos side = openSide(delivery);
+			if ((goalKey == delivery || goalKey == pickupBox) && !seesChest((BlockPos) goalKey)) {
+				BlockPos side = openSide((BlockPos) goalKey);
 				approach = side == null ? goal : Vec3.atBottomCenterOf(side);
 
 				// its whole body has to fit up through the gap, or it bobs at the edge of the ceiling
@@ -2870,17 +3133,18 @@ public class RobotEntity extends PathfinderMob {
 				} else {
 					getNavigation().moveTo(path, 1.0);
 				}
-			} else if (getNavigation().isDone() && goalKey == delivery) {
+			} else if (getNavigation().isDone() && (goalKey == delivery || goalKey == pickupBox)) {
 				// out of the water again (or its way ended a bit off): a new way right up to the chest, or as close as it goes
-				Path path = getNavigation().createPath(delivery, 1);
-				BlockPos side = openSide(delivery);
+				BlockPos box = (BlockPos) goalKey;
+				Path path = getNavigation().createPath(box, 1);
+				BlockPos side = openSide(box);
 
 				if ((path == null || !path.canReach()) && side != null) {
 					path = getNavigation().createPath(side, 0);
 				}
 
 				if (path == null || !path.canReach()) {
-					path = getNavigation().createPath(delivery, 3);
+					path = getNavigation().createPath(box, 3);
 				}
 
 				if (path != null) {
@@ -3444,6 +3708,7 @@ public class RobotEntity extends PathfinderMob {
 		output.store("Tools", ItemStack.OPTIONAL_CODEC.listOf(), List.of(tools));
 		output.store("Bag", ItemStack.CODEC.listOf(), List.copyOf(bag));
 		output.store("Torches", ItemStack.OPTIONAL_CODEC, torches);
+		output.storeNullable("CourierTo", BlockPos.CODEC, courierTo);
 	}
 
 	@Override
@@ -3467,5 +3732,6 @@ public class RobotEntity extends PathfinderMob {
 		bag.clear();
 		bag.addAll(input.read("Bag", ItemStack.CODEC.listOf()).orElse(List.of()));
 		torches = input.read("Torches", ItemStack.OPTIONAL_CODEC).orElse(ItemStack.EMPTY);
+		courierTo = input.read("CourierTo", BlockPos.CODEC).orElse(null);
 	}
 }
