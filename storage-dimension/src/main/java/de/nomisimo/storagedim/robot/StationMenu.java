@@ -49,6 +49,18 @@ public class StationMenu extends AbstractContainerMenu {
 	public static final int MAX_ROBOTS = 32;
 	public static final int MAX_NAME = 32;
 	private static final int[] RANGES = {16, 32, 64, 96, 128, RobotEntity.RANGE};
+
+	/** The ranges to choose from: up to 10 chunks, in a station group one chunk more for each further station. */
+	static int[] ranges(int max) {
+		int[] ranges = new int[RANGES.length + Math.max(0, (max - RobotEntity.RANGE) / 16)];
+		System.arraycopy(RANGES, 0, ranges, 0, RANGES.length);
+
+		for (int i = RANGES.length; i < ranges.length; i++) {
+			ranges[i] = ranges[i - 1] + 16;
+		}
+
+		return ranges;
+	}
 	private static final int SYNC_TICKS = 10;
 
 	// layout, shared with the screen (item positions inside the window)
@@ -82,6 +94,8 @@ public class StationMenu extends AbstractContainerMenu {
 	/** Server side only: the player looking at the station, and where it is. */
 	private final ServerPlayer viewer;
 	private final BlockPos pos;
+	/** The station of the group that was clicked: the player has to stay close to that one. */
+	private final BlockPos clicked;
 	private final String dim;
 	private RobotConfig config;
 	private int ticks;
@@ -89,15 +103,16 @@ public class StationMenu extends AbstractContainerMenu {
 
 	/** Client side: the slots are filled by the server. */
 	private StationMenu(int containerId, Inventory inventory) {
-		this(containerId, inventory, null, null);
+		this(containerId, inventory, null, null, null);
 	}
 
-	private StationMenu(int containerId, Inventory inventory, ServerPlayer viewer, BlockPos pos) {
+	private StationMenu(int containerId, Inventory inventory, ServerPlayer viewer, BlockPos pos, BlockPos clicked) {
 		super(TYPE, containerId);
 		this.filterSlots = new SimpleContainer(FILTER_SLOTS);
 		this.io = new SimpleContainer(2);
 		this.viewer = viewer;
 		this.pos = pos;
+		this.clicked = clicked;
 		this.dim = viewer == null ? null : Rooms.id(viewer.level());
 		this.config = viewer == null ? RobotConfig.DEFAULT : StorageData.get().station(dim, pos);
 
@@ -142,8 +157,19 @@ public class StationMenu extends AbstractContainerMenu {
 	}
 
 	public static void open(ServerPlayer player, BlockPos pos) {
-		player.openMenu(new SimpleMenuProvider((id, inventory, p) -> new StationMenu(id, inventory, player, pos),
-				Component.literal("Roboter-Station")));
+		open(player, pos, pos);
+	}
+
+	/** The screen of the main station {@code pos}, opened at the station {@code clicked} of its group. */
+	public static void open(ServerPlayer player, BlockPos pos, BlockPos clicked) {
+		int stations = StationCluster.members(player.level(), pos).size();
+		Component title = Component.literal(stations > 1 ? "Stations-Verbund (" + stations + " Stationen)" : "Roboter-Station");
+		player.openMenu(new SimpleMenuProvider((id, inventory, p) -> new StationMenu(id, inventory, player, pos, clicked), title));
+	}
+
+	/** How many stations count for the group (1 for a single station). */
+	private int groupSize() {
+		return StationCluster.size(viewer.level(), pos);
 	}
 
 	private void save() {
@@ -163,7 +189,7 @@ public class StationMenu extends AbstractContainerMenu {
 		}
 
 		switch (action) {
-			case ACTION_RANGE -> config = config.withRange(step(RANGES, config.range(), value));
+			case ACTION_RANGE -> config = config.withRange(step(ranges(StationCluster.maxRange(groupSize())), config.range(), value));
 			case ACTION_COLOR -> config = config.withColor(step(RobotConfig.colors(), config.color(), value));
 			case ACTION_MODE -> config = config.withExclude(!config.exclude());
 			case ACTION_RECALL -> RobotEntity.recall((ServerLevel) viewer.level(), dim, pos, viewer.getUUID());
@@ -351,7 +377,8 @@ public class StationMenu extends AbstractContainerMenu {
 		String areaState = area.connected() ? (area.enabled() ? Areas.autoPaused(dim, pos) ? "pausiert (Auto)" : "an" : "aus") : "";
 		StationNetworking.SyncPayload payload = new StationNetworking.SyncPayload(containerId, config.stationName(), config.name(),
 				config.range(), config.color(), config.exclude(), antennas, area.name(), area.connected() ? area.sizeText(pos) : "", areaState,
-				names, states, config.mining(), config.mining() && config.oreSearch(), StationChunks.loaded(dim, pos), StationProgress.shown(dim, pos, config));
+				names, states, config.mining(), config.mining() && config.oreSearch(), StationChunks.loaded(dim, pos), StationProgress.shown(dim, pos, config),
+				StationCluster.members(viewer.level(), pos).size(), StationCluster.maxRobots(groupSize()));
 
 		if (force || !Objects.equals(payload, lastSync)) {
 			lastSync = payload;
@@ -376,8 +403,10 @@ public class StationMenu extends AbstractContainerMenu {
 
 	@Override
 	public boolean stillValid(Player player) {
-		return viewer == null || player.level().getBlockState(pos).is(RobotStationBlock.BLOCK)
-				&& player.distanceToSqr(pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5) <= 64;
+		// the clicked station still stands and still belongs to this main station
+		return viewer == null || player.level().getBlockState(pos).is(RobotStationBlock.BLOCK) && player.level().getBlockState(clicked).is(RobotStationBlock.BLOCK)
+				&& (clicked.equals(pos) || StationCluster.main(player.level(), clicked).equals(pos))
+				&& player.distanceToSqr(clicked.getX() + 0.5, clicked.getY() + 0.5, clicked.getZ() + 0.5) <= 64;
 	}
 
 	@Override

@@ -153,13 +153,25 @@ Rechtsklick auf die Station öffnet ihr Fenster:
 - **Robotername:** für die nächsten Roboter, die eingestellt werden. Bekommen mehrere Roboter einer Station denselben Namen, werden sie durchnummeriert (Quak1, Quak2 …). Das Benennen kostet keine Level.
 - **Roboter einstellen:** Roboter links in den Eingang legen, er kommt rechts eingestellt wieder heraus. Genauso werden Antennen mit der Station gepaart. Die Einstellungen stehen im Tooltip des Roboter-Items.
 - **Bereich geladen halten** (standardmäßig aus): hält den ganzen Arbeitsbereich der Station geladen, also alle Chunks ihrer Reichweite oder ihrer Antennen-Area (plus ein paar Blöcke Rand), wie mit `/forceload`. Dann sammeln und bauen die Roboter weiter, auch wenn kein Spieler in der Nähe oder online ist. Der Knopf zeigt, wie viele Chunks geladen sind. Ausschalten oder die Station abbauen gibt die Chunks wieder frei. Chunks, die schon vorher von Hand geladen waren, bleiben unberührt. Viele Chunks kosten Server-Leistung, also lieber eine kleine Reichweite oder eine Antennen-Area nehmen. Beim Abbau und bei der Erzsuche kommen 2 Chunks Rand rund um das Quadrat dazu. Solange eine Station ihren Bereich geladen hält, pausiert ein Server ohne Spieler nicht (`pause-when-empty-seconds` in `server.properties`). Das lässt sich in den Mod-Einstellungen (Mod Menu) mit „Server ohne Spieler: Läuft weiter / Pausiert“ umschalten; nur Operatoren können das ändern, es gilt für den ganzen Server und steht als `keepServerAwake` in `config/storagedim.json`.
-- **Roboterliste** rechts daneben: alle Roboter der Station (höchstens 32) mit Entfernung und dem, was jeder gerade tut. Das Mausrad blättert.
+- **Roboterliste** rechts daneben: alle Roboter der Station (höchstens 32, im [Stations-Verbund](#stations-verbund) 32 pro Station) mit Entfernung und dem, was jeder gerade tut. Das Mausrad blättert.
 
 ![Fenster der Roboter-Station mit Roboterliste](docs/screenshots/roboter-station-menu.png)
 
 Ein eingestellter Roboter, der außerhalb der Reichweite seiner Station hingestellt wird, läuft zuerst zur Station und arbeitet dann los.
 
 ![Roboter-Station mit Jade-Anzeige](docs/screenshots/roboter-station.png)
+
+### Stations-Verbund
+
+Stellt man Roboter-Stationen **direkt nebeneinander** auf dieselbe Höhe (Seite an Seite nach Norden, Osten, Süden oder Westen, in jeder Form: Reihe, L, 2 × 2 …), werden sie zu einem **Stations-Verbund**. Er arbeitet wie eine einzige große Station:
+
+- **Hauptstation:** Eine Station des Verbunds führt ihn. Sie hat die Einstellungen, die Roboterliste, die Antennen-Area und den Abbau. Rechtsklick auf **jede** Station des Verbunds öffnet ihr Fenster („Stations-Verbund (3 Stationen)“). Die Hauptstation ist die, die zuerst stand. Beim Zusammenwachsen zweier Verbünde bleibt die mit mehr Robotern die Hauptstation.
+- **Mehr Roboter:** 32 Roboter pro Station, also z. B. 96 bei drei und 256 bei acht Stationen.
+- **Mehr Reichweite:** Jede weitere Station gibt einen Chunk mehr Reichweite (10 Chunks bei einer, 17 bei acht Stationen) und 16 Blöcke mehr für die Antennen-Area (160 bis 272 Blöcke je Achse). Mehr als acht Stationen gehören noch zum Verbund, bringen aber nichts mehr dazu.
+- **Gemeinsame Kisten:** Kisten an **jeder** Station des Verbunds sind Ein- und Ausgang: Die Roboter lagern in alle ein (die der Hauptstation zuerst) und holen ihr Werkzeug aus einer Werkzeug- oder Filterkiste an irgendeiner Station.
+- **Keine doppelte Arbeit:** Alle Roboter gehören zur Hauptstation und teilen sich eine Abbau-Liste, keine zwei graben am selben Block. Die 9 × 9 Plattform bleibt um jede Station des Verbunds stehen.
+- **Aussehen:** Im Verbund sieht die Hauptstation wie ein Leitstand mit goldenem Rahmen aus, die übrigen wie Roboter-Docks. Leitungen auf der Oberseite verbinden die Stationen.
+- **Dazustellen und Abbauen:** Roboter einer Station, die zu einem Verbund dazukommt, ziehen von selbst zur Hauptstation. Wird die Hauptstation abgebaut, übernimmt eine Station daneben ihre Einstellungen und Roboter. Antennen sind an die alte Hauptstation gepaart und müssen neu gepaart werden.
 
 ### Wohin die Roboter einlagern
 

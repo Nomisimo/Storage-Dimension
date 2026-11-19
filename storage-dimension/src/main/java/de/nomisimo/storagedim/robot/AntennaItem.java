@@ -140,8 +140,11 @@ public class AntennaItem extends BlockItem {
 			return "Diese Station hat schon eine Gegenecke (" + c.getX() + " " + c.getY() + " " + c.getZ() + "). Bau sie erst ab.";
 		}
 
-		if (StationArea.tooFar(station, pos)) {
-			return "Zu weit von der Station: höchstens " + StationArea.MAX_SIZE + " Blöcke in jede Richtung.";
+		int maxSize = StationCluster.maxRange(StationCluster.size(level, station));
+
+		if (StationArea.tooFar(station, pos, maxSize)) {
+			return "Zu weit von der Station: höchstens " + maxSize + " Blöcke in jede Richtung."
+					+ (maxSize < StationCluster.MAX_RANGE ? " Jede weitere Station daneben gibt 16 Blöcke mehr." : "");
 		}
 
 		return null;

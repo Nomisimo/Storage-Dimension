@@ -15,7 +15,7 @@ import net.minecraft.world.phys.Vec3;
  * Its name is set at the station (its colour is the station's colour), and the remote switches it on and off.
  */
 public record StationArea(boolean base, Optional<BlockPos> corner, String name, boolean enabled) {
-	/** Longest side of an area in blocks, like the largest range without antennas (10 chunks). */
+	/** Longest side of an area in blocks, like the largest range without antennas (10 chunks); a station group adds 16 per station. */
 	public static final int MAX_SIZE = RobotEntity.RANGE;
 	public static final StationArea EMPTY = new StationArea(false, Optional.empty(), "", true);
 	public static final Codec<StationArea> CODEC = RecordCodecBuilder.create(i -> i.group(
@@ -78,9 +78,9 @@ public record StationArea(boolean base, Optional<BlockPos> corner, String name, 
 		return (int) Math.ceil(Math.sqrt(dx * dx + dz * dz));
 	}
 
-	/** A corner antenna here would make the area too big (more than {@link #MAX_SIZE} blocks on a side). */
-	public static boolean tooFar(BlockPos station, BlockPos corner) {
-		return Math.abs(station.getX() - corner.getX()) >= MAX_SIZE || Math.abs(station.getY() - corner.getY()) >= MAX_SIZE
-				|| Math.abs(station.getZ() - corner.getZ()) >= MAX_SIZE;
+	/** A corner antenna here would make the area too big (more than {@code maxSize} blocks on a side). */
+	public static boolean tooFar(BlockPos station, BlockPos corner, int maxSize) {
+		return Math.abs(station.getX() - corner.getX()) >= maxSize || Math.abs(station.getY() - corner.getY()) >= maxSize
+				|| Math.abs(station.getZ() - corner.getZ()) >= maxSize;
 	}
 }

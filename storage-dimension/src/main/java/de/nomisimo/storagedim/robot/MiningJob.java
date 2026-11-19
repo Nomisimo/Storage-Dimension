@@ -90,6 +90,8 @@ public final class MiningJob implements DigJob {
 	/** How often water at a place was turned into cobblestone: where it keeps coming back, the cobblestone stays as a wall. */
 	private final Map<Long, Integer> pumped = new HashMap<>();
 	private long lastUsed;
+	/** The other stations of the station's group: their platforms stay as well. */
+	private List<BlockPos> group = List.of();
 	/** Blocks from the highest one to dig of each column down to the bottom, when it was first looked at: the work at the start. */
 	private long initial;
 	/** The same for the columns now: what is left. */
@@ -153,6 +155,13 @@ public final class MiningJob implements DigJob {
 
 		job.lastUsed = now;
 		return job;
+	}
+
+	/** The stations of the group this job's station leads (its own included), whose platforms stay. */
+	public void setGroup(List<BlockPos> members) {
+		if (!group.equals(members)) {
+			group = List.copyOf(members);
+		}
 	}
 
 	/** Mining switched off or on again at a station: what was known is looked at afresh (blocks may have been placed since). */
@@ -264,6 +273,14 @@ public final class MiningJob implements DigJob {
 		int dz = pos.getZ() - station.getZ();
 
 		if (Math.abs(dx) > PLATFORM || Math.abs(dz) > PLATFORM || pos.getY() < station.getY() - 1) {
+			// in a station group the same platform round each further station, without a way down
+			for (BlockPos member : group) {
+				if (!member.equals(station) && Math.abs(pos.getX() - member.getX()) <= PLATFORM && Math.abs(pos.getZ() - member.getZ()) <= PLATFORM
+						&& pos.getY() >= member.getY() - 1 && pos.getY() >= station.getY() - 1) {
+					return true;
+				}
+			}
+
 			return false;
 		}
 

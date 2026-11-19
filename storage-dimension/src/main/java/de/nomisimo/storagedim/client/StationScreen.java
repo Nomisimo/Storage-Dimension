@@ -210,7 +210,7 @@ public class StationScreen extends AbstractContainerScreen<StationMenu> {
 
 		int x = imageWidth + LIST_GAP;
 		List<Component> names = data.names();
-		graphics.text(font, "Roboter (" + names.size() + "/" + StationMenu.MAX_ROBOTS + ")", x + 6, 6, TEXT, false);
+		graphics.text(font, "Roboter (" + names.size() + "/" + data.maxRobots() + ")", x + 6, 6, TEXT, false);
 		progress(graphics, x + 6, LIST_TOP - 2);
 
 		if (names.isEmpty()) {

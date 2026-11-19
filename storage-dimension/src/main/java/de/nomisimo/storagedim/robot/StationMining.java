@@ -70,10 +70,12 @@ public final class StationMining {
 
 			BlockState state = Blocks.CHEST.defaultBlockState();
 
-			// its front faces away from the station
-			for (Direction side : Direction.Plane.HORIZONTAL) {
-				if (station.relative(side).equals(chest)) {
-					state = state.setValue(ChestBlock.FACING, side);
+			// its front faces away from the station (of the group) it stands beside
+			for (BlockPos member : StationCluster.members(level, station)) {
+				for (Direction side : Direction.Plane.HORIZONTAL) {
+					if (member.relative(side).equals(chest)) {
+						state = state.setValue(ChestBlock.FACING, side);
+					}
 				}
 			}
 
@@ -91,7 +93,9 @@ public final class StationMining {
 
 	/** The tool chest is still there, right next to the station. */
 	public static boolean isToolChest(ServerLevel level, BlockPos pos, BlockPos station) {
-		return pos.distManhattan(station) == 1 && level.isLoaded(pos) && level.getBlockState(pos).getBlock() instanceof ChestBlock;
+		// beside any station of the group
+		return level.isLoaded(pos) && level.getBlockState(pos).getBlock() instanceof ChestBlock
+				&& (pos.distManhattan(station) == 1 || StationCluster.beside(StationCluster.members(level, station), pos));
 	}
 
 	/**
@@ -105,25 +109,33 @@ public final class StationMining {
 			return null;
 		}
 
-		for (Direction side : Direction.values()) {
-			BlockPos pos = station.relative(side);
+		// beside any station of the group, the main station first
+		for (BlockPos member : StationCluster.members(level, station)) {
+			for (Direction side : Direction.values()) {
+				BlockPos pos = member.relative(side);
 
-			if (data.filterChest(dim, pos) != null && level.isLoaded(pos) && level.getBlockState(pos).getBlock() instanceof ChestBlock) {
-				return pos;
+				if (data.filterChest(dim, pos) != null && level.isLoaded(pos) && level.getBlockState(pos).getBlock() instanceof ChestBlock) {
+					return pos;
+				}
 			}
 		}
 
 		return null;
 	}
 
-	/** A side of the station (north, east, south, west) with room for a chest: nothing there but air, grass or the like. */
+	/**
+	 * A side of the station (north, east, south, west) with room for a chest: nothing there but air, grass or the
+	 * like. In a group the sides of the other stations count too, the main station's first.
+	 */
 	private static BlockPos freeSide(ServerLevel level, BlockPos station) {
-		for (Direction side : Direction.Plane.HORIZONTAL) {
-			BlockPos pos = station.relative(side);
-			BlockState state = level.getBlockState(pos);
+		for (BlockPos member : StationCluster.members(level, station)) {
+			for (Direction side : Direction.Plane.HORIZONTAL) {
+				BlockPos pos = member.relative(side);
+				BlockState state = level.getBlockState(pos);
 
-			if (state.canBeReplaced() && state.getFluidState().isEmpty() && !hasChestBeside(level, pos)) {
-				return pos;
+				if (state.canBeReplaced() && state.getFluidState().isEmpty() && !hasChestBeside(level, pos)) {
+					return pos;
+				}
 			}
 		}
 
