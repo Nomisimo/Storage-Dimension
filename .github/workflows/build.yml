@@ -43,6 +43,9 @@ jobs:
           echo "eula=true" > run/eula.txt
           # the stations keep their areas loaded: the server must not pause after this minute without players
           echo "pause-when-empty-seconds=60" > run/server.properties
+          # the test generates new terrain for each phase within a single tick, which can take over a minute on a slow
+          # runner; the watchdog would take that for a hung server (timeout 2400 still stops a real hang)
+          echo "max-tick-time=-1" >> run/server.properties
           timeout 2400 ./gradlew runServer --args="nogui" 2>&1 | tee swarm.log
           ! grep -q "pausing" swarm.log
           rm -rf run/world
@@ -57,6 +60,7 @@ jobs:
           echo "eula=true" > run/eula.txt
           # the robot tests run for minutes without a player; a dedicated server would pause after 60 seconds
           echo "pause-when-empty-seconds=0" > run/server.properties
+          echo "max-tick-time=-1" >> run/server.properties
           timeout 2400 ./gradlew runServer --args="nogui" 2>&1 | tee server.log
           grep -q "SMOKETEST OK" server.log
       - name: build modrinth pack
