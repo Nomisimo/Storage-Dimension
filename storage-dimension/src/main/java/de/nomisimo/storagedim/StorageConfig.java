@@ -38,6 +38,8 @@ public final class StorageConfig {
 
 	/**
 	 * Server. Address players open the web view at, e.g. "mc.example.de" or "123.45.67.89" (without port).
+	 * With "http://" or "https://" it is the whole start of the link and used as it is (with port, if needed),
+	 * e.g. "https://mc.example.de:10000" behind a reverse proxy or tunnel with HTTPS.
 	 * Empty: the server-ip from server.properties, or "localhost".
 	 */
 	public String webAddress = "";
