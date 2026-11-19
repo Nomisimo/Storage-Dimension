@@ -1,5 +1,7 @@
 Storage Dimension für **Minecraft 26.1.2** (Fabric).
 
+**Neu in 0.8.5.1:** Werkzeuge mit **Reparatur (Mending)** gehen bei Robotern **nie mehr kaputt**. Sie verlieren beim Abbauen, Bäumefällen und Erzsuchen keine Haltbarkeit, und ein schon abgenutztes Mending-Werkzeug ist beim nächsten Block wieder heil. Vorher konnten z. B. Diamant-Spitzhacken mit Mending trotzdem zerbrechen, wenn nicht genug Erfahrung in der Nähe war. Server und alle Spieler brauchen 0.8.5.1.
+
 **Neu in 0.8.5:** In der Station steht beim **Abbau** und bei der **Erzsuche** jetzt, wie viel Prozent schon fertig sind, mit Fortschrittsbalken über der Roboterliste. Der Wert wird mit der Welt gespeichert und bleibt nach einem Neustart erhalten. **Erzsuche:** Gänge enden jetzt dort, wo sie aus dem Boden kommen (Tal, See, Meer), statt als Bruchsteinbrücke durch die Luft weiterzugehen; dort gibt es ohnehin keine Erze. Server und alle Spieler brauchen 0.8.5.
 
 **Neu in 0.8.4:** Bei der **Erzsuche** arbeiten jetzt alle Roboter gleichzeitig: Die Station plant das Strip Mining im ganzen Bereich, die Roboter fangen auf den **oberen Ebenen** an, sobald die Treppe sie erreicht, und arbeiten sich nach unten vor, während andere die Treppe weitergraben (bis zu vier an der Treppe, drei Lagen auf einmal). Ein Roboter, der zu einem Block keinen Weg findet, lässt nur diesen Block für sich aus, statt alle anderen aufzuhalten; erst wenn drei daran scheitern, wird er kurz für alle übersprungen. Erzadern folgen sie nur nahe an Treppe und Gängen, nicht mehr durch Höhlen, aus denen sie nicht zurückfanden. Sand oder Kies direkt über Gängen und Treppe wird zu Bruchstein, damit nichts nachrutscht und Roboter verschüttet; unter Wasser wird der Ring um die Säule nicht mehr endlos geöffnet. **Abbau:** Gefällte Bäume fallen ganz (Stamm und Krone), Roboter im Gedränge an der Kiste geben ihre Ladung über bis zu 6 Blöcke ab, und wer von Laub eingeschlossen ist, gräbt sich frei. Die Station hält 2 Chunks Rand mit geladen, damit Roboter am Rand nicht einfrieren. Wer in einem Loch festsitzt, in das der Weg nur scheinbar hinausführt, gräbt sich selbst frei, und Werkzeug aus der Tiefe wird zuerst zur Station hochgetragen. **Server pausiert nicht mehr:** Solange eine Station ihren Bereich geladen hält, pausiert ein Server ohne Spieler nicht (`pause-when-empty-seconds`). Abschaltbar in den Mod-Einstellungen (Mod Menu) unter „Server ohne Spieler: Läuft weiter / Pausiert“, das ändern nur Operatoren, gespeichert wird es auf dem Server. Server und alle Spieler brauchen 0.8.4.
@@ -38,18 +40,18 @@ Storage Dimension für **Minecraft 26.1.2** (Fabric).
 
 **Neu in 0.4.1:** Im ME-Speicher (auch über das Rucksack-Upgrade) und im Filter-Fenster lassen sich Items im eigenen Inventar wieder ziehen und verteilen sowie per Doppelklick sammeln; vorher sprangen sie zurück in die Hand.
 
-**Neu in 0.4.0:** Sammelroboter, eigene Texturen für Dimensionskiste, Filterkiste, ME-Terminal und die ME-Items, Rezepte in JEI, Anbindung an Maschinen (z. B. Tech Reborn), doppelte Filterkisten mit 14 Filtern. Ab dieser Version brauchen **alle Spieler** `storage-dimension-0.8.5.jar`.
+**Neu in 0.4.0:** Sammelroboter, eigene Texturen für Dimensionskiste, Filterkiste, ME-Terminal und die ME-Items, Rezepte in JEI, Anbindung an Maschinen (z. B. Tech Reborn), doppelte Filterkisten mit 14 Filtern. Ab dieser Version brauchen **alle Spieler** `storage-dimension-0.8.5.1.jar`.
 
 ## Server, in den Ordner `mods`
 
-- `storage-dimension-0.8.5.jar`
-- `storagedim-tb-0.8.5.jar`
+- `storage-dimension-0.8.5.1.jar`
+- `storagedim-tb-0.8.5.1.jar`
 - dazu [Fabric API](https://modrinth.com/mod/fabric-api), [Traveler's Backpack](https://modrinth.com/mod/travelersbackpack) und [Forge Config API Port](https://modrinth.com/mod/forge-config-api-port), alle für 26.1.2
 
 ## Jeder Spieler, in den Ordner `mods`
 
-- `storage-dimension-0.8.5.jar`
-- `storagedim-tb-0.8.5.jar`
+- `storage-dimension-0.8.5.1.jar`
+- `storagedim-tb-0.8.5.1.jar`
 - dazu [Fabric API](https://modrinth.com/mod/fabric-api), [Traveler's Backpack](https://modrinth.com/mod/travelersbackpack), [Forge Config API Port](https://modrinth.com/mod/forge-config-api-port) und [JEI](https://modrinth.com/mod/jei), alle für 26.1.2
 
 ## Nur Storage Dimension, ohne Traveler's Backpack

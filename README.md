@@ -2,7 +2,7 @@
 
 Ein Fabric-Mod für **Minecraft 26.1.2**: eine Bibliothek voller Kisten in einer eigenen Dimension, ein ME-Speicher ohne Stapelgrenzen und kleine Sammelroboter, die herumliegende Items einsammeln und einlagern.
 
-**Aktuelle Version: 0.8.5.** Die fertigen Dateien gibt es unter [Releases](https://github.com/Nomisimo/Storage-Dimension/releases), dort steht auch, welche Datei wohin gehört.
+**Aktuelle Version: 0.8.5.1.** Die fertigen Dateien gibt es unter [Releases](https://github.com/Nomisimo/Storage-Dimension/releases), dort steht auch, welche Datei wohin gehört.
 
 ![Dimensionskiste, Filterkiste, doppelte Filterkiste und ME-Terminal, davor der Sammelroboter](docs/screenshots/kisten-und-roboter.png)
 
@@ -19,11 +19,11 @@ Ein Fabric-Mod für **Minecraft 26.1.2**: eine Bibliothek voller Kisten in einer
 
 ## Installation
 
-`storage-dimension-0.8.5.jar` muss **auf dem Server und bei allen Spielern** im Ordner `mods` liegen.
+`storage-dimension-0.8.5.1.jar` muss **auf dem Server und bei allen Spielern** im Ordner `mods` liegen.
 
 1. Fabric Loader 0.19.5 oder neuer und [Fabric API](https://modrinth.com/mod/fabric-api) für 26.1.2 auf Server und Clients installieren.
-2. `storage-dimension-0.8.5.jar` (nicht die `-sources.jar`) in den `mods`-Ordner legen.
-3. Optional das [Traveler's-Backpack-Add-on](#me-rucksack-und-travelers-backpack) `storagedim-tb-0.8.5.jar` dazulegen, ebenfalls auf Server und Clients.
+2. `storage-dimension-0.8.5.1.jar` (nicht die `-sources.jar`) in den `mods`-Ordner legen.
+3. Optional das [Traveler's-Backpack-Add-on](#me-rucksack-und-travelers-backpack) `storagedim-tb-0.8.5.1.jar` dazulegen, ebenfalls auf Server und Clients.
 4. Server starten. Die Dimension `storagedim:storage` wird automatisch angelegt, die Daten liegen in `world/storagedim.json`.
 
 **Passt gut dazu (optional):** [JEI](https://modrinth.com/mod/jei) (Rezepte, Suche koppeln, „+“ im Rucksack), [Jade](https://modrinth.com/mod/jade) (Infos zu Robotern und Stationen), [Xaero's Minimap](https://modrinth.com/mod/xaeros-minimap) (Roboter auf der Karte). Getestet mit JEI 29.47.0.111, Jade 26.1.11 und Xaero's Minimap 26.6.2.
@@ -220,7 +220,7 @@ Mit dem Knopf **Sammeln / Abbauen** in der Station werden alle Roboter der Stati
 - **Wasser:** Wasser im Bereich (still oder fließend) füllen die Roboter mit Bruchstein auf und bauen den dann ab. So werden Teiche, Seen und geflutete Höhlen trocken und nichts läuft nach. Kommt an einer Stelle immer wieder Wasser (etwa von einem Meer neben dem Bereich), bleibt dort nach dem dritten Mal der Bruchstein als Wand stehen.
 - **Was stehen bleibt:** die Station, Antennen, Roboter-Barrieren, alle Blöcke mit Inhalt (Kisten, Öfen, Spawner …), Lava, unzerstörbare Blöcke wie Grundgestein.
 - **Abbauzeit wie beim Spieler:** Harte Blöcke dauern länger, mit dem falschen Werkzeug noch länger. Effizienz macht schneller. Man sieht die Risse im Block, und der Roboter pickt mit dem Schnabel daran herum.
-- **Verzauberungen:** Glück (Fortune), Behutsamkeit (Silk Touch) und die anderen wirken wie beim Spieler, Haltbarkeit (Unbreaking) schont das Werkzeug. **Reparatur (Mending)** repariert das Werkzeug mit den Erfahrungskugeln aus dem abgebauten Block. Ohne Mending-Werkzeug bleiben die Kugeln für die Spieler liegen. Mit einer zu schwachen Spitzhacke gibt ein Block (z. B. Diamanterz mit einer Steinspitzhacke) wie beim Spieler nichts.
+- **Verzauberungen:** Glück (Fortune), Behutsamkeit (Silk Touch) und die anderen wirken wie beim Spieler, Haltbarkeit (Unbreaking) schont das Werkzeug. Ein Werkzeug mit **Reparatur (Mending)** geht bei Robotern **nie kaputt**: es verliert keine Haltbarkeit, und war es vorher schon abgenutzt, ist es beim nächsten Block wieder heil. Erfahrungskugeln aus dem abgebauten Block reparieren außerdem andere Mending-Werkzeuge. Ohne Mending-Werkzeug bleiben die Kugeln für die Spieler liegen. Mit einer zu schwachen Spitzhacke gibt ein Block (z. B. Diamanterz mit einer Steinspitzhacke) wie beim Spieler nichts.
 - **Beute:** Jeder Roboter sammelt bis zu 9 Stapel, dann bringt er sie Stapel für Stapel in die Kisten an der Station.
 - **Helm:** Im Abbau-Modus tragen die Roboter einen Bergmannshelm in ihrer Farbe mit einer leuchtenden Lampe vorne.
 - **Ausschalten:** Ein Klick weiter kommt die [Erzsuche](#erzsuche), noch einer zurück auf **Sammeln**: Dann bringen die Roboter ihr Werkzeug in die Werkzeugkiste zurück und sammeln wieder Items.
@@ -281,7 +281,7 @@ Ein Rucksack, der mit dem Speicher verbunden ist und ihn von überall öffnet.
 
 ### Traveler's-Backpack-Add-on
 
-Das Add-on `storagedim-tb-0.8.5.jar` fügt ein echtes **ME-Upgrade** für den Upgrade-Slot von Traveler's Backpack hinzu. Es hat immer dieselbe Versionsnummer wie Storage Dimension.
+Das Add-on `storagedim-tb-0.8.5.1.jar` fügt ein echtes **ME-Upgrade** für den Upgrade-Slot von Traveler's Backpack hinzu. Es hat immer dieselbe Versionsnummer wie Storage Dimension.
 
 - **Rezept** (formlos): Leeres Upgrade (Traveler's Backpack), Enderauge, 2× Amethystscherbe, Redstoneblock. Mit dem Add-on ergibt auch das normale ME-Upgrade-Rezept (mit Papier) dieses Upgrade. Es passt in den Upgrade-Slot und macht mit einem Bündel auch einen ME-Rucksack.
 - **ME-Ansicht:** Upgrade in einen Upgrade-Slot legen. Linksklick auf das ME-Symbol zeigt den ME-Speicher direkt im Rucksack-Fenster an Stelle des Rucksack-Inhalts. Crafting und die anderen Upgrades bleiben daneben. Ein zweiter Linksklick zeigt wieder den Rucksack, Rechtsklick nimmt das Upgrade heraus.
@@ -300,7 +300,7 @@ Das Add-on `storagedim-tb-0.8.5.jar` fügt ein echtes **ME-Upgrade** für den Up
 - Der Rucksack muss nicht in der Hand sein: auf dem Rücken tragen und mit der Rucksack-Taste (Standard **B**) öffnen reicht.
 - **Crafting aus dem ME-Speicher:** Hat der Rucksack zusätzlich das Crafting-Upgrade, holt der „+“-Knopf von JEI fehlende Zutaten auch aus dem ME-Speicher, genauso wie aus Inventar und Rucksack. „+“ ist nur grün, wenn alle Zutaten zusammen vorhanden sind, sonst markiert JEI die fehlenden rot. Shift + „+“ füllt das Raster für so viele Durchgänge wie möglich (bis zu einem Stapel). Was vorher im Raster lag, kommt zurück ins Inventar oder, wenn das voll ist, in den Speicher.
 - Der kleine Schalter neben dem ME-Symbol stellt zwischen *ME als Quelle* (Standard) und *nur Inventar* um.
-- **Installation:** `storagedim-tb-0.8.5.jar` und `storage-dimension-0.8.5.jar` auf Server und Clients, dazu Traveler's Backpack, [Forge Config API Port](https://modrinth.com/mod/forge-config-api-port) und Fabric API. JEI wird nur für „+“ und die Rezeptanzeige gebraucht, Mod Menu (optional, nur im Client) für die Einstellungen.
+- **Installation:** `storagedim-tb-0.8.5.1.jar` und `storage-dimension-0.8.5.1.jar` auf Server und Clients, dazu Traveler's Backpack, [Forge Config API Port](https://modrinth.com/mod/forge-config-api-port) und Fabric API. JEI wird nur für „+“ und die Rezeptanzeige gebraucht, Mod Menu (optional, nur im Client) für die Einstellungen.
 
 ![ME-Ansicht im Rucksack mit Suchleiste, Sortierung und Knöpfen wie im ME-Speicher](docs/screenshots/rucksack-me-suche.png)
 
