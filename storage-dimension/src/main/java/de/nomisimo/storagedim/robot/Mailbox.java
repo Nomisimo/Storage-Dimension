@@ -34,23 +34,28 @@ import net.minecraft.world.level.block.state.BlockState;
  * address, which puts it into the chest beside it. Addresses may use wildcards: {@code *} for any text, {@code ?}
  * for one character; of several matching mailboxes the closest one with room gets it.
  */
-public record Mailbox(String address, String destination) {
+public record Mailbox(String address, String destination, int machineIn, boolean machineOut) {
 	public static final Codec<Mailbox> CODEC = RecordCodecBuilder.create(i -> i.group(
 			Codec.STRING.optionalFieldOf("address", "").forGetter(Mailbox::address),
-			Codec.STRING.optionalFieldOf("destination", "").forGetter(Mailbox::destination)
+			Codec.STRING.optionalFieldOf("destination", "").forGetter(Mailbox::destination),
+			Codec.INT.optionalFieldOf("machineIn", 0).forGetter(Mailbox::machineIn),
+			Codec.BOOL.optionalFieldOf("machineOut", false).forGetter(Mailbox::machineOut)
 	).apply(i, Mailbox::new));
+	/** What arrives does not go into machines beside it (only into chests). */
+	public static final int IN_NONE = 0;
+	/** What arrives goes into the machines' ingredient slots (like a hopper on top of a furnace). */
+	public static final int IN_INGREDIENTS = 1;
+	/** What arrives goes into the machines' fuel slots (like a hopper at the side of a furnace). */
+	public static final int IN_FUEL = 2;
 	/** Stacks a courier takes along at a time: one in its beak, the rest in its bag (like a mining robot). */
 	public static final int MAX_STACKS = RobotEntity.BAG_SLOTS;
 	public static final int MAX_ADDRESS = 32;
 	/** Mailbox (dimension@packed position) to the courier robot on its way there to fetch the post. */
 	private static final Map<String, UUID> CLAIMED = new HashMap<>();
 
-	public Mailbox withAddress(String address) {
-		return new Mailbox(address, destination);
-	}
-
-	public Mailbox withDestination(String destination) {
-		return new Mailbox(address, destination);
+	/** A mailbox that only works with the chests beside it. */
+	public Mailbox(String address, String destination) {
+		this(address, destination, IN_NONE, false);
 	}
 
 	/** Mailbox flags: once a second every loaded mailbox shows whether post is waiting in the chest beside it. */
@@ -169,13 +174,35 @@ public record Mailbox(String address, String destination) {
 	// ---- the chests beside it ----
 
 	/**
-	 * The storage blocks right beside the mailbox (chests, barrels and other storage, by the same rules as at a
-	 * station). Sending leaves out the mod's ME blocks and ender chests, so a mailbox never empties a whole ME storage.
+	 * Where the mailbox sends from or puts what arrives, machines first: with the machine settings, the output of the
+	 * machines beside it (taken from below, like a hopper under a furnace) or their ingredient or fuel slots (filled
+	 * from above or from the side). Then the storage blocks beside it (chests, barrels and other storage, by the same
+	 * rules as at a station). Sending leaves out the mod's ME blocks and ender chests, so a mailbox never empties a
+	 * whole ME storage.
 	 */
 	private static List<Storage<ItemVariant>> beside(ServerLevel level, BlockPos pos, boolean sending) {
 		List<Storage<ItemVariant>> storages = new ArrayList<>();
 		StorageData data = StorageData.get();
 		String dim = Rooms.id(level);
+		Mailbox mailbox = data == null ? null : data.mailbox(dim, pos);
+		Direction machineFace = mailbox == null ? null : sending ? (mailbox.machineOut() ? Direction.DOWN : null)
+				: mailbox.machineIn() == IN_INGREDIENTS ? Direction.UP : mailbox.machineIn() == IN_FUEL ? Direction.NORTH : null;
+
+		if (machineFace != null) {
+			for (Direction side : Direction.values()) {
+				BlockPos other = pos.relative(side);
+
+				if (!level.isLoaded(other) || !isMachine(level, other, data, dim)) {
+					continue;
+				}
+
+				Storage<ItemVariant> storage = ItemStorage.SIDED.find(level, other, machineFace);
+
+				if (storage != null) {
+					storages.add(storage);
+				}
+			}
+		}
 
 		for (Direction side : Direction.values()) {
 			BlockPos other = pos.relative(side);
@@ -205,9 +232,41 @@ public record Mailbox(String address, String destination) {
 		return storages;
 	}
 
-	/** Some storage block stands beside the mailbox for what arrives. */
+	/**
+	 * A machine for the mailbox: any block that takes or gives items but is no storage block (furnaces, smokers,
+	 * brewing stands, hoppers, other mods' machines); never the mod's own blocks or ME blocks.
+	 */
+	private static boolean isMachine(ServerLevel level, BlockPos pos, StorageData data, String dim) {
+		BlockState state = level.getBlockState(pos);
+
+		if (state.is(MailboxBlock.BLOCK) || state.is(RobotStationBlock.BLOCK) || state.is(Blocks.ENDER_CHEST)
+				|| RobotEntity.looksLikeStorage(state) && !state.is(RobotEntity.NOT_STORAGE)) {
+			return false;
+		}
+
+		return data == null || data.chestOwner(dim, pos) == null && data.filterChest(dim, pos) == null && !data.isTerminal(dim, pos)
+				&& data.projectChest(dim, pos) == null;
+	}
+
+	/** Some storage block (or, with the machine setting, machine) stands beside the mailbox for what arrives. */
 	public static boolean hasChest(ServerLevel level, BlockPos pos) {
 		return !beside(level, pos, false).isEmpty();
+	}
+
+	/** Some machine stands beside the mailbox (whatever its settings). */
+	public static boolean hasMachine(ServerLevel level, BlockPos pos) {
+		StorageData data = StorageData.get();
+		String dim = Rooms.id(level);
+
+		for (Direction side : Direction.values()) {
+			BlockPos other = pos.relative(side);
+
+			if (level.isLoaded(other) && isMachine(level, other, data, dim) && ItemStorage.SIDED.find(level, other, Direction.UP) != null) {
+				return true;
+			}
+		}
+
+		return false;
 	}
 
 	/** What would be sent: up to {@code max} stacks from the chests beside it (nothing is taken out). */

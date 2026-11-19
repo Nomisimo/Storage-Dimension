@@ -22,13 +22,17 @@ public final class MailboxNetworking {
 	}
 
 	/** Server to client: open the screen of the mailbox at {@code pos}; {@code state} says what is going on there. */
-	public record OpenPayload(long pos, String address, String destination, String state) implements CustomPacketPayload {
+	public record OpenPayload(long pos, String address, String destination, String state, int machineIn, boolean machineOut, boolean machine)
+			implements CustomPacketPayload {
 		public static final Type<OpenPayload> TYPE = new Type<>(StorageDimensionMod.id("mailbox_open"));
 		public static final StreamCodec<RegistryFriendlyByteBuf, OpenPayload> CODEC = StreamCodec.composite(
 				ByteBufCodecs.VAR_LONG, OpenPayload::pos,
 				ByteBufCodecs.stringUtf8(64), OpenPayload::address,
 				ByteBufCodecs.stringUtf8(64), OpenPayload::destination,
 				ByteBufCodecs.stringUtf8(256), OpenPayload::state,
+				ByteBufCodecs.VAR_INT, OpenPayload::machineIn,
+				ByteBufCodecs.BOOL, OpenPayload::machineOut,
+				ByteBufCodecs.BOOL, OpenPayload::machine,
 				OpenPayload::new);
 
 		@Override
@@ -38,12 +42,14 @@ public final class MailboxNetworking {
 	}
 
 	/** Client to server: the addresses typed into the screen. */
-	public record SavePayload(long pos, String address, String destination) implements CustomPacketPayload {
+	public record SavePayload(long pos, String address, String destination, int machineIn, boolean machineOut) implements CustomPacketPayload {
 		public static final Type<SavePayload> TYPE = new Type<>(StorageDimensionMod.id("mailbox_save"));
 		public static final StreamCodec<RegistryFriendlyByteBuf, SavePayload> CODEC = StreamCodec.composite(
 				ByteBufCodecs.VAR_LONG, SavePayload::pos,
 				ByteBufCodecs.stringUtf8(64), SavePayload::address,
 				ByteBufCodecs.stringUtf8(64), SavePayload::destination,
+				ByteBufCodecs.VAR_INT, SavePayload::machineIn,
+				ByteBufCodecs.BOOL, SavePayload::machineOut,
 				SavePayload::new);
 
 		@Override
@@ -75,17 +81,23 @@ public final class MailboxNetworking {
 			data.setMailbox(dim, pos, mailbox);
 		}
 
-		ServerPlayNetworking.send(player, new OpenPayload(pos.asLong(), mailbox.address(), mailbox.destination(), state(level, pos, mailbox)));
+		send(player, level, pos, mailbox);
+	}
+
+	private static void send(ServerPlayer player, ServerLevel level, BlockPos pos, Mailbox mailbox) {
+		ServerPlayNetworking.send(player, new OpenPayload(pos.asLong(), mailbox.address(), mailbox.destination(), state(level, pos, mailbox),
+				mailbox.machineIn(), mailbox.machineOut(), Mailbox.hasMachine(level, pos)));
 	}
 
 	/** What the screen shows below the fields: chest beside it, post waiting, destination found or not. */
 	static String state(ServerLevel level, BlockPos pos, Mailbox mailbox) {
-		if (!Mailbox.hasChest(level, pos)) {
-			return "§cKeine Kiste daneben: stell eine Kiste (oder ein Fass) direkt an den Briefkasten.";
+		if (!Mailbox.hasChest(level, pos) && !(mailbox.machineOut() && Mailbox.hasMachine(level, pos))) {
+			return Mailbox.hasMachine(level, pos) ? "§cMaschine daneben, aber Eingang und Ausgang sind aus: stell unten ein, was der Briefkasten mit ihr macht."
+					: "§cKeine Kiste daneben: stell eine Kiste (oder ein Fass oder eine Maschine) direkt an den Briefkasten.";
 		}
 
 		List<ItemStack> waiting = Mailbox.waiting(level, pos, Mailbox.MAX_STACKS);
-		String post = waiting.isEmpty() ? "Keine Post in der Kiste." : "Post in der Kiste: " + waiting.size() + (waiting.size() >= Mailbox.MAX_STACKS ? "+" : "")
+		String post = waiting.isEmpty() ? "Keine Post da." : "Post wartet: " + waiting.size() + (waiting.size() >= Mailbox.MAX_STACKS ? "+" : "")
 				+ (waiting.size() == 1 ? " Stapel." : " Stapel.");
 
 		if (mailbox.destination().isEmpty()) {
@@ -114,10 +126,11 @@ public final class MailboxNetworking {
 		}
 
 		String dim = Rooms.id(level);
-		Mailbox mailbox = new Mailbox(clean(payload.address()), clean(payload.destination()));
+		Mailbox mailbox = new Mailbox(clean(payload.address()), clean(payload.destination()), Math.clamp(payload.machineIn(), Mailbox.IN_NONE, Mailbox.IN_FUEL),
+				payload.machineOut());
 		data.setMailbox(dim, pos, mailbox);
 		// the screen shows the new state (destination found or not)
-		ServerPlayNetworking.send(player, new OpenPayload(pos.asLong(), mailbox.address(), mailbox.destination(), state(level, pos, mailbox)));
+		send(player, level, pos, mailbox);
 	}
 
 	private static String clean(String text) {

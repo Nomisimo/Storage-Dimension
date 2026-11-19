@@ -257,11 +257,15 @@ Ein Klick nach **Abbauen** kommt **Erzsuche**: Strip Mining unter der Station. D
 
 Mit Briefkästen tragen die Roboter Items von einer Kiste zur anderen, zum Beispiel vom Abbau zum Lager oder vom Lager zum Ofen.
 
-- **Briefkasten:** Stell ihn direkt neben eine Kiste (oder ein Fass oder anderen Speicher, dieselben Regeln wie an der Station). Rechtsklick öffnet sein Fenster mit zwei Feldern:
+- **Briefkasten:** Stell ihn direkt neben eine Kiste (oder ein Fass oder anderen Speicher, dieselben Regeln wie an der Station) oder an eine Maschine. Rechtsklick öffnet sein Fenster mit zwei Feldern:
   - **Adresse:** sein Name. Unter dieser Adresse bekommt er Post. Ein frischer Briefkasten heißt „Briefkasten 1“, „Briefkasten 2“ …, ein im Amboss umbenannter trägt diesen Namen.
   - **Schickt an:** wohin er schickt. Alles, was in der Kiste daneben liegt, wird abgeholt und zum Briefkasten mit dieser Adresse gebracht. Leer heißt: er empfängt nur.
   - Darunter steht, ob eine Kiste daneben steht, wie viel Post wartet und ob das Ziel gefunden wurde.
 - **Empfangen:** Was ankommt, legt der Briefkasten in die Kiste daneben (auch in Dimensionskisten, Filterkisten und das ME-Terminal, also direkt ins ME). Aus Dimensionskisten, Filterkisten, ME-Terminals, Projektkisten und Enderkisten wird dagegen **nie** etwas abgeschickt, damit ein Briefkasten nicht den ganzen ME-Speicher leert.
+- **Maschinen:** Steht der Briefkasten direkt an einer Maschine (Ofen, Räucherofen, Schmelzofen, Braustand, Trichter oder Maschinen anderer Mods), stellst du im Fenster ein, was er mit ihr macht:
+  - **Ankommendes in Maschine: Zutaten / Brennstoff / aus.** Was ankommt, kommt in die Zutaten (wie ein Trichter von oben) oder in den Brennstoff (wie ein Trichter von der Seite). Was nicht mehr passt, kommt in die Kiste daneben.
+  - **Fertiges aus Maschine schicken: an / aus.** Der Briefkasten schickt auch, was fertig aus der Maschine kommt (ihr Ausgang, wie ein Trichter darunter), an sein Ziel. Zutaten und Brennstoff bleiben drin.
+  - Beispiel: Briefkasten „Ofen“ am Ofen mit Zutaten und Fertiges an, Ziel „Lager“. Bruchstein, der an „Ofen“ geschickt wird, landet im Ofen, und der fertige Stein geht von selbst ins Lager. Kohle schickt ein zweiter Briefkasten „Ofen Kohle“ mit Brennstoff an der anderen Seite des Ofens.
 - **Platzhalter:** `*` steht für beliebigen Text, `?` für ein Zeichen, Groß- und Kleinschreibung zählt nicht. „Lager*“ geht an „Lager Ost“ oder „Lager West“. Passen mehrere, bekommt der **nächste** mit Platz die Post. Mehrere Briefkästen dürfen gleich heißen.
 - **Fahne:** Wartet Post auf Abholung, steht die rote Fahne an der Seite des Briefkastens hoch.
 - **Kurier-Modus:** Ein Klick nach **Erzsuche** kommt **Kurier**. Die Roboter der Station bringen zuerst ihr Werkzeug zurück und tragen dann die Post: Sie holen bis zu 9 Stapel auf einmal (einen im Schnabel, den Rest im Beutel) und bringen sie Stapel für Stapel zum Ziel. Jeder Briefkasten wird nur von einem Roboter zur Zeit abgeholt, mehrere Roboter arbeiten an verschiedenen Briefkästen.

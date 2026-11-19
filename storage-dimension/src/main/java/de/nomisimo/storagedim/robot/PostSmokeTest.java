@@ -103,6 +103,7 @@ public final class PostSmokeTest {
 			errors.add("Adressen mit Platzhaltern passen falsch");
 		}
 
+		machineCheck(dim, errors);
 		robot = Robots.ROBOT.create(level, EntitySpawnReason.SPAWN_ITEM_USE);
 		robot.snapTo(station.getX() - 1.5, Y, station.getZ() + 1.5, 0, 0);
 		robot.setup(null, station);
@@ -128,6 +129,37 @@ public final class PostSmokeTest {
 				}
 			});
 		}
+	}
+
+	/**
+	 * A mailbox at a furnace (outside the station's range): what arrives goes into the ingredient slot, what is
+	 * sent comes from the output slot only, the fuel stays.
+	 */
+	private static void machineCheck(String dim, List<String> errors) {
+		BlockPos box = station.offset(-40, 0, 0);
+		BlockPos furnacePos = box.east();
+		level.setBlockAndUpdate(box.below(), Blocks.STONE.defaultBlockState());
+		level.setBlockAndUpdate(furnacePos, Blocks.FURNACE.defaultBlockState());
+		level.setBlockAndUpdate(box, MailboxBlock.BLOCK.defaultBlockState());
+		StorageData.get().setMailbox(dim, box, new Mailbox("Ofen", "Lager*", Mailbox.IN_INGREDIENTS, true));
+		Container furnace = (Container) level.getBlockEntity(furnacePos);
+		int stored = Mailbox.insert(level, box, new ItemStack(Items.COBBLESTONE, 8), false);
+
+		if (stored != 8 || !furnace.getItem(0).is(Items.COBBLESTONE)) {
+			errors.add("Briefkasten am Ofen: Zutat nicht im Ofen (" + stored + ", " + furnace.getItem(0) + ")");
+		}
+
+		furnace.setItem(1, new ItemStack(Items.COAL, 5));
+		furnace.setItem(2, new ItemStack(Items.STONE, 3));
+		List<ItemStack> taken = Mailbox.take(level, box, Mailbox.MAX_STACKS);
+
+		if (taken.size() != 1 || !taken.get(0).is(Items.STONE) || taken.get(0).getCount() != 3 || furnace.getItem(1).getCount() != 5
+				|| furnace.getItem(0).getCount() != 8) {
+			errors.add("Briefkasten am Ofen: holt " + taken + " statt nur 3 Stein, Ofen " + furnace.getItem(0) + "/" + furnace.getItem(1));
+		}
+
+		level.setBlockAndUpdate(box, Blocks.AIR.defaultBlockState());
+		level.setBlockAndUpdate(furnacePos, Blocks.AIR.defaultBlockState());
 	}
 
 	private static void mailbox(String dim, BlockPos pos, String address, String destination) {

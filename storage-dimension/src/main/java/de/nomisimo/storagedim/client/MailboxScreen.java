@@ -21,7 +21,7 @@ import net.minecraft.network.chat.Component;
 @Environment(EnvType.CLIENT)
 public class MailboxScreen extends Screen {
 	private static final int WIDTH = 236;
-	private static final int HEIGHT = 150;
+	private static final int HEIGHT = 196;
 	private static final int TEXT = 0xFF404040;
 
 	private MailboxNetworking.OpenPayload data;
@@ -29,12 +29,18 @@ public class MailboxScreen extends Screen {
 	private EditBox destination;
 	private String typedAddress;
 	private String typedDestination;
+	private int machineIn;
+	private boolean machineOut;
+	private Button inButton;
+	private Button outButton;
 
 	private MailboxScreen(MailboxNetworking.OpenPayload data) {
 		super(Component.literal("Briefkasten"));
 		this.data = data;
 		this.typedAddress = data.address();
 		this.typedDestination = data.destination();
+		this.machineIn = data.machineIn();
+		this.machineOut = data.machineOut();
 	}
 
 	/** The server opened the mailbox, or answered a save with the new state. */
@@ -44,6 +50,7 @@ public class MailboxScreen extends Screen {
 		if (minecraft.screen instanceof MailboxScreen screen && screen.data.pos() == payload.pos()) {
 			// only the state line changes; what is being typed stays
 			screen.data = payload;
+			screen.updateButtons();
 		} else {
 			minecraft.setScreen(new MailboxScreen(payload));
 		}
@@ -74,13 +81,41 @@ public class MailboxScreen extends Screen {
 		destination.setResponder(text -> typedDestination = text);
 		destination.setTooltip(Tooltip.create(Component.literal("Was in der Kiste daneben liegt, bringen die Kurier-Roboter zum Briefkasten mit dieser Adresse. "
 				+ "* steht für beliebigen Text, ? für ein Zeichen: „Ofen*“ geht an den nächsten Briefkasten, dessen Adresse mit Ofen anfängt.")));
+		inButton = addRenderableWidget(Button.builder(Component.empty(), b -> {
+			machineIn = (machineIn + 1) % 3;
+			updateButtons();
+			save();
+		}).bounds(l + 10, t + 88, WIDTH - 20, 16)
+				.tooltip(Tooltip.create(Component.literal("Steht eine Maschine (Ofen, Räucherofen, Braustand, Trichter, Maschinen anderer Mods) direkt am Briefkasten: "
+						+ "Was ankommt, kommt in ihre Zutaten (wie ein Trichter von oben) oder in den Brennstoff (wie ein Trichter von der Seite). "
+						+ "Was nicht passt, kommt in die Kiste daneben.")))
+				.build());
+		outButton = addRenderableWidget(Button.builder(Component.empty(), b -> {
+			machineOut = !machineOut;
+			updateButtons();
+			save();
+		}).bounds(l + 10, t + 108, WIDTH - 20, 16)
+				.tooltip(Tooltip.create(Component.literal("An: Der Briefkasten schickt auch, was fertig aus der Maschine kommt (ihren Ausgang, wie ein Trichter darunter), "
+						+ "an das Ziel oben. Zutaten und Brennstoff bleiben drin.")))
+				.build());
+		updateButtons();
 		addRenderableWidget(Button.builder(Component.literal("Speichern"), b -> save())
 				.bounds(l + WIDTH - 90, t + HEIGHT - 26, 80, 16).build());
 		setInitialFocus(address);
 	}
 
+	private void updateButtons() {
+		String in = machineIn == Mailbox.IN_INGREDIENTS ? "Zutaten" : machineIn == Mailbox.IN_FUEL ? "Brennstoff" : "aus";
+		inButton.setMessage(Component.literal("Ankommendes in Maschine: ").append(Component.literal(in)
+				.withStyle(machineIn == Mailbox.IN_NONE ? ChatFormatting.WHITE : ChatFormatting.GREEN)));
+		outButton.setMessage(Component.literal("Fertiges aus Maschine schicken: ").append(Component.literal(machineOut ? "an" : "aus")
+				.withStyle(machineOut ? ChatFormatting.GREEN : ChatFormatting.WHITE)));
+		inButton.active = data.machine() || machineIn != Mailbox.IN_NONE;
+		outButton.active = data.machine() || machineOut;
+	}
+
 	private void save() {
-		ClientPlayNetworking.send(new MailboxNetworking.SavePayload(data.pos(), typedAddress, typedDestination));
+		ClientPlayNetworking.send(new MailboxNetworking.SavePayload(data.pos(), typedAddress, typedDestination, machineIn, machineOut));
 	}
 
 	@Override
@@ -103,7 +138,8 @@ public class MailboxScreen extends Screen {
 		graphics.text(font, title, l + 10, t + 7, TEXT, false);
 		graphics.text(font, "Adresse", l + 10, t + 20, TEXT, false);
 		graphics.text(font, "Schickt an", l + 10, t + 54, TEXT, false);
-		graphics.textWithWordWrap(font, Component.literal(data.state()).withStyle(ChatFormatting.DARK_GRAY), l + 10, t + 86, WIDTH - 20, TEXT, false);
+		graphics.text(font, data.machine() ? "Maschine daneben" : "Keine Maschine daneben", l + 10, t + 79, TEXT, false);
+		graphics.textWithWordWrap(font, Component.literal(data.state()).withStyle(ChatFormatting.DARK_GRAY), l + 10, t + 130, WIDTH - 20, TEXT, false);
 	}
 
 	@Override
