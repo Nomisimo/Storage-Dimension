@@ -1,19 +1,23 @@
 package de.nomisimo.storagedim.storage;
 
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 
 import com.mojang.brigadier.CommandDispatcher;
+import com.mojang.brigadier.arguments.IntegerArgumentType;
 import com.mojang.brigadier.context.CommandContext;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
 
 import de.nomisimo.storagedim.StorageConfig;
 import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback;
 import net.minecraft.ChatFormatting;
+import net.minecraft.commands.CommandBuildContext;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
 import net.minecraft.commands.arguments.EntityArgument;
+import net.minecraft.commands.arguments.item.ItemArgument;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.item.ItemStack;
@@ -26,10 +30,10 @@ public final class StorageCommands {
 	}
 
 	public static void register() {
-		CommandRegistrationCallback.EVENT.register((dispatcher, buildContext, selection) -> register(dispatcher));
+		CommandRegistrationCallback.EVENT.register((dispatcher, buildContext, selection) -> register(dispatcher, buildContext));
 	}
 
-	private static void register(CommandDispatcher<CommandSourceStack> dispatcher) {
+	private static void register(CommandDispatcher<CommandSourceStack> dispatcher, CommandBuildContext buildContext) {
 		dispatcher.register(Commands.literal("storage")
 				.executes(StorageCommands::info)
 				.then(Commands.literal("info").executes(StorageCommands::info))
@@ -72,6 +76,13 @@ public final class StorageCommands {
 									send(player, "Klicke jetzt die Dimensionskiste an, die " + name(target) + " gehören soll.", ChatFormatting.YELLOW);
 									return 1;
 								}))))
+				.then(Commands.literal("einlagern")
+						.requires(Commands.hasPermission(Commands.LEVEL_GAMEMASTERS))
+						.then(Commands.argument("spieler", EntityArgument.players())
+								.then(Commands.argument("item", ItemArgument.item(buildContext))
+										.executes(ctx -> store(ctx, 1))
+										.then(Commands.argument("anzahl", IntegerArgumentType.integer(1))
+												.executes(ctx -> store(ctx, IntegerArgumentType.getInteger(ctx, "anzahl")))))))
 				.then(Commands.literal("give")
 						.requires(Commands.hasPermission(Commands.LEVEL_GAMEMASTERS))
 						.executes(ctx -> give(ctx.getSource().getPlayerOrException(), StorageItems.storageChest()))
@@ -201,6 +212,29 @@ public final class StorageCommands {
 		StorageData.markDirty();
 		send(player, name(target) + " wurde entfernt.", ChatFormatting.GREEN);
 		return 1;
+	}
+
+	/** /storage einlagern: puts items straight into the ME storage the players use, like /give but without inventory. */
+	private static int store(CommandContext<CommandSourceStack> ctx, int count) throws CommandSyntaxException {
+		Collection<ServerPlayer> targets = EntityArgument.getPlayers(ctx, "spieler");
+		ItemStack prototype = ItemArgument.getItem(ctx, "item").createItemStack(1, false);
+		StorageData data = StorageData.get();
+		java.util.Set<StorageNetwork> done = new java.util.HashSet<>();
+
+		for (ServerPlayer target : targets) {
+			StorageNetwork network = data.networkFor(target.getUUID());
+
+			// Players sharing one storage get the items once, not once per player.
+			if (done.add(network)) {
+				network.insert(prototype, count);
+			}
+		}
+
+		Component item = prototype.getDisplayName();
+		String who = targets.size() == 1 ? name(targets.iterator().next()) : targets.size() + " Spieler";
+		ctx.getSource().sendSuccess(() -> Component.literal(count + " × ").append(item)
+				.append(" ins ME-Netz von " + who + " gelegt" + (done.size() < targets.size() ? " (" + done.size() + " Speicher)" : "") + "."), true);
+		return done.size();
 	}
 
 	private static int give(ServerPlayer player, ItemStack stack) {
