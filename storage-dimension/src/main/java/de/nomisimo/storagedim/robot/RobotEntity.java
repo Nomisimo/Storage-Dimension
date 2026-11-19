@@ -1739,14 +1739,8 @@ public class RobotEntity extends PathfinderMob {
 			}
 		}
 
-		if (wears && !tool.isEmpty()) {
-			tool.hurtAndBreak(1, server, (ServerPlayer) null, item -> {
-			});
-
-			if (tool.isEmpty()) {
-				tools[kind] = ItemStack.EMPTY;
-				playSound(SoundEvents.ITEM_PICKUP, 0.6F, 0.5F);
-			}
+		if (wears) {
+			wear(server, kind, true);
 		}
 
 		mend(server, pos);
@@ -1811,13 +1805,8 @@ public class RobotEntity extends PathfinderMob {
 				area.dug(server, pos);
 				felled++;
 
-				if (log && !tool.isEmpty()) {
-					tool.hurtAndBreak(1, server, (ServerPlayer) null, item -> {
-					});
-
-					if (tool.isEmpty()) {
-						tools[kind] = ItemStack.EMPTY;
-					}
+				if (log) {
+					wear(server, kind, false);
 				}
 
 				open.add(pos);
@@ -1850,6 +1839,38 @@ public class RobotEntity extends PathfinderMob {
 		bag.add(drop.copy());
 		drop.setCount(0);
 		return true;
+	}
+
+	/**
+	 * The tool of this kind wears down by one (Unbreaking counts) and breaks when it is used up. A tool with Mending
+	 * never wears down at all: a robot's Mending tool lasts forever.
+	 */
+	private void wear(ServerLevel server, int kind, boolean sound) {
+		ItemStack tool = kind < 0 ? ItemStack.EMPTY : tools[kind];
+
+		if (tool.isEmpty() || !tool.isDamageableItem()) {
+			return;
+		}
+
+		if (enchantmentLevel(Enchantments.MENDING, tool) > 0) {
+			// one that was worn before (by a player or an older version) is whole again
+			if (tool.isDamaged()) {
+				tool.setDamageValue(0);
+			}
+
+			return;
+		}
+
+		tool.hurtAndBreak(1, server, (ServerPlayer) null, item -> {
+		});
+
+		if (tool.isEmpty()) {
+			tools[kind] = ItemStack.EMPTY;
+
+			if (sound) {
+				playSound(SoundEvents.ITEM_PICKUP, 0.6F, 0.5F);
+			}
+		}
 	}
 
 	/** Experience orbs around the block it dug repair its tools with Mending; without such a tool they stay for the players. */
@@ -2472,14 +2493,8 @@ public class RobotEntity extends PathfinderMob {
 				}
 			}
 
-			if (!tool.isEmpty() && state.getDestroySpeed(server, pos) > 0) {
-				tool.hurtAndBreak(1, server, (ServerPlayer) null, item -> {
-				});
-
-				if (tool.isEmpty()) {
-					tools[kind] = ItemStack.EMPTY;
-					playSound(SoundEvents.ITEM_PICKUP, 0.6F, 0.5F);
-				}
+			if (state.getDestroySpeed(server, pos) > 0) {
+				wear(server, kind, true);
 			}
 		}
 	}
