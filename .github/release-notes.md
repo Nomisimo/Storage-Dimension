@@ -1,5 +1,7 @@
 Storage Dimension für **Minecraft 26.1.2** (Fabric).
 
+**Neu in 0.8.6:** **Stations-Verbund:** Roboter-Stationen, die direkt nebeneinander auf derselben Höhe stehen, arbeiten als eine große Station. Jede Station gibt **32 Roboter** und **einen Chunk Reichweite** mehr (die Antennen-Area wird 16 Blöcke größer), bis 8 Stationen mit 256 Robotern und 17 Chunks. Rechtsklick auf jede Station öffnet das gemeinsame Fenster der Hauptstation. Kisten an jeder Station sind Ein- und Ausgang, und Werkzeug- oder Filterkiste dürfen an jeder Station stehen. Alle Roboter teilen sich eine Abbau-Liste, also gibt es keine doppelte Arbeit, und die 9 × 9 Plattform bleibt um jede Station stehen. Im Verbund sieht die Hauptstation wie ein Leitstand aus, die anderen wie Roboter-Docks, und Leitungen auf der Oberseite verbinden sie. Roboter einer Station, die dazukommt, ziehen von selbst zur Hauptstation. Wird die Hauptstation abgebaut, übernimmt die Nachbarstation. Server und alle Spieler brauchen 0.8.6.
+
 **Neu in 0.8.5.2:** Neuer OP-Befehl `/storage einlagern <spieler> <item> [anzahl]` legt Items direkt ins ME-Netz eines Spielers, mit Komponenten wie bei `/give`. Beispiel für die Server-Konsole: `storage einlagern Steve minecraft:diamond_pickaxe[enchantments={mending:1}] 32`. Spieler, die sich einen Speicher teilen, bekommen die Items nur einmal. Server und alle Spieler brauchen 0.8.5.2.
 
 **Neu in 0.8.5.1:** Werkzeuge mit **Reparatur (Mending)** gehen bei Robotern **nie mehr kaputt**. Sie verlieren beim Abbauen, Bäumefällen und Erzsuchen keine Haltbarkeit, und ein schon abgenutztes Mending-Werkzeug ist beim nächsten Block wieder heil. Vorher konnten z. B. Diamant-Spitzhacken mit Mending trotzdem zerbrechen, wenn nicht genug Erfahrung in der Nähe war. Server und alle Spieler brauchen 0.8.5.1.
@@ -46,14 +48,14 @@ Storage Dimension für **Minecraft 26.1.2** (Fabric).
 
 ## Server, in den Ordner `mods`
 
-- `storage-dimension-0.8.5.2.jar`
-- `storagedim-tb-0.8.5.2.jar`
+- `storage-dimension-0.8.6.jar`
+- `storagedim-tb-0.8.6.jar`
 - dazu [Fabric API](https://modrinth.com/mod/fabric-api), [Traveler's Backpack](https://modrinth.com/mod/travelersbackpack) und [Forge Config API Port](https://modrinth.com/mod/forge-config-api-port), alle für 26.1.2
 
 ## Jeder Spieler, in den Ordner `mods`
 
-- `storage-dimension-0.8.5.2.jar`
-- `storagedim-tb-0.8.5.2.jar`
+- `storage-dimension-0.8.6.jar`
+- `storagedim-tb-0.8.6.jar`
 - dazu [Fabric API](https://modrinth.com/mod/fabric-api), [Traveler's Backpack](https://modrinth.com/mod/travelersbackpack), [Forge Config API Port](https://modrinth.com/mod/forge-config-api-port) und [JEI](https://modrinth.com/mod/jei), alle für 26.1.2
 
 ## Nur Storage Dimension, ohne Traveler's Backpack
