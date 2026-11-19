@@ -141,7 +141,7 @@ public final class PostSmokeTest {
 		level.setBlockAndUpdate(box.below(), Blocks.STONE.defaultBlockState());
 		level.setBlockAndUpdate(furnacePos, Blocks.FURNACE.defaultBlockState());
 		level.setBlockAndUpdate(box, MailboxBlock.BLOCK.defaultBlockState());
-		StorageData.get().setMailbox(dim, box, new Mailbox("Ofen", "Lager*", Mailbox.IN_INGREDIENTS, true));
+		StorageData.get().setMailbox(dim, box, new Mailbox("Ofen", "Lager*"));
 		Container furnace = (Container) level.getBlockEntity(furnacePos);
 		int stored = Mailbox.insert(level, box, new ItemStack(Items.COBBLESTONE, 8), false);
 
@@ -149,7 +149,13 @@ public final class PostSmokeTest {
 			errors.add("Briefkasten am Ofen: Zutat nicht im Ofen (" + stored + ", " + furnace.getItem(0) + ")");
 		}
 
-		furnace.setItem(1, new ItemStack(Items.COAL, 5));
+		// fuel goes into the fuel slot by itself
+		stored = Mailbox.insert(level, box, new ItemStack(Items.COAL, 5), false);
+
+		if (stored != 5 || !furnace.getItem(1).is(Items.COAL)) {
+			errors.add("Briefkasten am Ofen: Kohle nicht im Brennstoff (" + stored + ", " + furnace.getItem(0) + "/" + furnace.getItem(1) + ")");
+		}
+
 		furnace.setItem(2, new ItemStack(Items.STONE, 3));
 		List<ItemStack> taken = Mailbox.take(level, box, Mailbox.MAX_STACKS);
 
