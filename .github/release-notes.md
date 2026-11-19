@@ -1,6 +1,6 @@
 Storage Dimension für **Minecraft 26.1.2** (Fabric).
 
-**Neu in 0.8.6:** Werkzeuge mit **Reparatur (Mending)** gehen bei Robotern **nie mehr kaputt**. Sie verlieren beim Abbauen, Bäumefällen und Erzsuchen keine Haltbarkeit, und ein schon abgenutztes Mending-Werkzeug ist beim nächsten Block wieder heil. Vorher konnten z. B. Diamant-Spitzhacken mit Mending trotzdem zerbrechen, wenn nicht genug Erfahrung in der Nähe war. Server und alle Spieler brauchen 0.8.6.
+**Neu in 0.8.5.1:** Werkzeuge mit **Reparatur (Mending)** gehen bei Robotern **nie mehr kaputt**. Sie verlieren beim Abbauen, Bäumefällen und Erzsuchen keine Haltbarkeit, und ein schon abgenutztes Mending-Werkzeug ist beim nächsten Block wieder heil. Vorher konnten z. B. Diamant-Spitzhacken mit Mending trotzdem zerbrechen, wenn nicht genug Erfahrung in der Nähe war. Server und alle Spieler brauchen 0.8.5.1.
 
 **Neu in 0.8.5:** In der Station steht beim **Abbau** und bei der **Erzsuche** jetzt, wie viel Prozent schon fertig sind, mit Fortschrittsbalken über der Roboterliste. Der Wert wird mit der Welt gespeichert und bleibt nach einem Neustart erhalten. **Erzsuche:** Gänge enden jetzt dort, wo sie aus dem Boden kommen (Tal, See, Meer), statt als Bruchsteinbrücke durch die Luft weiterzugehen; dort gibt es ohnehin keine Erze. Server und alle Spieler brauchen 0.8.5.
 
@@ -40,18 +40,18 @@ Storage Dimension für **Minecraft 26.1.2** (Fabric).
 
 **Neu in 0.4.1:** Im ME-Speicher (auch über das Rucksack-Upgrade) und im Filter-Fenster lassen sich Items im eigenen Inventar wieder ziehen und verteilen sowie per Doppelklick sammeln; vorher sprangen sie zurück in die Hand.
 
-**Neu in 0.4.0:** Sammelroboter, eigene Texturen für Dimensionskiste, Filterkiste, ME-Terminal und die ME-Items, Rezepte in JEI, Anbindung an Maschinen (z. B. Tech Reborn), doppelte Filterkisten mit 14 Filtern. Ab dieser Version brauchen **alle Spieler** `storage-dimension-0.8.6.jar`.
+**Neu in 0.4.0:** Sammelroboter, eigene Texturen für Dimensionskiste, Filterkiste, ME-Terminal und die ME-Items, Rezepte in JEI, Anbindung an Maschinen (z. B. Tech Reborn), doppelte Filterkisten mit 14 Filtern. Ab dieser Version brauchen **alle Spieler** `storage-dimension-0.8.5.1.jar`.
 
 ## Server, in den Ordner `mods`
 
-- `storage-dimension-0.8.6.jar`
-- `storagedim-tb-0.8.6.jar`
+- `storage-dimension-0.8.5.1.jar`
+- `storagedim-tb-0.8.5.1.jar`
 - dazu [Fabric API](https://modrinth.com/mod/fabric-api), [Traveler's Backpack](https://modrinth.com/mod/travelersbackpack) und [Forge Config API Port](https://modrinth.com/mod/forge-config-api-port), alle für 26.1.2
 
 ## Jeder Spieler, in den Ordner `mods`
 
-- `storage-dimension-0.8.6.jar`
-- `storagedim-tb-0.8.6.jar`
+- `storage-dimension-0.8.5.1.jar`
+- `storagedim-tb-0.8.5.1.jar`
 - dazu [Fabric API](https://modrinth.com/mod/fabric-api), [Traveler's Backpack](https://modrinth.com/mod/travelersbackpack), [Forge Config API Port](https://modrinth.com/mod/forge-config-api-port) und [JEI](https://modrinth.com/mod/jei), alle für 26.1.2
 
 ## Nur Storage Dimension, ohne Traveler's Backpack
