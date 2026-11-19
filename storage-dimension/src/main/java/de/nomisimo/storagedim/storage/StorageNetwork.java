@@ -63,6 +63,23 @@ public class StorageNetwork {
 		StorageData.markDirty();
 	}
 
+	/** Adds {@code count} copies of the prototype, beyond any stack limit (used by /storage einlagern). */
+	public void insert(ItemStack prototype, long count) {
+		if (prototype.isEmpty() || count <= 0) {
+			return;
+		}
+
+		StoredItem entry = find(prototype);
+
+		if (entry == null) {
+			items.add(new StoredItem(prototype.copyWithCount(1), count));
+		} else {
+			entry.count += count;
+		}
+
+		StorageData.markDirty();
+	}
+
 	/**
 	 * Removes up to {@code amount} items matching the prototype and returns them as a stack. What blocking projects
 	 * keep stays in, see {@link Projects}.
