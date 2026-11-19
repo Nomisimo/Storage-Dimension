@@ -217,7 +217,7 @@ public final class StorageCommands {
 	/** /storage einlagern: puts items straight into the ME storage the players use, like /give but without inventory. */
 	private static int store(CommandContext<CommandSourceStack> ctx, int count) throws CommandSyntaxException {
 		Collection<ServerPlayer> targets = EntityArgument.getPlayers(ctx, "spieler");
-		ItemStack prototype = ItemArgument.getItem(ctx, "item").createItemStack(1, false);
+		ItemStack prototype = ItemArgument.getItem(ctx, "item").createItemStack(1);
 		StorageData data = StorageData.get();
 		java.util.Set<StorageNetwork> done = new java.util.HashSet<>();
 
