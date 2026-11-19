@@ -36,11 +36,12 @@ public final class StationNetworking {
 
 	/**
 	 * Server to client: the station's settings and its robots (names and what each is doing). {@code progress}: how
-	 * far the mining is in tenths of a percent, -1 while not known or not mining.
+	 * far the mining is in tenths of a percent, -1 while not known or not mining. {@code stations}: how many stations
+	 * the group has (1 for a single station), {@code maxRobots}: how many robots it can have.
 	 */
 	public record SyncPayload(int containerId, String stationName, String robotName, int range, int color, boolean exclude,
 			int antennas, String areaName, String areaSize, String areaState, List<Component> names, List<Component> states, boolean mining, boolean oreSearch,
-			int loadedChunks, int progress) implements CustomPacketPayload {
+			int loadedChunks, int progress, int stations, int maxRobots) implements CustomPacketPayload {
 		public static final Type<SyncPayload> TYPE = new Type<>(StorageDimensionMod.id("station_sync"));
 		public static final StreamCodec<RegistryFriendlyByteBuf, SyncPayload> CODEC = StreamCodec.of((buf, payload) -> {
 			buf.writeVarInt(payload.containerId);
@@ -64,6 +65,8 @@ public final class StationNetworking {
 			buf.writeBoolean(payload.oreSearch);
 			buf.writeVarInt(payload.loadedChunks);
 			buf.writeVarInt(payload.progress + 1);
+			buf.writeVarInt(payload.stations);
+			buf.writeVarInt(payload.maxRobots);
 		}, buf -> {
 			int containerId = buf.readVarInt();
 			String stationName = buf.readUtf();
@@ -88,8 +91,10 @@ public final class StationNetworking {
 			boolean oreSearch = buf.readBoolean();
 			int loadedChunks = buf.readVarInt();
 			int progress = buf.readVarInt() - 1;
+			int stations = buf.readVarInt();
+			int maxRobots = buf.readVarInt();
 			return new SyncPayload(containerId, stationName, robotName, range, color, exclude, antennas, areaName, areaSize, areaState, names, states, mining,
-					oreSearch, loadedChunks, progress);
+					oreSearch, loadedChunks, progress, stations, maxRobots);
 		});
 
 		@Override

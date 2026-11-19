@@ -127,7 +127,7 @@ public final class StationChunks {
 			return chunks;
 		}
 
-		int range = Math.clamp(config.range(), 16, RobotEntity.RANGE) + MARGIN;
+		int range = Math.clamp(config.range(), 16, StationCluster.MAX_RANGE) + MARGIN;
 		int sx = station.getX();
 		int sz = station.getZ();
 

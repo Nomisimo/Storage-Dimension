@@ -207,6 +207,10 @@ public class RobotEntity extends PathfinderMob {
 	private long nextSearch;
 	/** The robot station it belongs to, or null for a robot without one (its home is where it was placed). */
 	private BlockPos station;
+	/** The stations of its station's group, its own (the main station) first; just its station when it stands alone. */
+	private List<BlockPos> groupMembers = List.of();
+	/** The largest range of its station's group (10 chunks for a single station, one more per further station). */
+	private int groupRange = RANGE;
 	private long homeUnreachableUntil;
 	/** No chest or other storage right next to its station. */
 	private boolean noChest;
@@ -370,7 +374,7 @@ public class RobotEntity extends PathfinderMob {
 	}
 
 	private void applySettings(RobotConfig config, String name) {
-		int newRange = Math.clamp(config.range(), MIN_RANGE, RANGE);
+		int newRange = Math.clamp(config.range(), MIN_RANGE, StationCluster.MAX_RANGE);
 
 		if (newRange != range) {
 			range = newRange;
@@ -409,6 +413,19 @@ public class RobotEntity extends PathfinderMob {
 		}
 
 		String dim = Rooms.id(level());
+		// its station joined a group (the robots belong to the main station) or was broken next to one: it moves there
+		BlockPos moved = StationCluster.newHome(level(), station);
+
+		if (moved != null && !moved.equals(station)) {
+			StationRobots.unregister(dim, station, getUUID());
+			station = moved;
+			home = moved;
+			release();
+			dropMineTarget();
+		}
+
+		groupMembers = StationCluster.members(level(), station);
+		groupRange = StationCluster.maxRange(groupMembers.size());
 		String name = data.stationRobots(dim, station).get(getUUID());
 
 		if (name == null) {
@@ -465,7 +482,7 @@ public class RobotEntity extends PathfinderMob {
 		oreSearch = mining && stationConfig.oreSearch();
 		toolChest = stationConfig.toolChest().orElse(null);
 		int wasRange = workRange();
-		stationRange = Math.clamp(stationConfig.range(), MIN_RANGE, RANGE);
+		stationRange = Math.clamp(stationConfig.range(), MIN_RANGE, Math.max(MIN_RANGE, groupRange));
 
 		if (wasOres != oreSearch || was != mining || wasRange != workRange()) {
 			applyRange();
@@ -852,21 +869,27 @@ public class RobotEntity extends PathfinderMob {
 		return station != null ? station : home();
 	}
 
-	/** The chests and other storage blocks right next to its station (the six touching sides), in a fixed order. */
+	/**
+	 * The chests and other storage blocks right next to its station (the six touching sides), in a fixed order; in a
+	 * station group those next to every station of it, the main station's first.
+	 */
 	private List<BlockPos> stationContainers() {
 		List<BlockPos> containers = new ArrayList<>();
-		BlockPos centre = storageCentre();
+		List<BlockPos> centres = station != null && groupMembers.size() > 1 && groupMembers.get(0).equals(station) ? groupMembers : List.of(storageCentre());
+		BlockPos tools = toolSpot();
 
-		for (Direction side : Direction.values()) {
-			BlockPos pos = centre.relative(side);
+		for (BlockPos centre : centres) {
+			for (Direction side : Direction.values()) {
+				BlockPos pos = centre.relative(side);
 
-			// the tool chest of the mining robots only holds tools
-			if (pos.equals(toolChest) || pos.equals(toolSpot())) {
-				continue;
-			}
+				// the tool chest of the mining robots only holds tools; a chest between two stations counts once
+				if (pos.equals(toolChest) || pos.equals(tools) || containers.contains(pos)) {
+					continue;
+				}
 
-			if (level().isLoaded(pos) && isContainer(pos, side.getOpposite())) {
-				containers.add(pos);
+				if (level().isLoaded(pos) && isContainer(pos, side.getOpposite())) {
+					containers.add(pos);
+				}
 			}
 		}
 
@@ -932,7 +955,10 @@ public class RobotEntity extends PathfinderMob {
 			Direction side = null;
 
 			for (Direction direction : Direction.values()) {
-				if (pos.relative(direction).equals(storageCentre())) {
+				BlockPos beside = pos.relative(direction);
+
+				// in a station group the side facing whichever of its stations it stands next to
+				if (beside.equals(storageCentre()) || side == null && groupMembers.contains(beside)) {
 					side = direction;
 				}
 			}
@@ -1123,7 +1149,7 @@ public class RobotEntity extends PathfinderMob {
 	 * (at least one) all round. {minX, minZ, maxX, maxZ}, inclusive.
 	 */
 	public static int[] chunkSquare(BlockPos station, int range) {
-		int chunks = Math.max(1, Math.round(Math.clamp(range, MIN_RANGE, RANGE) / 16.0F));
+		int chunks = Math.max(1, Math.round(Math.clamp(range, MIN_RANGE, StationCluster.MAX_RANGE) / 16.0F));
 		int cx = station.getX() >> 4;
 		int cz = station.getZ() >> 4;
 		return new int[] {(cx - chunks) << 4, (cz - chunks) << 4, ((cx + chunks) << 4) + 15, ((cz + chunks) << 4) + 15};
@@ -1465,7 +1491,10 @@ public class RobotEntity extends PathfinderMob {
 
 		minY = Math.max(minY, level().getMinY());
 		maxY = Math.min(maxY, level().getMaxY());
-		return MiningJob.get(Rooms.id(level()), station, minX, minY, minZ, maxX, maxY, maxZ, level().getGameTime());
+		MiningJob job = MiningJob.get(Rooms.id(level()), station, minX, minY, minZ, maxX, maxY, maxZ, level().getGameTime());
+		// the platforms of the other stations of its group stay too
+		job.setGroup(groupMembers);
+		return job;
 	}
 
 	/**
@@ -3424,7 +3453,7 @@ public class RobotEntity extends PathfinderMob {
 		home = input.read("Home", BlockPos.CODEC).orElse(null);
 		entityData.set(COLOR, input.getIntOr("Color", DEFAULT_COLOR));
 		station = input.read("Station", BlockPos.CODEC).orElse(null);
-		range = Math.clamp(input.getIntOr("Range", RANGE), MIN_RANGE, RANGE);
+		range = Math.clamp(input.getIntOr("Range", RANGE), MIN_RANGE, StationCluster.MAX_RANGE);
 		applyRange();
 		filter.clear();
 		filter.addAll(input.read("Filter", ItemStack.CODEC.listOf()).orElse(List.of()));

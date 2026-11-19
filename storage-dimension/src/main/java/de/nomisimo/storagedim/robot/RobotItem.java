@@ -41,9 +41,14 @@ public class RobotItem extends Item {
 			return InteractionResult.FAIL;
 		}
 
-		if (StorageData.get().stationRobots(dim, config.station().get()).size() >= StationMenu.MAX_ROBOTS) {
+		// a station group takes 32 robots per station
+		int stations = StationCluster.size(level, config.station().get());
+		int max = StationCluster.maxRobots(stations);
+
+		if (StorageData.get().stationRobots(dim, config.station().get()).size() >= max) {
 			if (context.getPlayer() instanceof ServerPlayer player) {
-				player.sendSystemMessage(Component.literal("Diese Station hat schon " + StationMenu.MAX_ROBOTS + " Roboter.")
+				player.sendSystemMessage(Component.literal((stations > 1 ? "Dieser Stations-Verbund hat schon " : "Diese Station hat schon ") + max
+						+ " Roboter." + (stations < StationCluster.MAX_STATIONS ? " Stell eine weitere Station daneben für 32 mehr." : ""))
 						.withStyle(ChatFormatting.RED), true);
 			}
 

@@ -71,13 +71,22 @@ public class StorageJadePlugin implements IWailaPlugin {
 
 			if (data != null) {
 				String dim = Rooms.id(accessor.getLevel());
-				tag.putString("StationName", data.station(dim, accessor.getPosition()).stationName());
-				tag.putInt("Robots", data.stationRobots(dim, accessor.getPosition()).size());
-				de.nomisimo.storagedim.robot.StationArea area = data.stationArea(dim, accessor.getPosition());
+				// a station of a group shows its main station
+				net.minecraft.core.BlockPos pos = de.nomisimo.storagedim.robot.StationCluster.main(accessor.getLevel(), accessor.getPosition());
+				int stations = de.nomisimo.storagedim.robot.StationCluster.members(accessor.getLevel(), pos).size();
+				tag.putString("StationName", data.station(dim, pos).stationName());
+				tag.putInt("Robots", data.stationRobots(dim, pos).size());
+				tag.putInt("MaxRobots", de.nomisimo.storagedim.robot.StationCluster.maxRobots(stations));
+
+				if (stations > 1) {
+					tag.putString("Group", (pos.equals(accessor.getPosition()) ? "Hauptstation" : "Erweiterung") + " · Verbund aus " + stations + " Stationen");
+				}
+
+				de.nomisimo.storagedim.robot.StationArea area = data.stationArea(dim, pos);
 
 				if (area.connected()) {
-					String state = !area.enabled() ? "aus" : de.nomisimo.storagedim.robot.Areas.autoPaused(dim, accessor.getPosition()) ? "Pause" : "an";
-					tag.putString("Area", (area.name().isEmpty() ? "" : area.name() + " · ") + area.sizeText(accessor.getPosition()) + " · " + state);
+					String state = !area.enabled() ? "aus" : de.nomisimo.storagedim.robot.Areas.autoPaused(dim, pos) ? "Pause" : "an";
+					tag.putString("Area", (area.name().isEmpty() ? "" : area.name() + " · ") + area.sizeText(pos) + " · " + state);
 				} else if (area.hasAntenna()) {
 					tag.putString("Area", "1 von 2 Antennen");
 				}
@@ -102,8 +111,15 @@ public class StorageJadePlugin implements IWailaPlugin {
 				tooltip.add(Component.literal(name).withStyle(ChatFormatting.WHITE));
 			}
 
+			String group = data.getStringOr("Group", "");
+
+			if (!group.isEmpty()) {
+				tooltip.add(Component.literal(group).withStyle(ChatFormatting.GOLD));
+			}
+
 			if (data.contains("Robots")) {
-				tooltip.add(Component.literal("Roboter: " + data.getIntOr("Robots", 0) + "/" + StationMenu.MAX_ROBOTS).withStyle(ChatFormatting.GRAY));
+				tooltip.add(Component.literal("Roboter: " + data.getIntOr("Robots", 0) + "/" + data.getIntOr("MaxRobots", StationMenu.MAX_ROBOTS))
+						.withStyle(ChatFormatting.GRAY));
 			}
 
 			String area = data.getStringOr("Area", "");

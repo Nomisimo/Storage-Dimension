@@ -1,7 +1,13 @@
 {
   "variants": {
-    "": {
+    "part=single": {
       "model": "storagedim:block/robot_station"
+    },
+    "part=main": {
+      "model": "storagedim:block/robot_station_main"
+    },
+    "part=member": {
+      "model": "storagedim:block/robot_station_member"
     }
   }
 }
