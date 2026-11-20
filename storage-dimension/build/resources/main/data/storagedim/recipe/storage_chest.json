@@ -1,0 +1,18 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "pattern": [
+    "APA",
+    "PCP",
+    "APA"
+  ],
+  "key": {
+    "A": "minecraft:amethyst_shard",
+    "P": "minecraft:ender_pearl",
+    "C": "minecraft:chest"
+  },
+  "result": {
+    "id": "storagedim:dimension_chest",
+    "count": 1
+  }
+}

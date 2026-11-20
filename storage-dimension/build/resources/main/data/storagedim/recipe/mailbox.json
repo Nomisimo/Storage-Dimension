@@ -1,0 +1,18 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "pattern": [
+    "PIP",
+    "PCP",
+    "PPP"
+  ],
+  "key": {
+    "P": "#minecraft:planks",
+    "I": "minecraft:iron_ingot",
+    "C": "minecraft:chest"
+  },
+  "result": {
+    "id": "storagedim:mailbox",
+    "count": 1
+  }
+}
