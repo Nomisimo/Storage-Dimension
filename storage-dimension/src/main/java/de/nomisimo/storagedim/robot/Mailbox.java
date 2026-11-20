@@ -14,7 +14,7 @@ import com.mojang.serialization.codecs.RecordCodecBuilder;
 import de.nomisimo.storagedim.storage.Rooms;
 import de.nomisimo.storagedim.storage.StorageData;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
-import net.fabricmc.fabric.api.transfer.v1.item.InventoryStorage;
+import net.fabricmc.fabric.api.transfer.v1.item.ContainerStorage;
 import net.fabricmc.fabric.api.transfer.v1.item.ItemStorage;
 import net.fabricmc.fabric.api.transfer.v1.item.ItemVariant;
 import net.fabricmc.fabric.api.transfer.v1.storage.SlottedStorage;
@@ -271,7 +271,7 @@ public record Mailbox(String address, String destination) {
 	/** All slots of a machine, one by one, whatever side they are reachable from; null when it has none. */
 	private static SlottedStorage<ItemVariant> slotted(ServerLevel level, BlockPos pos) {
 		if (level.getBlockEntity(pos) instanceof Container container) {
-			return InventoryStorage.of(container, null);
+			return ContainerStorage.of(container, null);
 		}
 
 		return ItemStorage.SIDED.find(level, pos, null) instanceof SlottedStorage<ItemVariant> slotted ? slotted : null;
