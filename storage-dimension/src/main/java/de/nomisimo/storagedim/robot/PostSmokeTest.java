@@ -164,6 +164,26 @@ public final class PostSmokeTest {
 			errors.add("Briefkasten am Ofen: holt " + taken + " statt nur 3 Stein, Ofen " + furnace.getItem(0) + "/" + furnace.getItem(1));
 		}
 
+		// a slot in the address: "Ofen:1" puts even coal into slot 1 (the ingredients), not the fuel slot
+		if (Mailbox.slot("Ofen:1") != 0 || !Mailbox.pattern("Ofen : 2").equals("Ofen") || Mailbox.slot("Ofen") != -1 || Mailbox.slot("Ofen:0") != -1
+				|| Mailbox.slot("Uhr 12:3x") != -1) {
+			errors.add("Slot in der Adresse falsch gelesen");
+		}
+
+		for (int slot = 0; slot < furnace.getContainerSize(); slot++) {
+			furnace.setItem(slot, ItemStack.EMPTY);
+		}
+
+		stored = Mailbox.insert(level, box, new ItemStack(Items.COAL, 4), false, Mailbox.slot("Ofen:1"));
+
+		if (stored != 4 || !furnace.getItem(0).is(Items.COAL) || !furnace.getItem(1).isEmpty()) {
+			errors.add("Briefkasten am Ofen: Kohle an „Ofen:1“ nicht in Slot 1 (" + stored + ", " + furnace.getItem(0) + "/" + furnace.getItem(1) + ")");
+		}
+
+		if (Mailbox.machine(level, box) == null || Mailbox.machine(level, box).slots().size() != 3) {
+			errors.add("Briefkasten am Ofen: Bildschirm sieht die 3 Ofen-Slots nicht");
+		}
+
 		level.setBlockAndUpdate(box, Blocks.AIR.defaultBlockState());
 		level.setBlockAndUpdate(furnacePos, Blocks.AIR.defaultBlockState());
 	}

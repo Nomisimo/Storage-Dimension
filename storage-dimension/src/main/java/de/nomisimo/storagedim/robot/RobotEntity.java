@@ -271,6 +271,8 @@ public class RobotEntity extends PathfinderMob {
 	private BlockPos pickupBox;
 	/** The mailbox the post it carries goes to, or null (then it goes to the chests at its station). */
 	private BlockPos courierTo;
+	/** The machine slot (from 0) at {@code courierTo} the post it carries is addressed to, or -1. */
+	private int courierSlot = -1;
 	/** Since when the mailbox it brings post to has had no room or no way there (game time), or 0. */
 	private long courierBlockedSince;
 	/** The mailbox it brings post to has no room right now: it waits at its station. */
@@ -756,7 +758,8 @@ public class RobotEntity extends PathfinderMob {
 
 		// while it is busy it shows what it does; an old error from before does not count
 		if (!getCarried().isEmpty() && delivery != null && courierTo != null && delivery.equals(courierTo)) {
-			return Component.literal("Bringt ").append(getCarried().getHoverName()).append(" zu " + Mailbox.label((ServerLevel) level(), courierTo))
+			return Component.literal("Bringt ").append(getCarried().getHoverName()).append(" zu " + Mailbox.label((ServerLevel) level(), courierTo)
+					+ (courierSlot >= 0 ? ", Slot " + (courierSlot + 1) : ""))
 					.withStyle(ChatFormatting.GREEN);
 		}
 
@@ -968,7 +971,7 @@ public class RobotEntity extends PathfinderMob {
 	private int store(BlockPos pos, ItemStack stack, boolean simulate) {
 		// a mailbox of the parcel post puts it into the chest beside it
 		if (level().getBlockState(pos).is(MailboxBlock.BLOCK)) {
-			return Mailbox.insert((ServerLevel) level(), pos, stack, simulate);
+			return Mailbox.insert((ServerLevel) level(), pos, stack, simulate, pos.equals(courierTo) ? courierSlot : -1);
 		}
 
 		StorageNetwork network = networkAt(pos, stack);
@@ -1449,7 +1452,15 @@ public class RobotEntity extends PathfinderMob {
 			return null;
 		}
 
-		return Mailbox.resolve(server, box, other -> inRange(Vec3.atCenterOf(other)) && Mailbox.insert(server, other, post.get(0), true) > 0);
+		int slot = postSlot(server, box);
+		return Mailbox.resolve(server, box, other -> inRange(Vec3.atCenterOf(other)) && Mailbox.insert(server, other, post.get(0), true, slot) > 0);
+	}
+
+	/** The machine slot the mailbox's post is addressed to (from 0), or -1. */
+	private static int postSlot(ServerLevel server, BlockPos box) {
+		StorageData data = StorageData.get();
+		Mailbox mailbox = data == null ? null : data.mailbox(Rooms.id(server), box);
+		return mailbox == null ? -1 : Mailbox.slot(mailbox.destination());
 	}
 
 	/** At the mailbox: takes the post out of the chest beside it, one stack in the beak and the rest in its bag. */
@@ -1477,6 +1488,7 @@ public class RobotEntity extends PathfinderMob {
 		setItemSlot(EquipmentSlot.MAINHAND, taken.remove(0));
 		bag.addAll(taken);
 		courierTo = to;
+		courierSlot = postSlot(server, box);
 		courierBlockedSince = 0;
 		courierFull = false;
 		delivery = null;
@@ -3709,6 +3721,7 @@ public class RobotEntity extends PathfinderMob {
 		output.store("Bag", ItemStack.CODEC.listOf(), List.copyOf(bag));
 		output.store("Torches", ItemStack.OPTIONAL_CODEC, torches);
 		output.storeNullable("CourierTo", BlockPos.CODEC, courierTo);
+		output.putInt("CourierSlot", courierSlot);
 	}
 
 	@Override
@@ -3733,5 +3746,6 @@ public class RobotEntity extends PathfinderMob {
 		bag.addAll(input.read("Bag", ItemStack.CODEC.listOf()).orElse(List.of()));
 		torches = input.read("Torches", ItemStack.OPTIONAL_CODEC).orElse(ItemStack.EMPTY);
 		courierTo = input.read("CourierTo", BlockPos.CODEC).orElse(null);
+		courierSlot = input.getIntOr("CourierSlot", -1);
 	}
 }

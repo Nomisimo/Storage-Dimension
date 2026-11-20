@@ -14,8 +14,10 @@ import com.mojang.serialization.codecs.RecordCodecBuilder;
 import de.nomisimo.storagedim.storage.Rooms;
 import de.nomisimo.storagedim.storage.StorageData;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
+import net.fabricmc.fabric.api.transfer.v1.item.InventoryStorage;
 import net.fabricmc.fabric.api.transfer.v1.item.ItemStorage;
 import net.fabricmc.fabric.api.transfer.v1.item.ItemVariant;
+import net.fabricmc.fabric.api.transfer.v1.storage.SlottedStorage;
 import net.fabricmc.fabric.api.transfer.v1.storage.Storage;
 import net.fabricmc.fabric.api.transfer.v1.storage.StorageView;
 import net.fabricmc.fabric.api.transfer.v1.transaction.Transaction;
@@ -23,6 +25,7 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.Container;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
@@ -32,7 +35,8 @@ import net.minecraft.world.level.block.state.BlockState;
  * A mailbox of the parcel post: its own address, and the address it sends to. What lies in the chest beside it is
  * fetched by the courier robots of a station (mode "Kurier") and carried in their beak to the mailbox with that
  * address, which puts it into the chest beside it. Addresses may use wildcards: {@code *} for any text, {@code ?}
- * for one character; of several matching mailboxes the closest one with room gets it.
+ * for one character; of several matching mailboxes the closest one with room gets it. A slot number at the end of
+ * the destination ({@code "Ofen:2"}) sends into that slot of the machine beside the receiving mailbox.
  */
 public record Mailbox(String address, String destination) {
 	public static final Codec<Mailbox> CODEC = RecordCodecBuilder.create(i -> i.group(
@@ -42,6 +46,8 @@ public record Mailbox(String address, String destination) {
 	/** Stacks a courier takes along at a time: one in its beak, the rest in its bag (like a mining robot). */
 	public static final int MAX_STACKS = RobotEntity.BAG_SLOTS;
 	public static final int MAX_ADDRESS = 32;
+	/** Machine slots the screen shows (and a destination may name). */
+	public static final int MAX_MACHINE_SLOTS = 36;
 	/** Mailbox (dimension@packed position) to the courier robot on its way there to fetch the post. */
 	private static final Map<String, UUID> CLAIMED = new HashMap<>();
 
@@ -82,6 +88,32 @@ public record Mailbox(String address, String destination) {
 	}
 
 	// ---- addresses ----
+
+	/**
+	 * The machine slot a destination names, counted from 0, or -1: {@code "Ofen:2"} sends into slot 2 (counted from
+	 * 1 as the screen shows it) of the machine beside the mailbox "Ofen".
+	 */
+	public static int slot(String destination) {
+		int colon = destination.lastIndexOf(':');
+
+		if (colon < 0 || colon == destination.length() - 1) {
+			return -1;
+		}
+
+		String number = destination.substring(colon + 1).strip();
+
+		if (number.isEmpty() || number.length() > 3 || !number.chars().allMatch(Character::isDigit)) {
+			return -1;
+		}
+
+		int slot = Integer.parseInt(number);
+		return slot >= 1 && slot <= MAX_MACHINE_SLOTS ? slot - 1 : -1;
+	}
+
+	/** The address part of a destination, without a slot number at the end. */
+	public static String pattern(String destination) {
+		return slot(destination) < 0 ? destination : destination.substring(0, destination.lastIndexOf(':')).strip();
+	}
 
 	/** The address matches the pattern (case does not matter; {@code *} any text, {@code ?} one character). */
 	public static boolean matches(String pattern, String address) {
@@ -133,7 +165,7 @@ public record Mailbox(String address, String destination) {
 		for (Map.Entry<Long, Mailbox> entry : data.mailboxes(dim).entrySet()) {
 			BlockPos pos = BlockPos.of(entry.getKey());
 
-			if (pos.equals(from) || !matches(sender.destination(), entry.getValue().address())) {
+			if (pos.equals(from) || !matches(pattern(sender.destination()), entry.getValue().address())) {
 				continue;
 			}
 
@@ -149,7 +181,7 @@ public record Mailbox(String address, String destination) {
 	/** Some mailbox has the address (or matches the pattern), wherever it is. */
 	public static boolean known(String dim, String pattern) {
 		StorageData data = StorageData.get();
-		return data != null && data.mailboxes(dim).values().stream().anyMatch(mailbox -> matches(pattern, mailbox.address()));
+		return data != null && data.mailboxes(dim).values().stream().anyMatch(mailbox -> matches(pattern(pattern), mailbox.address()));
 	}
 
 	/** The name shown for a mailbox: its address, or its position when it has none. */
@@ -236,6 +268,54 @@ public record Mailbox(String address, String destination) {
 				&& data.projectChest(dim, pos) == null;
 	}
 
+	/** All slots of a machine, one by one, whatever side they are reachable from; null when it has none. */
+	private static SlottedStorage<ItemVariant> slotted(ServerLevel level, BlockPos pos) {
+		if (level.getBlockEntity(pos) instanceof Container container) {
+			return InventoryStorage.of(container, null);
+		}
+
+		return ItemStorage.SIDED.find(level, pos, null) instanceof SlottedStorage<ItemVariant> slotted ? slotted : null;
+	}
+
+	/** The machines beside the mailbox with their slots one by one. */
+	private static List<BlockPos> machines(ServerLevel level, BlockPos pos) {
+		List<BlockPos> machines = new ArrayList<>();
+		StorageData data = StorageData.get();
+		String dim = Rooms.id(level);
+
+		for (Direction side : Direction.values()) {
+			BlockPos other = pos.relative(side);
+
+			if (level.isLoaded(other) && isMachine(level, other, data, dim) && slotted(level, other) != null) {
+				machines.add(other);
+			}
+		}
+
+		return machines;
+	}
+
+	/** The machine beside the mailbox as its screen shows it: name and what lies in its slots; null without one. */
+	public static MachineView machine(ServerLevel level, BlockPos pos) {
+		for (BlockPos other : machines(level, pos)) {
+			SlottedStorage<ItemVariant> slotted = slotted(level, other);
+			List<ItemStack> contents = new ArrayList<>();
+
+			for (int i = 0; i < Math.min(slotted.getSlotCount(), MAX_MACHINE_SLOTS); i++) {
+				StorageView<ItemVariant> view = slotted.getSlot(i);
+				contents.add(view.isResourceBlank() || view.getAmount() <= 0 ? ItemStack.EMPTY
+						: view.getResource().toStack((int) Math.min(view.getAmount(), 99)));
+			}
+
+			return new MachineView(level.getBlockState(other).getBlock().getName().getString(), contents);
+		}
+
+		return null;
+	}
+
+	/** A machine as the mailbox screen shows it. */
+	public record MachineView(String name, List<ItemStack> slots) {
+	}
+
 	/** Some storage block or machine stands beside the mailbox for what arrives. */
 	public static boolean hasChest(ServerLevel level, BlockPos pos) {
 		return !beside(level, pos, false).isEmpty();
@@ -313,14 +393,39 @@ public record Mailbox(String address, String destination) {
 
 	/** Puts as much of the stack as fits into the chests beside the mailbox (or only works it out) and says how many. */
 	public static int insert(ServerLevel level, BlockPos pos, ItemStack stack, boolean simulate) {
+		return insert(level, pos, stack, simulate, -1);
+	}
+
+	/**
+	 * Like {@link #insert(ServerLevel, BlockPos, ItemStack, boolean)}, but post addressed to a machine slot
+	 * ({@code slot} from 0, -1 for none) goes only into that slot of the machine beside the mailbox. Without a machine
+	 * that has the slot it goes in as usual.
+	 */
+	public static int insert(ServerLevel level, BlockPos pos, ItemStack stack, boolean simulate, int slot) {
 		if (stack.isEmpty()) {
 			return 0;
+		}
+
+		List<Storage<ItemVariant>> targets = new ArrayList<>();
+
+		if (slot >= 0) {
+			for (BlockPos machine : machines(level, pos)) {
+				SlottedStorage<ItemVariant> slotted = slotted(level, machine);
+
+				if (slotted != null && slot < slotted.getSlotCount()) {
+					targets.add(slotted.getSlot(slot));
+				}
+			}
+		}
+
+		if (targets.isEmpty()) {
+			targets = beside(level, pos, false);
 		}
 
 		try (Transaction transaction = Transaction.openOuter()) {
 			long stored = 0;
 
-			for (Storage<ItemVariant> storage : beside(level, pos, false)) {
+			for (Storage<ItemVariant> storage : targets) {
 				stored += storage.insert(ItemVariant.of(stack), stack.getCount() - stored, transaction);
 
 				if (stored >= stack.getCount()) {
