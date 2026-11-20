@@ -184,13 +184,20 @@ public final class DeepOreSmokeTest {
 		long below = robots.stream().filter(r -> !r.tool(0).isEmpty() && r.getY() < bottom + 8).count();
 
 		if (trapped != null) {
-			// the robot walled in deep down digs itself out and comes home
-			if (Math.abs(trapped.getX() - station.getX() - 0.5) < 5 && Math.abs(trapped.getZ() - station.getZ() - 0.5) < 5 && trapped.getY() >= station.getY() - 1) {
-				StorageDimensionMod.LOGGER.info("SMOKETEST Tiefe Erzsuche: eingemauerter Roboter nach {} Ticks frei und daheim", ticks - trappedAt);
+			// the robot walled in deep down digs itself out and comes back to the station; it may go straight back to
+			// work down the staircase from there, so it counts as home anywhere in the column over the staircase (the
+			// pocket is 8 blocks off to the side, well outside it), once it has stopped digging its own way
+			if (Math.abs(trapped.getX() - station.getX() - 0.5) < 5 && Math.abs(trapped.getZ() - station.getZ() - 0.5) < 5 && trapped.getY() > station.getY() - 12
+					&& !trapped.rescuing()) {
+				StorageDimensionMod.LOGGER.info("SMOKETEST Tiefe Erzsuche: eingemauerter Roboter nach {} Ticks frei und an der Treppe bei {}", ticks - trappedAt, trapped.blockPosition());
 				StationMining.toggle(level, Rooms.id(level), station);
 				finish(List.of());
 			} else if (ticks - trappedAt > 3000) {
 				finish(List.of("Tiefe Erzsuche: eingemauerter Roboter kam nicht frei: " + trapped.describeMining() + " " + trapped.status().getString() + " at " + trapped.blockPosition()));
+			}
+
+			if ((ticks - trappedAt) % 200 == 0) {
+				StorageDimensionMod.LOGGER.info("SMOKETEST Tief-Eingemauert {}: {} {} at {}", ticks - trappedAt, trapped.describeMining(), trapped.status().getString(), trapped.blockPosition());
 			}
 
 			return;
