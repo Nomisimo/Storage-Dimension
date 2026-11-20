@@ -2,7 +2,7 @@
 
 Ein Fabric-Mod für **Minecraft 26.1.2**: eine Bibliothek voller Kisten in einer eigenen Dimension, ein ME-Speicher ohne Stapelgrenzen und kleine Sammelroboter, die herumliegende Items einsammeln und einlagern.
 
-**Aktuelle Version: 0.8.6.** Die fertigen Dateien gibt es unter [Releases](https://github.com/Nomisimo/Storage-Dimension/releases), dort steht auch, welche Datei wohin gehört.
+**Aktuelle Version: 0.8.7.** Die fertigen Dateien gibt es unter [Releases](https://github.com/Nomisimo/Storage-Dimension/releases), dort steht auch, welche Datei wohin gehört.
 
 ![Dimensionskiste, Filterkiste, doppelte Filterkiste und ME-Terminal, davor der Sammelroboter](docs/screenshots/kisten-und-roboter.png)
 
@@ -19,11 +19,11 @@ Ein Fabric-Mod für **Minecraft 26.1.2**: eine Bibliothek voller Kisten in einer
 
 ## Installation
 
-`storage-dimension-0.8.6.jar` muss **auf dem Server und bei allen Spielern** im Ordner `mods` liegen.
+`storage-dimension-0.8.7.jar` muss **auf dem Server und bei allen Spielern** im Ordner `mods` liegen.
 
 1. Fabric Loader 0.19.5 oder neuer und [Fabric API](https://modrinth.com/mod/fabric-api) für 26.1.2 auf Server und Clients installieren.
-2. `storage-dimension-0.8.6.jar` (nicht die `-sources.jar`) in den `mods`-Ordner legen.
-3. Optional das [Traveler's-Backpack-Add-on](#me-rucksack-und-travelers-backpack) `storagedim-tb-0.8.6.jar` dazulegen, ebenfalls auf Server und Clients.
+2. `storage-dimension-0.8.7.jar` (nicht die `-sources.jar`) in den `mods`-Ordner legen.
+3. Optional das [Traveler's-Backpack-Add-on](#me-rucksack-und-travelers-backpack) `storagedim-tb-0.8.7.jar` dazulegen, ebenfalls auf Server und Clients.
 4. Server starten. Die Dimension `storagedim:storage` wird automatisch angelegt, die Daten liegen in `world/storagedim.json`.
 
 **Passt gut dazu (optional):** [JEI](https://modrinth.com/mod/jei) (Rezepte, Suche koppeln, „+“ im Rucksack), [Jade](https://modrinth.com/mod/jade) (Infos zu Robotern und Stationen), [Xaero's Minimap](https://modrinth.com/mod/xaeros-minimap) (Roboter auf der Karte). Getestet mit JEI 29.47.0.111, Jade 26.1.11 und Xaero's Minimap 26.6.2.
@@ -73,13 +73,15 @@ Eine uralte Kiste aus Tiefenschiefer mit Sculk-Rune. Hingestellt öffnet sie per
 
 ### ME-Speicher im Browser
 
-Der Server zeigt den ME-Speicher und die Projekte auch als Webseite, z. B. auf dem Handy neben dem Spiel.
+Der Server zeigt den ME-Speicher, die Projekte, die Roboter-Stationen und die Briefkästen auch als Webseite, z. B. auf dem Handy neben dem Spiel.
 
-- `/storage web` schickt dir einen anklickbaren Link (`http://<adresse>:8765/#…`). Die Seite aktualisiert sich alle 10 Sekunden.
+- **Zugang:** `/storage web` schickt dir einen anklickbaren Link (`http://<adresse>:8765/#…`). Wer die Seite ohne Link öffnet (anderes Gerät, anderer Browser, Lesezeichen), meldet sich mit **Minecraft-Name und Passwort** an. Das Passwort setzt du einmal im Spiel mit `/storage web passwort <passwort>` oder auf der Seite unter **Konto** (mindestens 6 Zeichen). Danach bleibt der Browser angemeldet. Die Seite aktualisiert sich alle 10 Sekunden.
 - **ME-Speicher:** alle Items mit Bild, Menge, Abteilung, Verzauberungen und Trank-Wirkung, mit Suche, Sortierung nach Menge oder A–Z und Filter nach Abteilung. Herausnehmen oder einlagern geht dort nicht.
 - **Projekte:** zeigt alle Projekte deines Speichers mit Fortschritt, was da ist und was fehlt. Du kannst dort neue Projekte anlegen, umbenennen, „Im ME blocken“ umschalten, Items über die Suche hinzufügen (Items im Speicher zuerst, dann alle Items des Spiels samt jedem Trank und Verzauberungsbuch), Mengen ändern und Items entfernen. Ein neues Projekt steht auch gleich in der Eingangshalle der Bibliothek.
-- Jeder Spieler sieht den Speicher, den er auch im Spiel benutzt. Der Link ist geheim: Wer ihn hat, sieht deinen Speicher und kann deine Projekte ändern. `/storage web neu` macht einen neuen Link, der alte geht dann nicht mehr. Die Links liegen in `world/storagedim-web.json`.
-- **Für den Server:** Der Port (`webPort`, Standard 8765) muss von außen erreichbar sein, bei einem Hoster also als zusätzlicher Port freigegeben. In `webAddress` gehört die Adresse, unter der die Spieler den Server erreichen (ohne Port), sonst steht im Link `localhost`. Läuft die Seite hinter einem Reverse-Proxy oder Tunnel mit HTTPS (z. B. Caddy, Tailscale Funnel), trägt man in `webAddress` den kompletten Anfang des Links ein, z. B. `https://mc.example.de:10000`; der wird dann genau so benutzt, ohne `http://` und `webPort` davor bzw. dahinter. Mit `webPort = 0` ist die Webseite aus.
+- **Stationen:** jede Roboter-Station (ein [Stations-Verbund](#stations-verbund) als eine) mit Modus, Ort, Area und beim Abbau und bei der Erzsuche dem Fortschritt in Prozent. Darunter jeder Roboter einzeln: was er gerade tut (wie in der Stationsliste, Fehler rot mit 🚫), Entfernung zur Station, Herzen und ob er fröhlich oder traurig ist. Oben steht, wie viele arbeiten, warten oder einen Fehler haben. Nur anschauen, eingestellt wird im Spiel.
+- **Briefkästen:** alle Briefkästen der [Paketpost](#paketpost-briefkasten-und-kurier) mit Ort, Fahne („Post wartet“) und derselben Zustandszeile wie im Fenster. **Adresse** und **Schickt an** lassen sich dort ändern, auch mit Platzhaltern und Slot (`Ofen:2`). Aufstellen musst du einen Briefkasten im Spiel. Stationen und Briefkästen gehören im Spiel niemandem, deshalb sieht jeder Spieler auf der Seite alle.
+- Jeder Spieler sieht den Speicher, den er auch im Spiel benutzt. Der Link ist geheim: Wer ihn hat, sieht deinen Speicher und kann deine Projekte und die Briefkästen ändern. `/storage web neu` macht einen neuen Link, der alte geht dann nicht mehr, und alle Geräte sind abgemeldet. Nach 5 falschen Passwörtern ist der Name eine Minute gesperrt. Links, Namen und Passwörter (nur als Hash) liegen in `world/storagedim-web.json`.
+- **Für den Server:** Der Port (`webPort`, Standard 8765) muss von außen erreichbar sein, bei einem Hoster also als zusätzlicher Port freigegeben. In `webAddress` gehört die Adresse, unter der die Spieler den Server erreichen (ohne Port), sonst steht im Link `localhost`. Läuft die Seite hinter einem Reverse-Proxy oder Tunnel mit HTTPS (z. B. Caddy, Tailscale Funnel), trägt man in `webAddress` den kompletten Anfang des Links ein, z. B. `https://mc.example.de:10000`; der wird dann genau so benutzt, ohne `http://` und `webPort` davor bzw. dahinter. Ohne HTTPS geht das Passwort beim Anmelden unverschlüsselt durchs Netz, nimm dafür also kein Passwort, das du woanders benutzt. Mit `webPort = 0` ist die Webseite aus.
 - Bilder von Minecraft-Items kommen aus einer öffentlichen Kopie der Spieltexturen (jsDelivr bzw. GitHub), die der Mod liefert der Server selbst. Ohne Internet oder bei Items anderer Mods steht statt des Bilds der Anfangsbuchstabe. Item-Namen sind auf Englisch, weil der Server nur die englischen Namen kennt.
 
 ![ME-Speicher im Browser](docs/screenshots/web-me.png)
@@ -314,7 +316,7 @@ Ein Rucksack, der mit dem Speicher verbunden ist und ihn von überall öffnet.
 
 ### Traveler's-Backpack-Add-on
 
-Das Add-on `storagedim-tb-0.8.6.jar` fügt ein echtes **ME-Upgrade** für den Upgrade-Slot von Traveler's Backpack hinzu. Es hat immer dieselbe Versionsnummer wie Storage Dimension.
+Das Add-on `storagedim-tb-0.8.7.jar` fügt ein echtes **ME-Upgrade** für den Upgrade-Slot von Traveler's Backpack hinzu. Es hat immer dieselbe Versionsnummer wie Storage Dimension.
 
 - **Rezept** (formlos): Leeres Upgrade (Traveler's Backpack), Enderauge, 2× Amethystscherbe, Redstoneblock. Mit dem Add-on ergibt auch das normale ME-Upgrade-Rezept (mit Papier) dieses Upgrade. Es passt in den Upgrade-Slot und macht mit einem Bündel auch einen ME-Rucksack.
 - **ME-Ansicht:** Upgrade in einen Upgrade-Slot legen. Linksklick auf das ME-Symbol zeigt den ME-Speicher direkt im Rucksack-Fenster an Stelle des Rucksack-Inhalts. Crafting und die anderen Upgrades bleiben daneben. Ein zweiter Linksklick zeigt wieder den Rucksack, Rechtsklick nimmt das Upgrade heraus.
@@ -333,7 +335,7 @@ Das Add-on `storagedim-tb-0.8.6.jar` fügt ein echtes **ME-Upgrade** für den Up
 - Der Rucksack muss nicht in der Hand sein: auf dem Rücken tragen und mit der Rucksack-Taste (Standard **B**) öffnen reicht.
 - **Crafting aus dem ME-Speicher:** Hat der Rucksack zusätzlich das Crafting-Upgrade, holt der „+“-Knopf von JEI fehlende Zutaten auch aus dem ME-Speicher, genauso wie aus Inventar und Rucksack. „+“ ist nur grün, wenn alle Zutaten zusammen vorhanden sind, sonst markiert JEI die fehlenden rot. Shift + „+“ füllt das Raster für so viele Durchgänge wie möglich (bis zu einem Stapel). Was vorher im Raster lag, kommt zurück ins Inventar oder, wenn das voll ist, in den Speicher.
 - Der kleine Schalter neben dem ME-Symbol stellt zwischen *ME als Quelle* (Standard) und *nur Inventar* um.
-- **Installation:** `storagedim-tb-0.8.6.jar` und `storage-dimension-0.8.6.jar` auf Server und Clients, dazu Traveler's Backpack, [Forge Config API Port](https://modrinth.com/mod/forge-config-api-port) und Fabric API. JEI wird nur für „+“ und die Rezeptanzeige gebraucht, Mod Menu (optional, nur im Client) für die Einstellungen.
+- **Installation:** `storagedim-tb-0.8.7.jar` und `storage-dimension-0.8.7.jar` auf Server und Clients, dazu Traveler's Backpack, [Forge Config API Port](https://modrinth.com/mod/forge-config-api-port) und Fabric API. JEI wird nur für „+“ und die Rezeptanzeige gebraucht, Mod Menu (optional, nur im Client) für die Einstellungen.
 
 ![ME-Ansicht im Rucksack mit Suchleiste, Sortierung und Knöpfen wie im ME-Speicher](docs/screenshots/rucksack-me-suche.png)
 
@@ -370,7 +372,8 @@ Alle Rezepte stehen auch in [JEI](https://modrinth.com/mod/jei), auch auf Server
 | `/storage` | Infos zum eigenen Speicher |
 | `/storage raus` | Verlässt die Bibliothek |
 | `/storage web` | Link zum ME-Speicher im Browser ([mehr](#me-speicher-im-browser)) |
-| `/storage web neu` | Neuer Link, der alte geht dann nicht mehr |
+| `/storage web neu` | Neuer Link, der alte geht dann nicht mehr (meldet alle Geräte ab) |
+| `/storage web passwort <passwort>` | Passwort für die Webseite: Anmelden mit Name und Passwort statt Link |
 | `/storage me` | Öffnet den ME-Speicher, wenn du einen ME-Rucksack trägst oder dabeihast |
 | `/storage teilen <spieler>` | Lädt jemanden in deinen Speicher ein (nur ohne gemeinsamen Speicher) |
 | `/storage annehmen` | Nimmt eine Einladung an. Dein eigener Speicher bleibt erhalten. |

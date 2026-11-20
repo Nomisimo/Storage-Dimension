@@ -10,14 +10,20 @@ import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.security.MessageDigest;
 import java.security.SecureRandom;
+import java.security.spec.KeySpec;
 import java.util.HexFormat;
+import java.util.Locale;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
+
+import javax.crypto.SecretKeyFactory;
+import javax.crypto.spec.PBEKeySpec;
 
 import com.google.gson.Gson;
 import com.google.gson.JsonObject;
@@ -35,11 +41,14 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.level.storage.LevelResource;
 
 /**
- * A small read-only web page that lists what is in a player's ME storage, for a browser or phone next to the game.
+ * A small web page for a browser or phone next to the game: the player's ME storage, projects, robot stations and
+ * mailboxes.
  * <p>
  * The server runs on {@code webPort} from config/storagedim.json. Every player gets a secret link with
- * {@code /storage web}; the token in it decides whose storage the page shows. Tokens are kept in
- * storagedim-web.json in the world folder, {@code /storage web neu} replaces a player's token.
+ * {@code /storage web}; the token in it decides whose storage the page shows. With a password
+ * ({@code /storage web passwort <passwort>} or on the page) a player can also log in with their name, on any device,
+ * and gets the same token. Tokens, names and password hashes are kept in storagedim-web.json in the world folder,
+ * {@code /storage web neu} replaces a player's token (and so logs out every device).
  */
 public final class WebView {
 	private static final Gson GSON = new Gson();
@@ -47,6 +56,22 @@ public final class WebView {
 	/** Token to player. */
 	private static final Map<String, UUID> TOKENS = new ConcurrentHashMap<>();
 	private static final int MAX_BODY = 16 * 1024;
+	/** Player to their account: name (for the login) and password hash. */
+	private static final Map<UUID, Account> ACCOUNTS = new ConcurrentHashMap<>();
+	/** Lower-case name to failed logins in a row and until when the name is locked. */
+	private static final Map<String, long[]> FAILURES = new ConcurrentHashMap<>();
+	private static final int MAX_FAILURES = 5;
+	private static final long LOCK_MS = 60_000;
+	public static final int MIN_PASSWORD = 6;
+	public static final int MAX_PASSWORD = 64;
+	private static final int ITERATIONS = 120_000;
+
+	/** {@code salt} and {@code hash} are hex, empty while no password is set. */
+	private record Account(String name, String salt, String hash) {
+		boolean hasPassword() {
+			return !hash.isEmpty();
+		}
+	}
 
 	private static MinecraftServer server;
 	private static HttpServer http;
@@ -119,6 +144,7 @@ public final class WebView {
 			return 0;
 		}
 
+		remember(player);
 		String token = tokenOf(player.getUUID());
 
 		if (token == null || renew) {
@@ -140,12 +166,167 @@ public final class WebView {
 		player.sendSystemMessage(Component.literal("Der Link ist geheim, wer ihn hat, sieht deinen Speicher. Neuer Link: /storage web neu")
 				.withStyle(ChatFormatting.GRAY));
 
+		if (!hasPassword(player.getUUID())) {
+			player.sendSystemMessage(Component.literal("Ohne Link anmelden (mit deinem Namen): /storage web passwort <passwort>")
+					.withStyle(ChatFormatting.GRAY));
+		}
+
 		if (StorageConfig.get().webAddress.isBlank()) {
 			player.sendSystemMessage(Component.literal("Läuft der Server nicht auf diesem PC, trage in config/storagedim.json bei webAddress die Adresse des Servers ein.")
 					.withStyle(ChatFormatting.GRAY));
 		}
 
 		return 1;
+	}
+
+	/** {@code /storage web passwort <passwort>}: sets the password for logging in with the player's name. */
+	public static int passwordCommand(ServerPlayer player, String password) {
+		String problem = setPassword(player.getUUID(), player.getGameProfile().name(), password);
+
+		if (problem != null) {
+			player.sendSystemMessage(Component.literal(problem).withStyle(ChatFormatting.RED));
+			return 0;
+		}
+
+		player.sendSystemMessage(Component.literal("Passwort gesetzt. Auf der Webseite meldest du dich jetzt mit „" + player.getGameProfile().name()
+				+ "“ und diesem Passwort an.").withStyle(ChatFormatting.AQUA));
+
+		if (http != null) {
+			String link = baseUrl() + "/";
+			player.sendSystemMessage(Component.literal(link)
+					.withStyle(style -> style.withClickEvent(new ClickEvent.OpenUrl(URI.create(link))).withUnderlined(true).withColor(ChatFormatting.YELLOW)));
+		}
+
+		return 1;
+	}
+
+	/** Keeps the player's current name, so they can log in with it. */
+	private static void remember(ServerPlayer player) {
+		String name = player.getGameProfile().name();
+		Account account = ACCOUNTS.get(player.getUUID());
+
+		if (account == null || !account.name().equals(name)) {
+			ACCOUNTS.put(player.getUUID(), account == null ? new Account(name, "", "") : new Account(name, account.salt(), account.hash()));
+			saveTokens();
+		}
+	}
+
+	private static boolean hasPassword(UUID player) {
+		Account account = ACCOUNTS.get(player);
+		return account != null && account.hasPassword();
+	}
+
+	/** Sets the password; returns what is wrong with it, or null. */
+	private static String setPassword(UUID player, String name, String password) {
+		if (password == null || password.length() < MIN_PASSWORD) {
+			return "Das Passwort braucht mindestens " + MIN_PASSWORD + " Zeichen.";
+		}
+
+		if (password.length() > MAX_PASSWORD) {
+			return "Das Passwort darf höchstens " + MAX_PASSWORD + " Zeichen haben.";
+		}
+
+		byte[] salt = randomBytes();
+		ACCOUNTS.put(player, new Account(name, HexFormat.of().formatHex(salt), HexFormat.of().formatHex(hash(password, salt))));
+
+		if (tokenOf(player) == null) {
+			TOKENS.put(HexFormat.of().formatHex(randomBytes()), player);
+		}
+
+		saveTokens();
+		return null;
+	}
+
+	private static byte[] hash(String password, byte[] salt) {
+		try {
+			KeySpec spec = new PBEKeySpec(password.toCharArray(), salt, ITERATIONS, 256);
+			return SecretKeyFactory.getInstance("PBKDF2WithHmacSHA256").generateSecret(spec).getEncoded();
+		} catch (Exception e) {
+			throw new IllegalStateException("PBKDF2 fehlt", e);
+		}
+	}
+
+	/** The player's token for a right name and password, otherwise an error JSON (wrong, or locked after several tries). */
+	private static String login(JsonObject body) {
+		String name = body != null && body.has("name") ? body.get("name").getAsString().strip() : "";
+		String password = body != null && body.has("password") ? body.get("password").getAsString() : "";
+		String key = name.toLowerCase(Locale.ROOT);
+		long now = System.currentTimeMillis();
+		long[] failures = FAILURES.get(key);
+
+		if (failures != null && failures[1] > now) {
+			return error("Zu viele Versuche. Warte eine Minute.");
+		}
+
+		boolean known = false;
+
+		for (Map.Entry<UUID, Account> entry : ACCOUNTS.entrySet()) {
+			Account account = entry.getValue();
+
+			if (account.hasPassword() && account.name().equalsIgnoreCase(name) && password.length() <= MAX_PASSWORD) {
+				known = true;
+				byte[] expected = HexFormat.of().parseHex(account.hash());
+
+				if (MessageDigest.isEqual(expected, hash(password, HexFormat.of().parseHex(account.salt())))) {
+					FAILURES.remove(key);
+					String token = tokenOf(entry.getKey());
+
+					if (token == null) {
+						token = HexFormat.of().formatHex(randomBytes());
+						TOKENS.put(token, entry.getKey());
+						saveTokens();
+					}
+
+					JsonObject result = new JsonObject();
+					result.addProperty("token", token);
+					result.addProperty("name", account.name());
+					return GSON.toJson(result);
+				}
+			}
+		}
+
+		// only names with a password count, so made-up names do not fill the map
+		if (known) {
+			long[] count = FAILURES.computeIfAbsent(key, k -> new long[2]);
+			count[0]++;
+
+			if (count[0] >= MAX_FAILURES) {
+				count[0] = 0;
+				count[1] = now + LOCK_MS;
+			}
+		}
+
+		return error("Name oder Passwort falsch. Kein Passwort? Setz eins im Spiel mit /storage web passwort <passwort>.");
+	}
+
+	/** {@code /api/account}: the player's name and whether a password is set; POST sets a new password. */
+	private static String account(MinecraftServer server, UUID player, JsonObject body) {
+		Account account = ACCOUNTS.get(player);
+		ServerPlayer online = server.getPlayerList().getPlayer(player);
+		String name = online != null ? online.getGameProfile().name() : account != null ? account.name() : "";
+
+		if (body != null) {
+			if (name.isEmpty()) {
+				return error("Dein Name ist noch nicht bekannt. Gib einmal im Spiel /storage web ein.");
+			}
+
+			String problem = setPassword(player, name, body.has("password") ? body.get("password").getAsString() : "");
+
+			if (problem != null) {
+				return error(problem);
+			}
+		}
+
+		JsonObject result = new JsonObject();
+		result.addProperty("name", name);
+		result.addProperty("password", hasPassword(player));
+		return GSON.toJson(result);
+	}
+
+	private static String error(String text) {
+		JsonObject result = new JsonObject();
+		result.addProperty("error", text);
+		return GSON.toJson(result);
 	}
 
 	private static byte[] randomBytes() {
@@ -185,6 +366,7 @@ public final class WebView {
 
 	private static void loadTokens() {
 		TOKENS.clear();
+		ACCOUNTS.clear();
 
 		if (!Files.exists(tokenFile)) {
 			return;
@@ -193,17 +375,51 @@ public final class WebView {
 		try (Reader reader = Files.newBufferedReader(tokenFile, StandardCharsets.UTF_8)) {
 			JsonObject root = GSON.fromJson(reader, JsonObject.class);
 
-			if (root != null) {
+			if (root == null) {
+				return;
+			}
+
+			if (!root.has("tokens")) {
+				// up to 0.8.6 the file only held player to token
 				root.entrySet().forEach(entry -> TOKENS.put(entry.getValue().getAsString(), UUID.fromString(entry.getKey())));
+				return;
+			}
+
+			root.getAsJsonObject("tokens").entrySet().forEach(entry -> TOKENS.put(entry.getValue().getAsString(), UUID.fromString(entry.getKey())));
+
+			if (root.has("accounts")) {
+				root.getAsJsonObject("accounts").entrySet().forEach(entry -> {
+					JsonObject a = entry.getValue().getAsJsonObject();
+					ACCOUNTS.put(UUID.fromString(entry.getKey()), new Account(string(a, "name"), string(a, "salt"), string(a, "hash")));
+				});
 			}
 		} catch (Exception e) {
 			StorageDimensionMod.LOGGER.error("storagedim-web.json konnte nicht gelesen werden", e);
 		}
 	}
 
-	private static void saveTokens() {
+	private static String string(JsonObject object, String key) {
+		return object.has(key) ? object.get(key).getAsString() : "";
+	}
+
+	private static synchronized void saveTokens() {
+		if (tokenFile == null) {
+			return;
+		}
+
 		JsonObject root = new JsonObject();
-		TOKENS.forEach((token, player) -> root.addProperty(player.toString(), token));
+		JsonObject tokens = new JsonObject();
+		TOKENS.forEach((token, player) -> tokens.addProperty(player.toString(), token));
+		root.add("tokens", tokens);
+		JsonObject accounts = new JsonObject();
+		ACCOUNTS.forEach((player, account) -> {
+			JsonObject a = new JsonObject();
+			a.addProperty("name", account.name());
+			a.addProperty("salt", account.salt());
+			a.addProperty("hash", account.hash());
+			accounts.add(player.toString(), a);
+		});
+		root.add("accounts", accounts);
 
 		try (Writer writer = Files.newBufferedWriter(tokenFile, StandardCharsets.UTF_8)) {
 			GSON.toJson(root, writer);
@@ -236,6 +452,26 @@ public final class WebView {
 
 	private static void api(HttpExchange exchange) throws IOException {
 		try (exchange) {
+			if (exchange.getRequestURI().getPath().equals("/api/login")) {
+				if (!exchange.getRequestMethod().equals("POST")) {
+					send(exchange, 404, "application/json", "{\"error\":\"Nicht gefunden.\"}");
+					return;
+				}
+
+				JsonObject body;
+
+				try {
+					body = GSON.fromJson(new String(exchange.getRequestBody().readNBytes(MAX_BODY), StandardCharsets.UTF_8), JsonObject.class);
+				} catch (Exception e) {
+					send(exchange, 400, "application/json", "{\"error\":\"Ungültige Anfrage.\"}");
+					return;
+				}
+
+				String json = login(body);
+				send(exchange, json.startsWith("{\"error\"") ? 403 : 200, "application/json", json);
+				return;
+			}
+
 			String auth = exchange.getRequestHeaders().getFirst("Authorization");
 			UUID player = auth != null && auth.startsWith("Bearer ") ? TOKENS.get(auth.substring(7).strip()) : null;
 
@@ -266,6 +502,9 @@ public final class WebView {
 				case "/api/items" -> post ? null : () -> WebContent.items(current, player);
 				case "/api/projects" -> post ? () -> WebContent.changeProject(current, player, body) : () -> WebContent.projects(current, player);
 				case "/api/catalog" -> post ? null : () -> WebContent.catalog(current);
+				case "/api/account" -> () -> account(current, player, body);
+				case "/api/stations" -> post ? null : () -> WebRobots.stations(current);
+				case "/api/mailboxes" -> post ? () -> WebRobots.changeMailbox(current, body) : () -> WebRobots.mailboxes(current);
 				default -> null;
 			};
 

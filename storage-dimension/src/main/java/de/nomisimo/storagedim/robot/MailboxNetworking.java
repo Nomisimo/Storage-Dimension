@@ -110,7 +110,7 @@ public final class MailboxNetworking {
 	}
 
 	/** What the screen shows below the fields: chest beside it, post waiting, destination found or not. */
-	static String state(ServerLevel level, BlockPos pos, Mailbox mailbox) {
+	public static String state(ServerLevel level, BlockPos pos, Mailbox mailbox) {
 		if (!Mailbox.hasChest(level, pos)) {
 			return "§cKeine Kiste und keine Maschine daneben: stell eine Kiste, ein Fass oder eine Maschine (z. B. einen Ofen) direkt an den Briefkasten.";
 		}
@@ -155,7 +155,7 @@ public final class MailboxNetworking {
 		send(player, level, pos, mailbox);
 	}
 
-	private static String clean(String text) {
+	public static String clean(String text) {
 		String trimmed = text.strip();
 		return trimmed.length() > Mailbox.MAX_ADDRESS ? trimmed.substring(0, Mailbox.MAX_ADDRESS) : trimmed;
 	}

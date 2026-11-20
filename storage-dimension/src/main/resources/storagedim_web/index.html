@@ -16,6 +16,8 @@
 		--accent-soft: #ece3f7;
 		--foil: #9b59d0;
 		--good: #2f8a4c;
+		--bad: #c0392b;
+		--warn: #a86b00;
 		color-scheme: light;
 	}
 
@@ -30,11 +32,14 @@
 			--accent-soft: #2e2540;
 			--foil: #c69bff;
 			--good: #6fcf8e;
+			--bad: #ff7b6b;
+			--warn: #f0c060;
 			color-scheme: dark;
 		}
 	}
 
 	* { box-sizing: border-box; }
+	[hidden] { display: none !important; }
 
 	body {
 		margin: 0;
@@ -250,6 +255,55 @@
 		font-size: 14px;
 		z-index: 5;
 	}
+
+	.tabs { flex-wrap: wrap; }
+	.top-right { display: flex; align-items: baseline; gap: 10px; }
+	.login {
+		max-width: 360px;
+		margin: 40px auto;
+		background: var(--panel);
+		border: 1px solid var(--line);
+		border-radius: 12px;
+		padding: 18px;
+		display: grid;
+		gap: 10px;
+	}
+	.login h2 { margin: 0; font-size: 18px; }
+	.login p { margin: 0; color: var(--muted); font-size: 14px; }
+	.login .err { color: var(--bad); }
+	.card {
+		background: var(--panel);
+		border: 1px solid var(--line);
+		border-radius: 12px;
+		padding: 12px;
+		margin-bottom: 12px;
+	}
+	.card-head { display: flex; gap: 8px; align-items: baseline; justify-content: space-between; flex-wrap: wrap; }
+	.card-head strong { font-size: 16px; }
+	.sub { color: var(--muted); font-size: 13px; }
+	.badge { font-size: 12px; border-radius: 999px; padding: 2px 8px; background: var(--accent-soft); color: var(--accent); white-space: nowrap; }
+	.bots { margin-top: 8px; display: grid; gap: 2px; }
+	.bot { display: flex; gap: 10px; align-items: center; padding: 5px 0; border-top: 1px solid var(--line); font-size: 14px; }
+	.bot .dot { flex: none; width: 10px; height: 10px; border-radius: 50%; background: var(--muted); box-shadow: 0 0 0 1px var(--line); }
+	.bot .bname { flex: none; width: 34%; min-width: 90px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+	.bot .bstate { flex: 1; min-width: 0; }
+	.bot .bmeta { flex: none; color: var(--muted); font-size: 12px; font-variant-numeric: tabular-nums; text-align: right; }
+	.tone-error { color: var(--bad); }
+	.tone-busy, .tone-ok { color: var(--good); }
+	.tone-idle, .tone-warn { color: var(--warn); }
+	.tone-pause { color: var(--accent); }
+	.tone-off { color: var(--muted); }
+	.summary { display: flex; gap: 12px; flex-wrap: wrap; font-size: 13px; margin-top: 6px; }
+	.mailbox-fields { display: grid; grid-template-columns: 1fr 1fr auto; gap: 8px; margin-top: 8px; align-items: end; }
+	.mailbox-fields label { display: grid; gap: 4px; font-size: 12px; color: var(--muted); }
+	.mailbox-fields input { width: 100%; }
+	.state-line { font-size: 13px; margin-top: 8px; }
+	@media (max-width: 560px) {
+		.mailbox-fields { grid-template-columns: 1fr; }
+		.bot { flex-wrap: wrap; }
+		.bot .bname { width: auto; }
+		.bot .bstate { flex-basis: 100%; order: 3; padding-left: 20px; }
+	}
 </style>
 </head>
 <body>
@@ -258,8 +312,13 @@
 		<div class="tabs" role="tablist">
 			<button class="tab" id="tab-items" role="tab" type="button">ME-Speicher</button>
 			<button class="tab" id="tab-projects" role="tab" type="button">Projekte</button>
+			<button class="tab" id="tab-stations" role="tab" type="button">Stationen</button>
+			<button class="tab" id="tab-mailboxes" role="tab" type="button">Briefkästen</button>
 		</div>
-		<div class="stats" id="stats"></div>
+		<div class="top-right">
+			<div class="stats" id="stats"></div>
+			<button class="icon-btn" id="account-btn" type="button" title="Konto" hidden>Konto</button>
+		</div>
 	</div>
 	<div id="items-controls">
 		<div class="controls">
@@ -283,6 +342,18 @@
 		<div class="grid" id="grid"></div>
 	</div>
 	<div id="projects-view" hidden></div>
+	<div id="stations-view" hidden></div>
+	<div id="mailboxes-view" hidden></div>
+	<div id="account-view" hidden></div>
+	<form class="login" id="login" hidden>
+		<h2>Anmelden</h2>
+		<p>Mit deinem Minecraft-Namen und dem Passwort, das du im Spiel mit <code>/storage web passwort …</code> gesetzt hast.</p>
+		<input id="login-name" placeholder="Minecraft-Name" autocomplete="username" autocapitalize="off" spellcheck="false" required>
+		<input id="login-password" type="password" placeholder="Passwort" autocomplete="current-password" required>
+		<button class="primary" type="submit">Anmelden</button>
+		<p class="err" id="login-error" hidden></p>
+		<p>Noch kein Passwort? Gib im Spiel <code>/storage web passwort &lt;passwort&gt;</code> ein. Oder öffne den Link von <code>/storage web</code>.</p>
+	</form>
 	<div class="message" id="message" hidden></div>
 </main>
 <script>
@@ -320,7 +391,12 @@
 	}
 
 	state.sort = store("storagedim-sort") === "name" ? "name" : "count";
-	state.view = store("storagedim-view") === "projects" ? "projects" : "items";
+	const VIEWS = ["items", "projects", "stations", "mailboxes", "account"];
+	const TITLES = { items: "ME-Speicher", projects: "Projekte", stations: "Stationen", mailboxes: "Briefkästen", account: "Konto" };
+	state.view = VIEWS.includes(store("storagedim-view")) ? store("storagedim-view") : "items";
+	state.stations = null;
+	state.mailboxes = null;
+	state.account = null;
 	el("sort").value = state.sort;
 
 	function short(n) {
@@ -701,7 +777,16 @@
 	// ---- loading ----
 
 	function renderStats() {
-		if (state.view === "items") {
+		if (state.view === "stations") {
+			const list = state.stations || [];
+			const bots = list.reduce((n, s) => n + s.robots.length, 0);
+			el("stats").textContent = state.stations === null ? "" : list.length + (list.length === 1 ? " Station · " : " Stationen · ") + bots + " Roboter";
+		} else if (state.view === "mailboxes") {
+			const list = state.mailboxes || [];
+			el("stats").textContent = state.mailboxes === null ? "" : list.length + (list.length === 1 ? " Briefkasten" : " Briefkästen");
+		} else if (state.view === "account") {
+			el("stats").textContent = "";
+		} else if (state.view === "items") {
 			el("stats").textContent = state.total === undefined ? "" : fmt.format(state.types) + " Sorten · " + fmt.format(state.total) + " Items" + (state.shared ? " · gemeinsamer Speicher" : "");
 		} else {
 			el("stats").textContent = state.projects.length + (state.projects.length === 1 ? " Projekt" : " Projekte");
@@ -710,14 +795,301 @@
 
 	function editing() {
 		const a = document.activeElement;
-		return a && el("projects-view").contains(a) && (a.tagName === "INPUT");
+		// a mailbox with changes not saved yet is not drawn anew either
+		const unsaved = state.view === "mailboxes" && [...el("mailboxes-view").querySelectorAll("input")].some(i => i.value !== i.dataset.saved);
+		return unsaved || a && a.tagName === "INPUT" && (el("projects-view").contains(a) || el("mailboxes-view").contains(a) || el("account-view").contains(a));
 	}
 
+	// ---- stations ----
+
+	const MOODS = { 1: "fröhlich", 2: "traurig", 3: "schaut dir zu" };
+
+	function percent(permille) {
+		return (Math.floor(permille) / 10).toFixed(1).replace(".", ",") + " %";
+	}
+
+	function where(x) {
+		return x.world + " · " + x.x + " / " + x.y + " / " + x.z;
+	}
+
+	function renderStations() {
+		const view = el("stations-view");
+		const list = state.stations || [];
+		if (!list.length) {
+			view.replaceChildren();
+			return message("Noch keine Roboter-Station", "Stell im Spiel eine Roboter-Station auf und setz Roboter hinein.");
+		}
+		clearMessage();
+		view.replaceChildren(...list.map(renderStation));
+	}
+
+	function renderStation(st) {
+		const card = document.createElement("div");
+		card.className = "card";
+		const head = document.createElement("div");
+		head.className = "card-head";
+		const title = document.createElement("div");
+		const name = document.createElement("strong");
+		name.textContent = st.name || "Roboter-Station";
+		const sub = document.createElement("div");
+		sub.className = "sub";
+		sub.textContent = where(st) + (st.stations > 1 ? " · Verbund aus " + st.stations + " Stationen" : "") + (st.area ? " · " + st.area + (st.areaOn ? "" : " (aus)") : "");
+		title.append(name, sub);
+		const mode = document.createElement("span");
+		mode.className = "badge";
+		mode.textContent = st.mode + (st.loaded ? "" : " · nicht geladen");
+		head.append(title, mode);
+		card.append(head);
+
+		if (st.progress >= 0) {
+			const bar = document.createElement("div");
+			bar.className = "progress" + (st.progress >= 1000 ? " done" : "");
+			const fill = document.createElement("div");
+			fill.style.width = Math.min(100, st.progress / 10) + "%";
+			bar.append(fill);
+			const text = document.createElement("div");
+			text.className = "psum";
+			text.textContent = (st.mode === "Erzsuche" ? "Erzsuche " : "Abbau ") + percent(st.progress) + " fertig";
+			card.append(bar, text);
+		}
+
+		const counts = { busy: 0, idle: 0, error: 0, off: 0, pause: 0 };
+		st.robots.forEach(r => { counts[r.error ? "error" : r.tone] = (counts[r.error ? "error" : r.tone] || 0) + 1; });
+		const summary = document.createElement("div");
+		summary.className = "summary";
+		const parts = [
+			[st.robots.length + " / " + st.maxRobots + " Roboter", ""],
+			[counts.busy + " arbeiten", "tone-busy"],
+			[counts.idle + " warten", "tone-idle"],
+			[counts.error + " mit Fehler", counts.error ? "tone-error" : "tone-off"]
+		];
+		if (counts.pause) parts.push([counts.pause + " Pause/Rückruf", "tone-pause"]);
+		if (counts.off) parts.push([counts.off + " nicht geladen", "tone-off"]);
+		if (st.keptLoaded) parts.push([st.keptLoaded + " Chunks geladen gehalten", "tone-off"]);
+		parts.forEach(([t, c]) => {
+			const span = document.createElement("span");
+			span.textContent = t;
+			if (c) span.className = c;
+			summary.append(span);
+		});
+		card.append(summary);
+
+		const bots = document.createElement("div");
+		bots.className = "bots";
+		st.robots.forEach(r => bots.append(renderBot(r)));
+		card.append(bots);
+		return card;
+	}
+
+	function renderBot(r) {
+		const row = document.createElement("div");
+		row.className = "bot";
+		const dot = document.createElement("span");
+		dot.className = "dot";
+		if (r.color) dot.style.background = r.color;
+		const name = document.createElement("span");
+		name.className = "bname";
+		name.textContent = (r.error ? "🚫 " : "") + r.name;
+		const status = document.createElement("span");
+		status.className = "bstate tone-" + (r.error ? "error" : r.tone);
+		status.textContent = r.status;
+		const meta = document.createElement("span");
+		meta.className = "bmeta";
+		if (r.loaded) {
+			const bits = [r.distance + " m"];
+			if (r.maxHealth) bits.push("♥ " + r.health + "/" + r.maxHealth);
+			if (MOODS[r.mood]) bits.push(MOODS[r.mood]);
+			meta.textContent = bits.join(" · ");
+		}
+		row.append(dot, name, status, meta);
+		return row;
+	}
+
+	// ---- mailboxes ----
+
+	function renderMailboxes() {
+		const view = el("mailboxes-view");
+		const list = state.mailboxes || [];
+		if (!list.length) {
+			view.replaceChildren();
+			return message("Noch kein Briefkasten", "Bau im Spiel einen Briefkasten (7 Bretter um eine Kiste, oben ein Eisenbarren) und stell ihn neben eine Kiste oder Maschine. Danach kannst du hier seine Adressen ändern.");
+		}
+		clearMessage();
+		const sorted = list.slice().sort((a, b) => (a.address || "").localeCompare(b.address || "", "de"));
+		view.replaceChildren(...sorted.map(renderMailbox));
+	}
+
+	function renderMailbox(box) {
+		const card = document.createElement("form");
+		card.className = "card";
+		const head = document.createElement("div");
+		head.className = "card-head";
+		const title = document.createElement("div");
+		const name = document.createElement("strong");
+		name.textContent = box.address || "Briefkasten ohne Adresse";
+		const sub = document.createElement("div");
+		sub.className = "sub";
+		sub.textContent = where(box);
+		title.append(name, sub);
+		head.append(title);
+		if (box.mail) {
+			const flag = document.createElement("span");
+			flag.className = "badge";
+			flag.textContent = "🚩 Post wartet";
+			head.append(flag);
+		}
+		card.append(head);
+
+		const fields = document.createElement("div");
+		fields.className = "mailbox-fields";
+		const field = (label, value, hint) => {
+			const l = document.createElement("label");
+			l.textContent = label;
+			const input = document.createElement("input");
+			input.value = value;
+			input.dataset.saved = value;
+			input.maxLength = state.maxAddress || 32;
+			input.placeholder = hint;
+			input.autocomplete = "off";
+			l.append(input);
+			fields.append(l);
+			return input;
+		};
+		const address = field("Adresse", box.address, "z. B. Ofen");
+		const destination = field("Schickt an", box.destination, "leer: empfängt nur · z. B. Lager oder Ofen:2");
+		const save = document.createElement("button");
+		save.className = "primary";
+		save.type = "submit";
+		save.textContent = "Speichern";
+		fields.append(save);
+		card.append(fields);
+
+		const line = document.createElement("div");
+		line.className = "state-line tone-" + box.tone;
+		line.textContent = box.state;
+		card.append(line);
+
+		card.addEventListener("submit", async e => {
+			e.preventDefault();
+			save.disabled = true;
+			try {
+				const data = await api("mailboxes", { dim: box.dim, x: box.x, y: box.y, z: box.z, address: address.value.trim(), destination: destination.value.trim() });
+				state.mailboxes = data.mailboxes;
+				document.activeElement && document.activeElement.blur();
+				renderMailboxes();
+				toast("Gespeichert");
+			} catch (err) {
+				save.disabled = false;
+				toast(err.unauthorized ? "Bitte neu anmelden" : err.message);
+			}
+		});
+		return card;
+	}
+
+	// ---- account ----
+
+	function renderAccount() {
+		const view = el("account-view");
+		clearMessage();
+		const a = state.account || { name: "", password: false };
+		const card = document.createElement("form");
+		card.className = "login";
+		card.style.margin = "12px auto";
+		const h = document.createElement("h2");
+		h.textContent = a.name ? "Angemeldet als " + a.name : "Konto";
+		const p = document.createElement("p");
+		p.textContent = a.password
+			? "Du kannst dich auf jedem Gerät mit deinem Namen und Passwort anmelden. Hier kannst du ein neues Passwort setzen."
+			: "Setz ein Passwort, dann meldest du dich auf jedem Gerät mit deinem Namen an, ohne Link aus dem Spiel.";
+		const pw = document.createElement("input");
+		pw.type = "password";
+		pw.placeholder = "Neues Passwort (mindestens 6 Zeichen)";
+		pw.autocomplete = "new-password";
+		pw.minLength = 6;
+		pw.maxLength = 64;
+		const set = document.createElement("button");
+		set.className = "primary";
+		set.type = "submit";
+		set.textContent = a.password ? "Passwort ändern" : "Passwort setzen";
+		const out = document.createElement("button");
+		out.className = "plain";
+		out.type = "button";
+		out.textContent = "Abmelden";
+		out.onclick = logout;
+		const hint = document.createElement("p");
+		hint.innerHTML = "Alle Geräte abmelden: im Spiel <code>/storage web neu</code>.";
+		card.append(h, p, pw, set, out, hint);
+		card.addEventListener("submit", async e => {
+			e.preventDefault();
+			try {
+				state.account = await api("account", { password: pw.value });
+				toast("Passwort gesetzt");
+				pw.value = "";
+				renderAccount();
+			} catch (err) {
+				toast(err.unauthorized ? "Bitte neu anmelden" : err.message);
+			}
+		});
+		view.replaceChildren(card);
+	}
+
+	// ---- login ----
+
+	function showLogin(text) {
+		token = "";
+		store("storagedim-token", "");
+		document.querySelector("header").hidden = true;
+		VIEWS.forEach(v => { el(v + "-view").hidden = true; });
+		el("items-controls").hidden = true;
+		el("projects-controls").hidden = true;
+		clearMessage();
+		el("login").hidden = false;
+		const err = el("login-error");
+		err.hidden = !text;
+		err.textContent = text || "";
+		document.title = "Anmelden";
+	}
+
+	function logout() {
+		showLogin("");
+	}
+
+	el("login").addEventListener("submit", async e => {
+		e.preventDefault();
+		const res = await fetch("api/login", {
+			method: "POST",
+			headers: { "Content-Type": "application/json" },
+			body: JSON.stringify({ name: el("login-name").value.trim(), password: el("login-password").value }),
+			cache: "no-store"
+		}).catch(() => null);
+		let data = {};
+		try { data = res ? await res.json() : {}; } catch (err) { /* empty answer */ }
+		if (!res || !data.token) {
+			el("login-error").hidden = false;
+			el("login-error").textContent = res ? data.error || "Anmelden ging nicht." : "Server nicht erreichbar.";
+			return;
+		}
+		token = data.token;
+		store("storagedim-token", token);
+		el("login-password").value = "";
+		el("login").hidden = true;
+		document.querySelector("header").hidden = false;
+		show(state.view);
+		load();
+	});
+
 	async function load() {
-		if (!token) return message("Kein Zugang", "Gib im Spiel <code>/storage web</code> ein und öffne den Link, den du bekommst.");
+		if (!token) return showLogin("");
+		if (!el("login").hidden) return;
 
 		try {
-			const [items, projects] = await Promise.all([api("items"), api("projects")]);
+			const extra = state.view === "stations" ? api("stations") : state.view === "mailboxes" ? api("mailboxes")
+				: state.view === "account" ? api("account") : Promise.resolve(null);
+			const [items, projects, more] = await Promise.all([api("items"), api("projects"), extra]);
+			el("account-btn").hidden = false;
+			if (more && more.stations) state.stations = more.stations;
+			if (more && more.mailboxes) { state.mailboxes = more.mailboxes; state.maxAddress = more.maxAddress; }
+			if (more && more.name !== undefined) state.account = more;
 			state.items = items.items;
 			state.types = items.types;
 			state.total = items.total;
@@ -725,31 +1097,43 @@
 			state.projects = projects.projects;
 			renderStats();
 			if (state.view === "items") renderItems();
-			else if (!editing()) renderProjects();
+			else if (!editing()) renderView();
 		} catch (e) {
-			if (e.unauthorized) message("Link ungültig", "Gib im Spiel <code>/storage web</code> ein und öffne den neuen Link.");
+			if (e.unauthorized) showLogin("Deine Anmeldung gilt nicht mehr (neuer Link mit /storage web neu?). Melde dich neu an.");
 			else el("stats").textContent = "Server nicht erreichbar, versuche es gleich wieder …";
 		}
 	}
 
+	function renderView() {
+		if (state.view === "items") renderItems();
+		else if (state.view === "projects") renderProjects();
+		else if (state.view === "stations") { if (state.stations !== null) renderStations(); }
+		else if (state.view === "mailboxes") { if (state.mailboxes !== null) renderMailboxes(); }
+		else renderAccount();
+	}
+
 	function show(view) {
+		const changed = state.view !== view;
 		state.view = view;
 		store("storagedim-view", view);
-		el("tab-items").setAttribute("aria-selected", String(view === "items"));
-		el("tab-projects").setAttribute("aria-selected", String(view === "projects"));
+		["items", "projects", "stations", "mailboxes"].forEach(v => el("tab-" + v).setAttribute("aria-selected", String(view === v)));
 		el("items-controls").hidden = view !== "items";
-		el("items-view").hidden = view !== "items";
 		el("projects-controls").hidden = view !== "projects";
-		el("projects-view").hidden = view !== "projects";
-		document.title = view === "items" ? "ME-Speicher" : "Projekte";
+		VIEWS.forEach(v => { el(v + "-view").hidden = view !== v; });
+		document.title = TITLES[view];
+		clearMessage();
 		renderStats();
+		if (view === "account") renderAccount();
 		if (state.total === undefined) return;
-		if (view === "items") renderItems();
-		else renderProjects();
+		renderView();
+		if (changed && view !== "items" && view !== "projects") load();
 	}
 
 	el("tab-items").onclick = () => show("items");
 	el("tab-projects").onclick = () => show("projects");
+	el("tab-stations").onclick = () => show("stations");
+	el("tab-mailboxes").onclick = () => show("mailboxes");
+	el("account-btn").onclick = () => show("account");
 	el("search").addEventListener("input", e => { state.search = e.target.value; renderItems(); });
 	el("sort").addEventListener("change", e => { state.sort = e.target.value; store("storagedim-sort", state.sort); renderItems(); });
 	el("new-project").addEventListener("submit", async e => {
