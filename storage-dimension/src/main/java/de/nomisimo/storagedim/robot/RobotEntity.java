@@ -189,6 +189,15 @@ public class RobotEntity extends PathfinderMob {
 	private int airTicks;
 	/** Ticks it has been stuck away from its station (waiting with no way to anything). */
 	private int strandedTicks;
+	/**
+	 * Blocks to dig it gave up on one after the other without getting away from the spot, and where: a way the game
+	 * finds but the robot cannot go (out of a hole it dug itself free from, say) keeps handing it new blocks that it
+	 * never gets to, so it never waits and never counts as stuck.
+	 */
+	private int fruitlessDigs;
+	private Vec3 fruitlessAt;
+	/** It is digging itself out (for the smoke test's report). */
+	private boolean rescuing;
 	private int idleTicks;
 	private int range = RANGE;
 	/** Items it collects; empty = everything. */
@@ -1733,6 +1742,7 @@ public class RobotEntity extends PathfinderMob {
 	 */
 	private void breakTarget(DigJob job) {
 		ServerLevel server = (ServerLevel) level();
+		fruitlessDigs = 0;
 		BlockPos pos = mineTarget;
 		BlockState state = server.getBlockState(pos);
 
@@ -1939,7 +1949,30 @@ public class RobotEntity extends PathfinderMob {
 	public String describeMining() {
 		return "mining=" + mining + " phase=" + minePhase + " target=" + mineTarget + " idle=" + mineIdle + " finished=" + mineFinished
 				+ " problem=" + (mineProblem == null ? "" : mineProblem.getString()) + " tools=" + java.util.Arrays.toString(tools) + " torches=" + torches + " bag=" + bag
-				+ " carried=" + getCarried();
+				+ " carried=" + getCarried() + " rescue=" + rescuing + " stranded=" + strandedTicks + " fruitless=" + fruitlessDigs;
+	}
+
+	/** For the smoke test: it is digging itself out. */
+	public boolean rescuing() {
+		return rescuing;
+	}
+
+	/** How many blocks in a row it may give up on at one spot before it counts as stuck there. */
+	private static final int FRUITLESS_DIGS = 4;
+
+	/** It gave up on a block it got no closer to. */
+	private void noteFruitless() {
+		if (fruitlessAt == null || position().distanceTo(fruitlessAt) > 1.5) {
+			fruitlessAt = position();
+			fruitlessDigs = 0;
+		}
+
+		fruitlessDigs++;
+	}
+
+	/** It keeps giving up on the blocks it is handed and does not get away from the spot. */
+	private boolean diggingInVain() {
+		return fruitlessDigs >= FRUITLESS_DIGS && fruitlessAt != null && position().distanceTo(fruitlessAt) <= 1.5;
 	}
 
 	/** For the smoke test: nothing in its beak or bag, not digging. */
@@ -2273,6 +2306,7 @@ public class RobotEntity extends PathfinderMob {
 			if (stuck(distance) || ++wayTicks > WAY_TICKS) {
 				job.skip(mineTarget, getUUID(), level().getGameTime());
 				dropMineTarget();
+				noteFruitless();
 				return;
 			}
 
@@ -2308,6 +2342,9 @@ public class RobotEntity extends PathfinderMob {
 		private int steps;
 		private int checkCooldown;
 		private Vec3 strandedAt;
+		/** Where it set off along a way home it found; it only stops digging once it really gets on along it. */
+		private Vec3 walkFrom;
+		private int walkTicks;
 
 		RescueGoal() {
 			setFlags(EnumSet.of(Flag.MOVE, Flag.LOOK));
@@ -2316,7 +2353,8 @@ public class RobotEntity extends PathfinderMob {
 		private boolean stranded() {
 			long now = level().getGameTime();
 			// also when mining was switched off and it cannot get its tools up to the chest
-			boolean stuck = now < homeUnreachableUntil || mineIdle && !mineFinished && minePhase == 0 || !mining && mineProblem != null;
+			// or it keeps being handed blocks by ways it cannot go and never gets away from the spot
+			boolean stuck = now < homeUnreachableUntil || mineIdle && !mineFinished && minePhase == 0 || !mining && mineProblem != null || diggingInVain();
 			strandedTicks = !tools[PICKAXE].isEmpty() && station != null && !nearHome() && stuck && getAction() == 0 ? strandedTicks + 1 : 0;
 
 			if (strandedTicks == 1) {
@@ -2351,8 +2389,10 @@ public class RobotEntity extends PathfinderMob {
 			dropMineTarget();
 			digging = null;
 			stepTo = null;
+			walkFrom = null;
 			steps = 0;
 			checkCooldown = 0;
+			rescuing = true;
 		}
 
 		@Override
@@ -2363,9 +2403,13 @@ public class RobotEntity extends PathfinderMob {
 
 			digging = null;
 			stepTo = null;
+			walkFrom = null;
 			strandedTicks = 0;
 			homeUnreachableUntil = 0;
 			mineIdle = false;
+			fruitlessDigs = 0;
+			fruitlessAt = null;
+			rescuing = false;
 		}
 
 		@Override
@@ -2417,6 +2461,20 @@ public class RobotEntity extends PathfinderMob {
 				return;
 			}
 
+			if (walkFrom != null) {
+				if (position().distanceTo(walkFrom) > 2.0) {
+					// on its way home: it walks the rest
+					steps = MAX_STEPS;
+				} else if (++walkTicks > 60 || getNavigation().isDone()) {
+					// the game found a way it cannot go (its head under a step, say): it digs on and looks again later
+					getNavigation().stop();
+					walkFrom = null;
+					checkCooldown = 200;
+				}
+
+				return;
+			}
+
 			// now and then: is there a way home again?
 			if (steps > 2 && --checkCooldown <= 0 && standing()) {
 				checkCooldown = 20;
@@ -2424,7 +2482,8 @@ public class RobotEntity extends PathfinderMob {
 
 				if (home != null && home.canReach()) {
 					getNavigation().moveTo(home, 1.0);
-					steps = MAX_STEPS;
+					walkFrom = position();
+					walkTicks = 0;
 					return;
 				}
 			}
@@ -2436,13 +2495,16 @@ public class RobotEntity extends PathfinderMob {
 			planStep(server);
 		}
 
-		/** The next step towards the station: what is in the way is dug, a missing step or floor filled. */
+		/**
+		 * The next step towards the station: what is in the way is dug, a missing step or floor filled. Where a block
+		 * it may not dig is in the way (a step of the staircase, bedrock, a chest), it goes round it: along the other
+		 * direction towards the station, to the side, or first on the level instead of up.
+		 */
 		private void planStep(ServerLevel server) {
 			BlockPos at = blockPosition();
 			BlockPos h = home();
 			int dx = h.getX() - at.getX();
 			int dz = h.getZ() - at.getZ();
-			Direction dir = Math.abs(dx) >= Math.abs(dz) ? (dx >= 0 ? Direction.EAST : Direction.WEST) : (dz >= 0 ? Direction.SOUTH : Direction.NORTH);
 			boolean up = at.getY() < h.getY();
 			boolean down = at.getY() > h.getY() + 1;
 
@@ -2451,15 +2513,54 @@ public class RobotEntity extends PathfinderMob {
 				return;
 			}
 
-			BlockPos next = at.relative(dir).above(up ? 1 : down ? -1 : 0);
+			boolean alongX = Math.abs(dx) >= Math.abs(dz);
+			Direction main = alongX ? (dx >= 0 ? Direction.EAST : Direction.WEST) : (dz >= 0 ? Direction.SOUTH : Direction.NORTH);
+			List<Direction> dirs = new ArrayList<>(List.of(main));
+			int across = alongX ? dz : dx;
+
+			if (across != 0) {
+				dirs.add(alongX ? (across > 0 ? Direction.SOUTH : Direction.NORTH) : (across > 0 ? Direction.EAST : Direction.WEST));
+			}
+
+			for (Direction dir : List.of(main.getClockWise(), main.getCounterClockWise(), main.getOpposite())) {
+				if (!dirs.contains(dir)) {
+					dirs.add(dir);
+				}
+			}
+
+			int rise = up ? 1 : down ? -1 : 0;
+
+			for (int dy : rise == 0 ? new int[] {0} : new int[] {rise, 0}) {
+				for (Direction dir : dirs) {
+					if (tryStep(server, at, dir, dy)) {
+						return;
+					}
+				}
+			}
+
+			// shut in for good on all sides: it waits a little and tries again
+			steps += 10;
+		}
+
+		/** A step one block in that direction (and up or down): false when a block it may not dig is in the way. */
+		private boolean tryStep(ServerLevel server, BlockPos at, Direction dir, int dy) {
+			BlockPos next = at.relative(dir).above(dy);
 			List<BlockPos> clearing = new ArrayList<>(List.of(next, next.above()));
 
-			if (up) {
+			if (dy > 0) {
 				// room to jump up (also right over its head: it is low enough to stand under a step of the staircase)
 				clearing.add(at.above());
 				clearing.add(at.above(2));
-			} else if (down) {
+			} else if (dy < 0) {
 				clearing.add(next.above(2));
+			}
+
+			for (BlockPos pos : clearing) {
+				BlockState state = server.getBlockState(pos);
+
+				if (!state.getCollisionShape(server, pos).isEmpty() && !mayBreak(server, pos, state)) {
+					return false;
+				}
 			}
 
 			for (BlockPos pos : clearing) {
@@ -2467,18 +2568,10 @@ public class RobotEntity extends PathfinderMob {
 				BlockState state = server.getBlockState(pos);
 
 				if (!state.getCollisionShape(server, pos).isEmpty()) {
-					if (!mayBreak(server, pos, state)) {
-						// in the way for good (bedrock, a chest): try another way round next time
-						steps += 10;
-						stepTo = at.relative(dir.getClockWise());
-						stepTicks = 0;
-						return;
-					}
-
 					digging = pos.immutable();
 					digTicks = 0;
 					digTotal = digTime(pos, state);
-					return;
+					return true;
 				}
 			}
 
@@ -2493,6 +2586,7 @@ public class RobotEntity extends PathfinderMob {
 			steps++;
 			stepTo = next.immutable();
 			stepTicks = 0;
+			return true;
 		}
 
 		/** Water or lava there or right beside it becomes cobblestone, so it does not run onto the way out. */
