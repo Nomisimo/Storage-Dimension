@@ -10,7 +10,7 @@ Ein Fabric-Mod für **Minecraft 26.1.2**: eine Bibliothek voller Kisten in einer
 
 - [Installation](#installation)
 - [Speicher](#speicher): Dimensionskiste und Bibliothek, ME-Speicher, ME-Terminal, ME-Speicher im Browser, Filterkiste, Projektkiste, Trichter und Maschinen
-- [Sammelroboter](#sammelroboter): Roboter, Roboter-Station, Rückruf, Abbau-Modus, Erzsuche, Roboter-Barriere, Antennen und Fernbedienung
+- [Sammelroboter](#sammelroboter): Roboter, Roboter-Station, Rückruf, Abbau-Modus, Erzsuche, Paketpost, Roboter-Barriere, Antennen und Fernbedienung
 - [ME-Rucksack und Traveler's Backpack](#me-rucksack-und-travelers-backpack)
 - [Rezepte](#rezepte)
 - [Befehle](#befehle)
@@ -149,7 +149,7 @@ Rechtsklick auf die Station öffnet ihr Fenster:
 - **Reichweite** mit − und +: 1 bis 10 Chunks, gemessen ab der Station. Mit [Antennen](#antennen-und-fernbedienung) steht hier stattdessen „Antenne verbunden“ und die Größe des Bereichs.
 - **Area-Name und Farbe:** Name der Antennen-Area (so steht sie in der Fernbedienung) und ihre Farbe. Klick auf die Farbe schaltet weiter. Ohne Antennen ist es die Farbe der nächsten eingestellten Roboter, mit Antennen tragen alle Roboter der Station sofort die Area-Farbe.
 - **Zurückrufen:** siehe unten.
-- **Sammeln / Abbauen / Erzsuche:** schaltet alle Roboter der Station weiter: Items sammeln, alle Blöcke abbauen ([Abbau-Modus](#abbau-modus)) oder nur Erze unter der Station holen ([Erzsuche](#erzsuche)).
+- **Sammeln / Abbauen / Erzsuche / Kurier:** schaltet alle Roboter der Station weiter: Items sammeln, alle Blöcke abbauen ([Abbau-Modus](#abbau-modus)), nur Erze unter der Station holen ([Erzsuche](#erzsuche)) oder Post zwischen Briefkästen tragen ([Paketpost](#paketpost-briefkasten-und-kurier)).
 - **Robotername:** für die nächsten Roboter, die eingestellt werden. Bekommen mehrere Roboter einer Station denselben Namen, werden sie durchnummeriert (Quak1, Quak2 …). Das Benennen kostet keine Level.
 - **Roboter einstellen:** Roboter links in den Eingang legen, er kommt rechts eingestellt wieder heraus. Genauso werden Antennen mit der Station gepaart. Die Einstellungen stehen im Tooltip des Roboter-Items.
 - **Bereich geladen halten** (standardmäßig aus): hält den ganzen Arbeitsbereich der Station geladen, also alle Chunks ihrer Reichweite oder ihrer Antennen-Area (plus ein paar Blöcke Rand), wie mit `/forceload`. Dann sammeln und bauen die Roboter weiter, auch wenn kein Spieler in der Nähe oder online ist. Der Knopf zeigt, wie viele Chunks geladen sind. Ausschalten oder die Station abbauen gibt die Chunks wieder frei. Chunks, die schon vorher von Hand geladen waren, bleiben unberührt. Viele Chunks kosten Server-Leistung, also lieber eine kleine Reichweite oder eine Antennen-Area nehmen. Beim Abbau und bei der Erzsuche kommen 2 Chunks Rand rund um das Quadrat dazu. Solange eine Station ihren Bereich geladen hält, pausiert ein Server ohne Spieler nicht (`pause-when-empty-seconds` in `server.properties`). Das lässt sich in den Mod-Einstellungen (Mod Menu) mit „Server ohne Spieler: Läuft weiter / Pausiert“ umschalten; nur Operatoren können das ändern, es gilt für den ganzen Server und steht als `keepServerAwake` in `config/storagedim.json`.
@@ -253,6 +253,27 @@ Ein Klick nach **Abbauen** kommt **Erzsuche**: Strip Mining unter der Station. D
 - Die Kopflampe am Helm leuchtet nur zum Ansehen, Licht gibt sie nicht.
 - Werkzeugkiste, Helm, Abbauzeit, Verzauberungen und Beutesack wie im [Abbau-Modus](#abbau-modus).
 
+### Paketpost: Briefkasten und Kurier
+
+Mit Briefkästen tragen die Roboter Items von einer Kiste zur anderen, zum Beispiel vom Abbau zum Lager oder vom Lager zum Ofen.
+
+- **Briefkasten:** Stell ihn direkt neben eine Kiste (oder ein Fass oder anderen Speicher, dieselben Regeln wie an der Station) oder an eine Maschine. Rechtsklick öffnet sein Fenster mit zwei Feldern:
+  - **Adresse:** sein Name. Unter dieser Adresse bekommt er Post. Ein frischer Briefkasten heißt „Briefkasten 1“, „Briefkasten 2“ …, ein im Amboss umbenannter trägt diesen Namen.
+  - **Schickt an:** wohin er schickt. Alles, was in der Kiste daneben liegt, wird abgeholt und zum Briefkasten mit dieser Adresse gebracht. Leer heißt: er empfängt nur.
+  - Darunter steht, ob eine Kiste daneben steht, wie viel Post wartet und ob das Ziel gefunden wurde.
+- **Empfangen:** Was ankommt, legt der Briefkasten in die Kiste daneben (auch in Dimensionskisten, Filterkisten und das ME-Terminal, also direkt ins ME). Aus Dimensionskisten, Filterkisten, ME-Terminals, Projektkisten und Enderkisten wird dagegen **nie** etwas abgeschickt, damit ein Briefkasten nicht den ganzen ME-Speicher leert.
+- **Maschinen:** Ein Briefkasten an einer Maschine (Ofen, Räucherofen, Schmelzofen, Braustand, Trichter oder Maschinen anderer Mods) braucht keine Einstellung: Was ankommt, kommt von selbst in die Maschine, Brennstoff in den Brennstoff und alles andere in die Zutaten (wie Trichter von der Seite und von oben). Was nicht mehr passt, kommt in die Kiste daneben. Hat er ein Ziel, schickt er auch, was fertig aus der Maschine kommt (ihren Ausgang, wie ein Trichter darunter). Zutaten und Brennstoff bleiben drin.
+  - Beispiel: Briefkasten „Ofen“ am Ofen mit Ziel „Lager“. Bruchstein und Kohle, die an „Ofen“ geschickt werden, landen im Ofen, und der fertige Stein geht von selbst ins Lager.
+- **Slot im Ziel:** Mit Doppelpunkt und Nummer am Ende geht die Post in genau diesen Slot der Maschine am Ziel-Briefkasten, zum Beispiel „Legierungsofen:2“ für den zweiten Eingang. Welcher Slot welche Nummer hat, zeigt der Bildschirm des Ziel-Briefkastens unter den Feldern (Maus auf den Slot zeigt den Inhalt). Ist der Slot voll, wartet der Roboter wie bei einer vollen Kiste. Steht dort keine Maschine, kommt die Post wie sonst in die Kiste.
+  - Beispiel: Briefkasten „Kupfer“ mit Ziel „Legierungsofen:1“ und Briefkasten „Zinn“ mit Ziel „Legierungsofen:2“ füllen die beiden Eingänge getrennt.
+- **Platzhalter:** `*` steht für beliebigen Text, `?` für ein Zeichen, Groß- und Kleinschreibung zählt nicht. „Lager*“ geht an „Lager Ost“ oder „Lager West“. Passen mehrere, bekommt der **nächste** mit Platz die Post. Mehrere Briefkästen dürfen gleich heißen.
+- **Fahne:** Wartet Post auf Abholung, steht die rote Fahne an der Seite des Briefkastens hoch.
+- **Kurier-Modus:** Ein Klick nach **Erzsuche** kommt **Kurier**. Die Roboter der Station bringen zuerst ihr Werkzeug zurück und tragen dann die Post: Sie holen bis zu 9 Stapel auf einmal (einen im Schnabel, den Rest im Beutel) und bringen sie Stapel für Stapel zum Ziel. Jeder Briefkasten wird nur von einem Roboter zur Zeit abgeholt, mehrere Roboter arbeiten an verschiedenen Briefkästen.
+- **Bereich:** Absender und Ziel müssen im Bereich der Station liegen (Reichweite oder Antennen-Area). Liegt das Ziel außerhalb, wird die Post nicht abgeholt.
+- **Ziel voll:** Hat die Kiste am Ziel keinen Platz, wartet der Roboter an der Station („Fehler: Briefkasten … voll“) und schaut immer wieder nach. Nach einer Minute ohne Platz bringt er die Post in die Kisten an seiner Station. Fehlt der Ziel-Briefkasten, kommt die Post auch dorthin.
+- **Jade** zeigt am Briefkasten Adresse, Ziel und wie viel Post wartet, am Roboter, was er gerade holt oder wohin er es bringt.
+- Ein Klick weiter geht es zurück auf **Sammeln**. Was ein Roboter dann noch trägt, kommt in die Kisten an der Station.
+
 ### Jade und Xaero's Minimap
 
 Mit [Jade](https://modrinth.com/mod/jade) zeigt der Blick auf einen Roboter seine Station, Reichweite, Filter und was er gerade tut (oder welchen Fehler er hat). Der Blick auf eine Station zeigt ihren Namen und wie viele Roboter zu ihr gehören. Mit [Xaero's Minimap](https://modrinth.com/mod/xaeros-minimap) erscheinen die Roboter mit ihrem Gesicht auf der Karte.
@@ -336,6 +357,7 @@ Alle Rezepte stehen auch in [JEI](https://modrinth.com/mod/jei), auch auf Server
 | Roboter-Station | Blitzableiter, Eisenbarren, Redstoneblock, Kiste | ![Rezept Roboter-Station](docs/screenshots/rezept-robot-station.png) |
 | Roboter-Barriere (8 Stück) | 8 Glas um eine Amethystscherbe | ![Rezept Roboter-Barriere](docs/screenshots/rezept-robot-barrier.png) |
 | Antenne | formlos: Blitzableiter, 2× Kupferbarren, Redstone | ![Rezept Antenne](docs/screenshots/rezept-antenne.png) |
+| Briefkasten | 7 Holzbretter (beliebig) um eine Kiste, oben mittig ein Eisenbarren | – |
 | Fernbedienung | Redstone oben mittig, Glasscheibe in der Mitte, Enderperle unten mittig, 4 Kupferbarren links und rechts davon | ![Rezept Fernbedienung](docs/screenshots/rezept-fernbedienung.png) |
 | ME-Upgrade | formlos: Enderauge, 2× Amethystscherbe, Redstoneblock, Papier | ![Rezept ME-Upgrade](docs/screenshots/rezept-me-upgrade.png) |
 | ME-Rucksack | formlos: beliebiges Bündel + ME-Upgrade | ![Rezept ME-Rucksack](docs/screenshots/rezept-me-backpack.png) |

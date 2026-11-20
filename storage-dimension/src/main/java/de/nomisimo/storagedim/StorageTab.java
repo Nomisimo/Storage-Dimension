@@ -49,6 +49,7 @@ public final class StorageTab {
 					output.accept(RobotStationBlock.ITEM);
 					output.accept(RobotBarrierBlock.ITEM);
 					output.accept(AntennaBlock.ITEM);
+					output.accept(de.nomisimo.storagedim.robot.MailboxBlock.ITEM);
 					output.accept(RemoteItem.ITEM);
 				})
 				.build());

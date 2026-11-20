@@ -67,6 +67,8 @@ public final class StorageData {
 	public final Map<String, Map<Long, de.nomisimo.storagedim.robot.StationArea>> stationAreas = new HashMap<>();
 	/** How far the mining of each robot station per dimension is, for its screen. */
 	public final Map<String, Map<Long, de.nomisimo.storagedim.robot.StationProgress.Entry>> stationProgress = new HashMap<>();
+	/** Mailboxes per dimension: their own address and where they send what lies in the chest beside them. */
+	public final Map<String, Map<Long, de.nomisimo.storagedim.robot.Mailbox>> mailboxes = new HashMap<>();
 	/** Robot stations per dimension that keep their work area loaded (switched on at the station). */
 	public final Map<String, Set<Long>> loadedStations = new HashMap<>();
 	/** Chunks per dimension this mod force-loads for those stations, so only these are released again. */
@@ -265,6 +267,29 @@ public final class StorageData {
 	public void setStationArea(String dimension, BlockPos pos, de.nomisimo.storagedim.robot.StationArea area) {
 		stationAreas.computeIfAbsent(dimension, d -> new HashMap<>()).put(pos.asLong(), area);
 		markDirty();
+	}
+
+	/** The mailbox at {@code pos}, or null when there is none. */
+	public de.nomisimo.storagedim.robot.Mailbox mailbox(String dimension, BlockPos pos) {
+		return mailboxes.getOrDefault(dimension, Map.of()).get(pos.asLong());
+	}
+
+	/** All mailboxes of a dimension (packed position to mailbox). */
+	public Map<Long, de.nomisimo.storagedim.robot.Mailbox> mailboxes(String dimension) {
+		return mailboxes.getOrDefault(dimension, Map.of());
+	}
+
+	public void setMailbox(String dimension, BlockPos pos, de.nomisimo.storagedim.robot.Mailbox mailbox) {
+		mailboxes.computeIfAbsent(dimension, d -> new HashMap<>()).put(pos.asLong(), mailbox);
+		markDirty();
+	}
+
+	public void removeMailbox(String dimension, BlockPos pos) {
+		Map<Long, de.nomisimo.storagedim.robot.Mailbox> map = mailboxes.get(dimension);
+
+		if (map != null && map.remove(pos.asLong()) != null) {
+			markDirty();
+		}
 	}
 
 	private static JsonObject writeLongSets(Map<String, Set<Long>> sets) {
@@ -501,6 +526,15 @@ public final class StorageData {
 		});
 		root.add("stationAreas", areaObj);
 
+		JsonObject mailboxObj = new JsonObject();
+		mailboxes.forEach((dim, map) -> {
+			JsonObject d = new JsonObject();
+			map.forEach((pos, mailbox) -> de.nomisimo.storagedim.robot.Mailbox.CODEC.encodeStart(ops, mailbox).result()
+					.ifPresent(json -> d.add(Long.toString(pos), json)));
+			mailboxObj.add(dim, d);
+		});
+		root.add("mailboxes", mailboxObj);
+
 		JsonObject progressObj = new JsonObject();
 		stationProgress.forEach((dim, map) -> {
 			JsonObject d = new JsonObject();
@@ -705,6 +739,15 @@ public final class StorageData {
 				dim.getValue().getAsJsonObject().entrySet().forEach(e -> de.nomisimo.storagedim.robot.StationArea.CODEC.parse(ops, e.getValue())
 						.resultOrPartial(StorageDimensionMod.LOGGER::warn).ifPresent(area -> map.put(Long.parseLong(e.getKey()), area)));
 				stationAreas.put(dim.getKey(), map);
+			});
+		}
+
+		if (root.has("mailboxes")) {
+			root.getAsJsonObject("mailboxes").entrySet().forEach(dim -> {
+				Map<Long, de.nomisimo.storagedim.robot.Mailbox> map = new HashMap<>();
+				dim.getValue().getAsJsonObject().entrySet().forEach(e -> de.nomisimo.storagedim.robot.Mailbox.CODEC.parse(ops, e.getValue())
+						.resultOrPartial(StorageDimensionMod.LOGGER::warn).ifPresent(mailbox -> map.put(Long.parseLong(e.getKey()), mailbox)));
+				mailboxes.put(dim.getKey(), map);
 			});
 		}
 

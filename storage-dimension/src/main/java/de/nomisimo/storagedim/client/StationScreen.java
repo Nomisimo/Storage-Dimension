@@ -93,7 +93,9 @@ public class StationScreen extends AbstractContainerScreen<StationMenu> {
 						+ "Wasser pumpen sie dabei ab. Pro Roboter braucht es eine Spitzhacke (Axt und Schaufel gehen schneller): aus einer Filterkiste "
 						+ "neben der Station (aus dem ME-Speicher) oder aus der Werkzeugkiste, die sich sonst neben der Station aufstellt. "
 						+ "Erzsuche: Strip Mining unter der Station: Wendeltreppe bis kurz über das Grundgestein, dort Gänge über den ganzen Bereich, "
-						+ "Erze, die sie in den Gängen sehen, bringen sie heim. Klick: nächster Modus")))
+						+ "Erze, die sie in den Gängen sehen, bringen sie heim. "
+						+ "Kurier: sie holen die Post aus der Kiste neben einem Briefkasten und bringen sie im Schnabel zum Briefkasten mit der Zieladresse. "
+						+ "Klick: nächster Modus")))
 				.build());
 		addRenderableWidget(Button.builder(Component.literal("Zurückrufen"), b -> send(StationMenu.ACTION_RECALL, 0, ""))
 				.bounds(l + 8, t + StationMenu.BUTTONS_Y, 78, 14)
@@ -137,13 +139,14 @@ public class StationScreen extends AbstractContainerScreen<StationMenu> {
 		rangeDown.visible = data.antennas() == 0;
 		rangeUp.visible = data.antennas() == 0;
 
-		work.setMessage(data.oreSearch() ? Component.literal("Erzsuche").withStyle(ChatFormatting.AQUA)
+		work.setMessage(data.courier() ? Component.literal("Kurier").withStyle(ChatFormatting.LIGHT_PURPLE)
+				: data.oreSearch() ? Component.literal("Erzsuche").withStyle(ChatFormatting.AQUA)
 				: Component.literal(data.mining() ? "Abbauen" : "Sammeln").withStyle(data.mining() ? ChatFormatting.GOLD : ChatFormatting.WHITE));
 		chunks.setMessage(data.loadedChunks() > 0
 				? Component.literal("Bereich geladen: " + data.loadedChunks() + (data.loadedChunks() == 1 ? " Chunk" : " Chunks")).withStyle(ChatFormatting.GREEN)
 				: Component.literal("Bereich geladen halten: aus"));
 		// mining takes everything, the filter only matters for collecting
-		mode.active = !data.mining();
+		mode.active = !data.mining() && !data.courier();
 		mode.setMessage(Component.literal(data.exclude() ? "Sammelt alles AUSSER Filter" : "Sammelt nur den Filter"));
 		String colorName = RobotConfig.colorName(data.color());
 		color.setMessage(Component.literal("■ ").withColor(data.color()).append(Component.literal(colorName.startsWith("Standard") ? "Standard" : colorName)

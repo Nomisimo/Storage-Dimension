@@ -78,6 +78,7 @@ public class StorageDimensionClient implements ClientModInitializer {
 		ClientPlayNetworking.registerGlobalReceiver(de.nomisimo.storagedim.ServerSettings.StatePayload.TYPE, (payload, context) -> StorageConfigScreen.receive(payload));
 		ClientPlayNetworking.registerGlobalReceiver(de.nomisimo.storagedim.robot.Areas.OutlinePayload.TYPE, (payload, context) -> AreaOutlines.receive(payload));
 		ClientPlayNetworking.registerGlobalReceiver(de.nomisimo.storagedim.robot.Areas.OpenPayload.TYPE, (payload, context) -> RemoteScreen.receive(payload));
+		ClientPlayNetworking.registerGlobalReceiver(de.nomisimo.storagedim.robot.MailboxNetworking.OpenPayload.TYPE, (payload, context) -> MailboxScreen.receive(payload));
 		ClientPlayNetworking.registerGlobalReceiver(TerminalNetworking.OpenedPayload.TYPE, (payload, context) -> {
 			terminalId = payload.containerId();
 			sort = parse(payload.sort());

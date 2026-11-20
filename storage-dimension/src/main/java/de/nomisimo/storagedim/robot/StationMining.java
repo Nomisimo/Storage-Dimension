@@ -11,7 +11,8 @@ import net.minecraft.world.level.block.ChestBlock;
 import net.minecraft.world.level.block.state.BlockState;
 
 /**
- * Switching a station between collecting, mining (everything in the area) and the ore search (only the ores below it).
+ * Switching a station between collecting, mining (everything in the area), the ore search (only the ores below it)
+ * and the courier mode (carrying the post between mailboxes, see {@link Mailbox}).
  * Mining needs pickaxes: from a filter chest the player put right next to the station (it hands out the pickaxes of
  * its ME storage), or else from a tool chest that is set up next to the station when mining is switched on (or the
  * one from before is used again). Axes and shovels are taken along when there are some, but not needed.
@@ -24,19 +25,26 @@ public final class StationMining {
 	public record Result(boolean ok, Component message) {
 	}
 
-	/** The work mode button: collecting, then mining (with a tool chest next to the station), then the ore search, then collecting again. */
+	/** The work mode button: collecting, then mining (with a tool chest next to the station), then the ore search, the courier, then collecting again. */
 	public static Result toggle(ServerLevel level, String dim, BlockPos station) {
 		StorageData data = StorageData.get();
 		RobotConfig config = data.station(dim, station);
 		// every mode starts its progress afresh
 		StationProgress.clear(dim, station);
 
+		if (config.courier()) {
+			data.setStation(dim, station, config.withCourier(false));
+			return new Result(true, Component.literal("Die Roboter sammeln wieder. Post, die sie gerade tragen, kommt in die Kisten an der Station.")
+					.withStyle(ChatFormatting.YELLOW));
+		}
+
 		if (config.mining() && config.oreSearch()) {
-			data.setStation(dim, station, config.withMining(false).withOreSearch(false));
+			data.setStation(dim, station, config.withMining(false).withOreSearch(false).withCourier(true));
 			MiningJob.reset(dim, station);
 			OreJob.reset(dim, station);
-			return new Result(true, Component.literal("Die Roboter sammeln wieder. Ihr Werkzeug bringen sie in die Werkzeugkiste zurück.")
-					.withStyle(ChatFormatting.YELLOW));
+			return new Result(true, Component.literal("Kurier: Die Roboter bringen ihr Werkzeug in die Werkzeugkiste zurück und tragen dann die Post. "
+					+ "Was in der Kiste neben einem Briefkasten liegt, bringen sie im Schnabel zum Briefkasten mit der Zieladresse. "
+					+ "Beide Briefkästen müssen im Bereich der Station stehen.").withStyle(ChatFormatting.LIGHT_PURPLE));
 		}
 
 		if (config.mining()) {

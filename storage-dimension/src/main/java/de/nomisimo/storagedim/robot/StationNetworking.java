@@ -41,7 +41,7 @@ public final class StationNetworking {
 	 */
 	public record SyncPayload(int containerId, String stationName, String robotName, int range, int color, boolean exclude,
 			int antennas, String areaName, String areaSize, String areaState, List<Component> names, List<Component> states, boolean mining, boolean oreSearch,
-			int loadedChunks, int progress, int stations, int maxRobots) implements CustomPacketPayload {
+			int loadedChunks, int progress, int stations, int maxRobots, boolean courier) implements CustomPacketPayload {
 		public static final Type<SyncPayload> TYPE = new Type<>(StorageDimensionMod.id("station_sync"));
 		public static final StreamCodec<RegistryFriendlyByteBuf, SyncPayload> CODEC = StreamCodec.of((buf, payload) -> {
 			buf.writeVarInt(payload.containerId);
@@ -67,6 +67,7 @@ public final class StationNetworking {
 			buf.writeVarInt(payload.progress + 1);
 			buf.writeVarInt(payload.stations);
 			buf.writeVarInt(payload.maxRobots);
+			buf.writeBoolean(payload.courier);
 		}, buf -> {
 			int containerId = buf.readVarInt();
 			String stationName = buf.readUtf();
@@ -93,8 +94,9 @@ public final class StationNetworking {
 			int progress = buf.readVarInt() - 1;
 			int stations = buf.readVarInt();
 			int maxRobots = buf.readVarInt();
+			boolean courier = buf.readBoolean();
 			return new SyncPayload(containerId, stationName, robotName, range, color, exclude, antennas, areaName, areaSize, areaState, names, states, mining,
-					oreSearch, loadedChunks, progress, stations, maxRobots);
+					oreSearch, loadedChunks, progress, stations, maxRobots, courier);
 		});
 
 		@Override
