@@ -7,6 +7,7 @@ import java.util.UUID;
 
 import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.arguments.IntegerArgumentType;
+import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.context.CommandContext;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
 
@@ -60,7 +61,11 @@ public final class StorageCommands {
 				.then(Commands.literal("web")
 						.executes(ctx -> de.nomisimo.storagedim.web.WebView.command(ctx.getSource().getPlayerOrException(), false))
 						.then(Commands.literal("neu")
-								.executes(ctx -> de.nomisimo.storagedim.web.WebView.command(ctx.getSource().getPlayerOrException(), true))))
+								.executes(ctx -> de.nomisimo.storagedim.web.WebView.command(ctx.getSource().getPlayerOrException(), true)))
+						.then(Commands.literal("passwort")
+								.then(Commands.argument("passwort", StringArgumentType.greedyString())
+										.executes(ctx -> de.nomisimo.storagedim.web.WebView.passwordCommand(ctx.getSource().getPlayerOrException(),
+												StringArgumentType.getString(ctx, "passwort"))))))
 				.then(Commands.literal("teilen")
 						.then(Commands.argument("spieler", EntityArgument.player()).executes(StorageCommands::invite)))
 				.then(Commands.literal("annehmen").executes(StorageCommands::accept))

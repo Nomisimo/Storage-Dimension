@@ -1,5 +1,7 @@
 Storage Dimension für **Minecraft 26.1.2** (Fabric).
 
+**Neu in 0.8.7:** **Paketpost:** Neuer **Briefkasten** und neuer Stationsmodus **Kurier** (Sammeln → Abbauen → Erzsuche → Kurier). Ein Briefkasten steht neben einer Kiste oder Maschine und hat eine **Adresse** und ein Ziel (**Schickt an**). Die Roboter holen, was in der Kiste daneben liegt (bis 9 Stapel auf einmal), und bringen es zum Briefkasten mit dieser Adresse. Platzhalter `*` und `?` gehen, und mit `Ofen:2` landet die Post in Slot 2 der Maschine am Ziel. Rote Fahne, solange Post wartet. Aus ME-Blöcken und Enderkisten wird nie etwas abgeschickt. **Webseite:** Anmelden mit **Minecraft-Name und Passwort** (einmal `/storage web passwort <passwort>` im Spiel oder auf der Seite unter „Konto“), also ohne Link aus dem Spiel und auf jedem Gerät. Neue Seite **Stationen** mit Modus, Fortschritt in Prozent und jedem Roboter einzeln (was er tut, Fehler, Entfernung, Herzen, Laune). Neue Seite **Briefkästen**: alle Briefkästen mit Zustand, Adresse und Ziel lassen sich dort ändern. **Erzsuche:** Eingemauerte Roboter graben sich zuverlässig frei, statt endlos neue Blöcke anzufangen oder unter der Wendeltreppe festzustecken. Server und alle Spieler brauchen 0.8.7.
+
 **Neu in 0.8.6:** **Stations-Verbund:** Roboter-Stationen, die direkt nebeneinander auf derselben Höhe stehen, arbeiten als eine große Station. Jede Station gibt **32 Roboter** und **einen Chunk Reichweite** mehr (die Antennen-Area wird 16 Blöcke größer), bis 8 Stationen mit 256 Robotern und 17 Chunks. Rechtsklick auf jede Station öffnet das gemeinsame Fenster der Hauptstation. Kisten an jeder Station sind Ein- und Ausgang, und Werkzeug- oder Filterkiste dürfen an jeder Station stehen. Alle Roboter teilen sich eine Abbau-Liste, also gibt es keine doppelte Arbeit, und die 9 × 9 Plattform bleibt um jede Station stehen. Im Verbund sieht die Hauptstation wie ein Leitstand aus, die anderen wie Roboter-Docks, und Leitungen auf der Oberseite verbinden sie. Roboter einer Station, die dazukommt, ziehen von selbst zur Hauptstation. Wird die Hauptstation abgebaut, übernimmt die Nachbarstation. **ME-Webansicht:** Beginnt `webAddress` mit `http://` oder `https://`, wird es als kompletter Anfang des Links von `/storage web` benutzt, z. B. `https://mc.example.de:10000` hinter einem Reverse-Proxy oder Tunnel (danke an MrPancake). Server und alle Spieler brauchen 0.8.6.
 
 **Neu in 0.8.5.2:** Neuer OP-Befehl `/storage einlagern <spieler> <item> [anzahl]` legt Items direkt ins ME-Netz eines Spielers, mit Komponenten wie bei `/give`. Beispiel für die Server-Konsole: `storage einlagern Steve minecraft:diamond_pickaxe[enchantments={mending:1}] 32`. Spieler, die sich einen Speicher teilen, bekommen die Items nur einmal. Server und alle Spieler brauchen 0.8.5.2.
@@ -48,14 +50,14 @@ Storage Dimension für **Minecraft 26.1.2** (Fabric).
 
 ## Server, in den Ordner `mods`
 
-- `storage-dimension-0.8.6.jar`
-- `storagedim-tb-0.8.6.jar`
+- `storage-dimension-0.8.7.jar`
+- `storagedim-tb-0.8.7.jar`
 - dazu [Fabric API](https://modrinth.com/mod/fabric-api), [Traveler's Backpack](https://modrinth.com/mod/travelersbackpack) und [Forge Config API Port](https://modrinth.com/mod/forge-config-api-port), alle für 26.1.2
 
 ## Jeder Spieler, in den Ordner `mods`
 
-- `storage-dimension-0.8.6.jar`
-- `storagedim-tb-0.8.6.jar`
+- `storage-dimension-0.8.7.jar`
+- `storagedim-tb-0.8.7.jar`
 - dazu [Fabric API](https://modrinth.com/mod/fabric-api), [Traveler's Backpack](https://modrinth.com/mod/travelersbackpack), [Forge Config API Port](https://modrinth.com/mod/forge-config-api-port) und [JEI](https://modrinth.com/mod/jei), alle für 26.1.2
 
 ## Nur Storage Dimension, ohne Traveler's Backpack
