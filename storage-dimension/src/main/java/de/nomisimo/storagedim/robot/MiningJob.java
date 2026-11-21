@@ -182,7 +182,7 @@ public final class MiningJob implements DigJob {
 	/**
 	 * How far the quarry is, in tenths of a percent: of all the blocks from the top of each column down to the
 	 * bottom, how many are gone. -1 while not every column has been looked at yet. The work at the start is kept
-	 * with the world, so after a restart the count goes on from there.
+	 * with the world, so after a restart the count goes on from there. It never goes back: see {@link #total()}.
 	 */
 	int progress() {
 		if (finished()) {
@@ -193,9 +193,40 @@ public final class MiningJob implements DigJob {
 			return -1;
 		}
 
+		long total = total();
+		int permille = total <= 0 ? 0 : (int) Math.clamp((total - remaining) * 1000 / total, 0, 999);
+		StationProgress.Entry saved = saved();
+		return saved == null ? permille : Math.max(permille, Math.min(999, saved.permille()));
+	}
+
+	/** What was saved for this quarry, or null (none yet, or saved for another area). */
+	private StationProgress.Entry saved() {
 		StationProgress.Entry saved = StationProgress.get(dim, station);
-		long total = saved != null && saved.key().equals(key()) ? Math.max(saved.total(), initial) : initial;
-		return total <= 0 ? 0 : (int) Math.clamp((total - remaining) * 1000 / total, 0, 999);
+		return saved != null && saved.key().equals(key()) ? saved : null;
+	}
+
+	/**
+	 * All the blocks to dig, for the progress. A job that is looked at afresh (after a restart, or when its robots
+	 * left it alone for a while) can find more to dig than was left before: water that ran into the pit, the
+	 * cobblestone walls against a sea, sand that fell in. The bar used to jump back then (9.9 % to 6.2 %, say).
+	 * Instead the total grows by so much that the bar stays where it was and goes on from there.
+	 */
+	private long total() {
+		StationProgress.Entry saved = saved();
+
+		if (saved == null) {
+			return initial;
+		}
+
+		long total = Math.max(saved.total(), initial);
+		int floor = Math.clamp(saved.permille(), 0, 999);
+
+		if (floor > 0 && (total - remaining) * 1000 < (long) floor * total) {
+			// rounded up: (total - remaining) / total is then at least floor / 1000
+			total = (remaining * 1000 + (1000 - floor) - 1) / (1000 - floor);
+		}
+
+		return total;
 	}
 
 	private void saveProgress(long now) {
@@ -207,9 +238,7 @@ public final class MiningJob implements DigJob {
 		int permille = progress();
 
 		if (permille >= 0) {
-			StationProgress.Entry saved = StationProgress.get(dim, station);
-			long total = saved != null && saved.key().equals(key()) ? Math.max(saved.total(), initial) : initial;
-			StationProgress.put(dim, station, new StationProgress.Entry(key(), total, permille));
+			StationProgress.put(dim, station, new StationProgress.Entry(key(), total(), permille));
 		}
 	}
 
