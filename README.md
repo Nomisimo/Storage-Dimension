@@ -2,7 +2,7 @@
 
 Ein Fabric-Mod für **Minecraft 26.1.2**: eine Bibliothek voller Kisten in einer eigenen Dimension, ein ME-Speicher ohne Stapelgrenzen und kleine Sammelroboter, die herumliegende Items einsammeln und einlagern.
 
-**Aktuelle Version: 0.8.7.** Die fertigen Dateien gibt es unter [Releases](https://github.com/Nomisimo/Storage-Dimension/releases), dort steht auch, welche Datei wohin gehört.
+**Aktuelle Version: 0.8.8.** Die fertigen Dateien gibt es unter [Releases](https://github.com/Nomisimo/Storage-Dimension/releases), dort steht auch, welche Datei wohin gehört.
 
 ![Dimensionskiste, Filterkiste, doppelte Filterkiste und ME-Terminal, davor der Sammelroboter](docs/screenshots/kisten-und-roboter.png)
 
@@ -19,11 +19,11 @@ Ein Fabric-Mod für **Minecraft 26.1.2**: eine Bibliothek voller Kisten in einer
 
 ## Installation
 
-`storage-dimension-0.8.7.jar` muss **auf dem Server und bei allen Spielern** im Ordner `mods` liegen.
+`storage-dimension-0.8.8.jar` muss **auf dem Server und bei allen Spielern** im Ordner `mods` liegen.
 
 1. Fabric Loader 0.19.5 oder neuer und [Fabric API](https://modrinth.com/mod/fabric-api) für 26.1.2 auf Server und Clients installieren.
-2. `storage-dimension-0.8.7.jar` (nicht die `-sources.jar`) in den `mods`-Ordner legen.
-3. Optional das [Traveler's-Backpack-Add-on](#me-rucksack-und-travelers-backpack) `storagedim-tb-0.8.7.jar` dazulegen, ebenfalls auf Server und Clients.
+2. `storage-dimension-0.8.8.jar` (nicht die `-sources.jar`) in den `mods`-Ordner legen.
+3. Optional das [Traveler's-Backpack-Add-on](#me-rucksack-und-travelers-backpack) `storagedim-tb-0.8.8.jar` dazulegen, ebenfalls auf Server und Clients.
 4. Server starten. Die Dimension `storagedim:storage` wird automatisch angelegt, die Daten liegen in `world/storagedim.json`.
 
 **Passt gut dazu (optional):** [JEI](https://modrinth.com/mod/jei) (Rezepte, Suche koppeln, „+“ im Rucksack), [Jade](https://modrinth.com/mod/jade) (Infos zu Robotern und Stationen), [Xaero's Minimap](https://modrinth.com/mod/xaeros-minimap) (Roboter auf der Karte). Getestet mit JEI 29.47.0.111, Jade 26.1.11 und Xaero's Minimap 26.6.2.
@@ -229,7 +229,8 @@ Mit dem Knopf **Sammeln / Abbauen** in der Station werden alle Roboter der Stati
 - **Filterkiste als Werkzeugkiste:** Stell selbst eine [Filterkiste](#filterkiste) direkt neben die Station (zum Beispiel dahinter) und setz eine Spitzhacke als Filter. Dann holen sich die Roboter ihre Spitzhacken (und Äxte und Schaufeln, falls als Filter gesetzt) aus dem ME-Speicher und bringen sie beim Ausschalten dorthin zurück. Das geht auch, wenn der Abbau schon läuft.
 - **Werkzeugkiste:** Steht keine Filterkiste an der Station, stellt sich beim Einschalten an einer freien Seite der Station eine normale Kiste auf. Ist keine Seite frei, bleibt der Modus aus und es kommt eine Fehlermeldung. In die Werkzeugkiste (oder Filterkiste) lagern die Roboter nie Beute ein, die kommt in die anderen Kisten an der Station.
 - **Bereich:** Mit [Antennen](#antennen-und-fernbedienung) die Antennen-Box. Ohne Antennen ganze Chunks: der Chunk der Station und ihre Reichweite in Chunks rundherum (bei 10 Chunks also 21 × 21 Chunks = 336 × 336 Blöcke), immer an den Chunk-Grenzen, von der Oberfläche (auch Bäume und Berge) bis hinunter zum Grundgestein, wie ein Steinbruch. Die Station bleibt auf ihrer Säule stehen, und die Wendeltreppe um die Säule führt bis ganz nach unten. Um die Station bleibt eine **Plattform von 9 × 9 Blöcken** stehen (4 Blöcke Rand, eine Schicht dick unter dem Boden der Station) mit allem, was darauf steht: Kisten, ein AFK-Haus, Waystones. Nur der Ring um die Säule wird darin geöffnet, als Eingang zur Treppe.
-- **Von oben nach unten:** Die Roboter bauen immer die obersten Schichten zuerst ab, jeder den Block, der ihm am nächsten ist. Bis zu 32 Roboter teilen sich die Arbeit, und jeder Block wird nur einem Roboter gegeben. Ist der Bereich überdacht (die Station steht zum Beispiel unten in einer Höhle), graben sie sich zuerst rund um sich frei und arbeiten sich über die Treppe nach oben.
+- **Abbauplan:** Die Station schaut sich zuerst den ganzen Bereich an und legt dann einen festen Plan fest, den die Roboter der Reihe nach abarbeiten. Der Bereich wird in **Ebenen von 3 Blöcken Höhe** geteilt, angefangen beim höchsten Block (Bäume und Pflanzen zählen nicht). Jede Ebene wird **Ring für Ring von der Treppe aus** abgebaut: Steht die Station in einer Ecke der Antennen-Box, also aus dieser Ecke heraus, sonst rund um die Station nach außen. Eine Ebene fängt erst dort an, wo die darüber 2 Ringe weiter außen fertig ist, und höchstens 3 Ebenen sind gleichzeitig dran. So geht der Steinbruch in Terrassen nach unten, und der schon abgebaute Teil hängt immer an der Treppe zur Station. Bäume und Pflanzen werden geholt, sobald ein Roboter herankommt (ein Stamm fällt den ganzen Baum). Bis zu 32 Roboter teilen sich die Arbeit, jeder Block wird nur einem gegeben. Ein Block, an den mehrmals hintereinander niemand herankommt, bleibt stehen, statt den Plan aufzuhalten. Im Stationsfenster und in der Webansicht steht wie bisher der Fortschritt in Prozent.
+- **Hochbauen:** Kommt ein Roboter zu Fuß nicht an einen hohen Block (Klippe, Überhang), baut er sich wie ein Spieler mit Bruchstein unter sich hoch, bis zu 24 Blöcke („Baut sich hoch“). Die Säule wird später mit ihrer Ebene wieder abgebaut.
 - **Treppe zur Station:** Um eine Säule an der Station bleibt eine Wendeltreppe stehen, mit einer Stufe pro Block Höhe. So kommt man immer zur Station hinunter. Liegt Sand oder Kies auf einer Stufe, bleibt der Block darunter auch stehen. Die Treppe besteht aus den Blöcken, die dort schon waren: Wo vorher Luft war, fehlt eine Stufe.
 - **Wasser:** Wasser im Bereich (still oder fließend) füllen die Roboter mit Bruchstein auf und bauen den dann ab. So werden Teiche, Seen und geflutete Höhlen trocken und nichts läuft nach. Kommt an einer Stelle immer wieder Wasser (etwa von einem Meer neben dem Bereich), bleibt dort nach dem dritten Mal der Bruchstein als Wand stehen.
 - **Was stehen bleibt:** die Station, Antennen, Roboter-Barrieren, alle Blöcke mit Inhalt (Kisten, Öfen, Spawner …), Lava, unzerstörbare Blöcke wie Grundgestein.
@@ -316,7 +317,7 @@ Ein Rucksack, der mit dem Speicher verbunden ist und ihn von überall öffnet.
 
 ### Traveler's-Backpack-Add-on
 
-Das Add-on `storagedim-tb-0.8.7.jar` fügt ein echtes **ME-Upgrade** für den Upgrade-Slot von Traveler's Backpack hinzu. Es hat immer dieselbe Versionsnummer wie Storage Dimension.
+Das Add-on `storagedim-tb-0.8.8.jar` fügt ein echtes **ME-Upgrade** für den Upgrade-Slot von Traveler's Backpack hinzu. Es hat immer dieselbe Versionsnummer wie Storage Dimension.
 
 - **Rezept** (formlos): Leeres Upgrade (Traveler's Backpack), Enderauge, 2× Amethystscherbe, Redstoneblock. Mit dem Add-on ergibt auch das normale ME-Upgrade-Rezept (mit Papier) dieses Upgrade. Es passt in den Upgrade-Slot und macht mit einem Bündel auch einen ME-Rucksack.
 - **ME-Ansicht:** Upgrade in einen Upgrade-Slot legen. Linksklick auf das ME-Symbol zeigt den ME-Speicher direkt im Rucksack-Fenster an Stelle des Rucksack-Inhalts. Crafting und die anderen Upgrades bleiben daneben. Ein zweiter Linksklick zeigt wieder den Rucksack, Rechtsklick nimmt das Upgrade heraus.
@@ -335,7 +336,7 @@ Das Add-on `storagedim-tb-0.8.7.jar` fügt ein echtes **ME-Upgrade** für den Up
 - Der Rucksack muss nicht in der Hand sein: auf dem Rücken tragen und mit der Rucksack-Taste (Standard **B**) öffnen reicht.
 - **Crafting aus dem ME-Speicher:** Hat der Rucksack zusätzlich das Crafting-Upgrade, holt der „+“-Knopf von JEI fehlende Zutaten auch aus dem ME-Speicher, genauso wie aus Inventar und Rucksack. „+“ ist nur grün, wenn alle Zutaten zusammen vorhanden sind, sonst markiert JEI die fehlenden rot. Shift + „+“ füllt das Raster für so viele Durchgänge wie möglich (bis zu einem Stapel). Was vorher im Raster lag, kommt zurück ins Inventar oder, wenn das voll ist, in den Speicher.
 - Der kleine Schalter neben dem ME-Symbol stellt zwischen *ME als Quelle* (Standard) und *nur Inventar* um.
-- **Installation:** `storagedim-tb-0.8.7.jar` und `storage-dimension-0.8.7.jar` auf Server und Clients, dazu Traveler's Backpack, [Forge Config API Port](https://modrinth.com/mod/forge-config-api-port) und Fabric API. JEI wird nur für „+“ und die Rezeptanzeige gebraucht, Mod Menu (optional, nur im Client) für die Einstellungen.
+- **Installation:** `storagedim-tb-0.8.8.jar` und `storage-dimension-0.8.8.jar` auf Server und Clients, dazu Traveler's Backpack, [Forge Config API Port](https://modrinth.com/mod/forge-config-api-port) und Fabric API. JEI wird nur für „+“ und die Rezeptanzeige gebraucht, Mod Menu (optional, nur im Client) für die Einstellungen.
 
 ![ME-Ansicht im Rucksack mit Suchleiste, Sortierung und Knöpfen wie im ME-Speicher](docs/screenshots/rucksack-me-suche.png)
 
