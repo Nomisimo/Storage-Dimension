@@ -32,9 +32,9 @@ import net.minecraft.world.level.block.state.BlockState;
  * Once the station has looked at every column it makes a fixed plan, which the robots work through like a machine
  * through its program: the area is cut into levels three blocks high, starting at its highest block (trees and
  * plants left out), and each level is dug ring by ring from the staircase outwards (from the corner the station is
- * in, or around the station). A level may only start where the one above it is done two rings further out, and at
- * most three levels are dug at the same time, so the quarry goes down in terraces and the part already dug always
- * reaches the staircase. Trees and plants are taken whenever a robot gets at them (a log fells the whole tree).
+ * in, or around the station). A level may only start where the one above it is done two rings further out, so the
+ * quarry goes down in terraces round the staircase and the part already dug always reaches it. Robots too far from
+ * their block for one way walk as far as the way goes and look again from there. Trees and plants are taken whenever a robot gets at them (a log fells the whole tree).
  * Robots that cannot walk up to a block above them build themselves a pillar of cobblestone up to it.
  * <p>
  * A spiral staircase around a pillar stays standing, so the station can always be reached: the pillar is the column
@@ -160,8 +160,6 @@ public final class MiningJob implements DigJob {
 	private Integer planTop;
 	/** Height of one level: a robot standing on its floor reaches all of it. */
 	static final int LEVEL = 3;
-	/** Levels being dug at the same time, each a little behind the one above it. */
-	private static final int MAX_LEVELS = 3;
 	/** How many rings each level stays behind the one above it. */
 	private static final int LAG = 2;
 	/** A block all robots gave up on this many times is left for good. */
@@ -272,8 +270,8 @@ public final class MiningJob implements DigJob {
 
 	/**
 	 * May the block be dug now, by the plan? The top level always; the next ones only where the level above is done
-	 * {@value #LAG} rings further out, so every level is dug from the staircase outwards, three at most at the same
-	 * time. Trees and plants always.
+	 * {@value #LAG} rings further out, so every level is dug from the staircase outwards and the quarry
+	 * goes down like a funnel round the staircase. Trees and plants always.
 	 */
 	private boolean allowed(ServerLevel level, long column, BlockPos pos) {
 		if (planTop == null) {
@@ -286,7 +284,7 @@ public final class MiningJob implements DigJob {
 			return true;
 		}
 
-		if (l >= firstLevel + MAX_LEVELS || l - 1 >= frontier.length) {
+		if (l - 1 >= frontier.length) {
 			return false;
 		}
 

@@ -2338,6 +2338,8 @@ public class RobotEntity extends PathfinderMob {
 			candidates.addAll(job.nearby((ServerLevel) level(), blockPosition(), getUUID(), PATH_CHECKS, now));
 			BlockPos climbTo = null;
 			BlockPos climbFrom = null;
+			BlockPos approach = null;
+			Path approachPath = null;
 
 			for (BlockPos pos : candidates) {
 				if (getEyePosition().distanceTo(Vec3.atCenterOf(pos)) <= MINE_REACH) {
@@ -2352,6 +2354,13 @@ public class RobotEntity extends PathfinderMob {
 					return startDigging(job, pos);
 				}
 
+				if (approach == null && job instanceof MiningJob && closerAlong(path, pos)) {
+					// too far for one way (a mountain top, say): it walks as far as the way goes and looks again from there
+					approach = pos;
+					approachPath = path;
+					continue;
+				}
+
 				// (not for the leaves of a tree: cutting its trunk fells the whole tree)
 				if (climbTo == null && job instanceof MiningJob area && pos.getY() > getY() + 1 && !level().getBlockState(pos).is(net.minecraft.tags.BlockTags.LEAVES)) {
 					// too high to walk up to: it builds itself up there
@@ -2364,6 +2373,11 @@ public class RobotEntity extends PathfinderMob {
 				}
 
 				job.skip(pos, getUUID(), now);
+			}
+
+			if (approach != null) {
+				plannedPath = approachPath;
+				return startDigging(job, approach);
 			}
 
 			if (climbTo != null) {
@@ -2383,6 +2397,15 @@ public class RobotEntity extends PathfinderMob {
 		 */
 		private Path digPath(BlockPos pos) {
 			return getNavigation().createPath(Set.of(pos.immutable()), 4);
+		}
+
+		/** A way that does not get there but ends a good bit closer to the block. */
+		private boolean closerAlong(Path path, BlockPos target) {
+			if (path == null || path.getNodeCount() < 3) {
+				return false;
+			}
+
+			return path.getEndNode().asBlockPos().distSqr(target) + 16 < blockPosition().distSqr(target);
 		}
 
 		/** What it builds itself up to, and the spot it builds its pillar from. */
@@ -2742,7 +2765,7 @@ public class RobotEntity extends PathfinderMob {
 			} else if (getNavigation().isDone()) {
 				Path path = digPath(mineTarget);
 
-				if (path != null && path.canReach()) {
+				if (path != null && (path.canReach() || job instanceof MiningJob && closerAlong(path, mineTarget))) {
 					getNavigation().moveTo(path, 1.0);
 				} else {
 					getMoveControl().setWantedPosition(centre.x, centre.y, centre.z, 1.0);
