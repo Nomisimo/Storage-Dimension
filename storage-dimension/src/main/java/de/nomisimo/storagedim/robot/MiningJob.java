@@ -27,9 +27,15 @@ import net.minecraft.world.level.block.state.BlockState;
  * getting in each other's way.
  * <p>
  * The area is the station's antenna box, or without antennas a square of its range around the station, from the
- * top of the ground down to the bottom of the world (a quarry; the station stays on its pillar). It is dug from the top down: for every column of the area the job knows its
- * highest block still to dig, and the robots take the blocks of the highest layers first, each the one closest to
- * itself that no other robot has taken.
+ * top of the ground down to the bottom of the world (a quarry; the station stays on its pillar).
+ * <p>
+ * Once the station has looked at every column it makes a fixed plan, which the robots work through like a machine
+ * through its program: the area is cut into levels three blocks high, starting at its highest block (trees and
+ * plants left out), and each level is dug ring by ring from the staircase outwards (from the corner the station is
+ * in, or around the station). A level may only start where the one above it is done two rings further out, and at
+ * most three levels are dug at the same time, so the quarry goes down in terraces and the part already dug always
+ * reaches the staircase. Trees and plants are taken whenever a robot gets at them (a log fells the whole tree).
+ * Robots that cannot walk up to a block above them build themselves a pillar of cobblestone up to it.
  * <p>
  * A spiral staircase around a pillar stays standing, so the station can always be reached: the pillar is the column
  * of the station (or, when the station sits at a corner of its antenna box, the column diagonally inside the box),
@@ -51,8 +57,6 @@ public final class MiningJob implements DigJob {
 	private static final int FORGET_TICKS = 6000;
 	/** Block checks per call while the columns are looked at for the first time. */
 	private static final int SCAN_BUDGET = 6000;
-	/** Layers below the highest one that robots may already take blocks from. */
-	private static final int LAYER_BAND = 2;
 	private static final int CLEARED = Integer.MIN_VALUE;
 	/** Water that is back this often: its cobblestone is left as a wall. */
 	private static final int MAX_PUMPS = 3;
@@ -126,17 +130,167 @@ public final class MiningJob implements DigJob {
 
 		this.pillar = new BlockPos(px, station.getY(), pz);
 		List<long[]> columns = new ArrayList<>();
+		int pillarX = px;
+		int pillarZ = pz;
 
 		for (int x = minX; x <= maxX; x++) {
 			for (int z = minZ; z <= maxZ; z++) {
-				long dx = x - station.getX();
-				long dz = z - station.getZ();
-				columns.add(new long[] {column(x, z), dx * dx + dz * dz});
+				int dx = x - pillarX;
+				int dz = z - pillarZ;
+				// the plan: ring by ring around the staircase (from the corner the station is in, or around it), each ring
+				// walked round once, so the part already dug always reaches the staircase
+				long angle = Math.round((Math.atan2(dz, dx) + Math.PI) * 1000);
+				columns.add(new long[] {column(x, z), (long) Math.max(Math.abs(dx), Math.abs(dz)) << 16 | angle});
 			}
 		}
 
 		columns.sort(Comparator.comparingLong(c -> c[1]));
 		order = columns.stream().mapToLong(c -> c[0]).toArray();
+
+		for (int i = 0; i < order.length; i++) {
+			planIndex.put(order[i], i);
+		}
+	}
+
+	// ---- the plan ----
+
+	/** Plan step of each column: ring by ring around the staircase. */
+	private final Map<Long, Integer> planIndex = new HashMap<>();
+	/** The highest block of the area (trees and plants left out) when the plan was made: the first level starts there. */
+	private Integer planTop;
+	/** Height of one level: a robot standing on its floor reaches all of it. */
+	static final int LEVEL = 3;
+	/** Levels being dug at the same time, each a little behind the one above it. */
+	private static final int MAX_LEVELS = 3;
+	/** How many rings each level stays behind the one above it. */
+	private static final int LAG = 2;
+	/** A block all robots gave up on this many times is left for good. */
+	private static final int GIVE_UP_ROUNDS = 3;
+	private final Map<Long, Integer> skipRounds = new HashMap<>();
+	private final Set<Long> givenUp = new java.util.HashSet<>();
+	/** Given up since the last call: their columns look further down. */
+	private final List<BlockPos> pendingGiveUp = new ArrayList<>();
+	private long frontierTick = Long.MIN_VALUE;
+	private int firstLevel;
+	/** For each level, the innermost ring that still has work at that level or above (Integer.MAX_VALUE when none). */
+	private int[] frontier = new int[0];
+
+	/** Ring of a column around the staircase. */
+	private int ring(long column) {
+		return Math.max(Math.abs(columnX(column) - pillar.getX()), Math.abs(columnZ(column) - pillar.getZ()));
+	}
+
+	/** Which level of the plan a height is in: 0 is the top one. */
+	int level(int y) {
+		return planTop == null || y >= planTop ? 0 : (planTop - y) / LEVEL;
+	}
+
+	/** The plan is made once every column has been looked at. */
+	public boolean planned() {
+		return planTop != null;
+	}
+
+	/** For the station screen and the tests: the level the robots are on, and how many there are. */
+	public String describePlan() {
+		if (planTop == null) {
+			return "Plan wird erstellt";
+		}
+
+		return "Ebene " + (firstLevel + 1) + " von " + (level(minY) + 1) + " (oben bei Y " + planTop + ")";
+	}
+
+	/** Trees and plants: dug wherever they are (a log fells the whole tree), they do not hold up the levels. */
+	private static boolean vegetation(ServerLevel level, BlockPos pos, BlockState state) {
+		return state.is(net.minecraft.tags.BlockTags.LOGS) || state.is(net.minecraft.tags.BlockTags.LEAVES) || state.getCollisionShape(level, pos).isEmpty()
+				&& !isWater(state);
+	}
+
+	/** Makes the plan: the highest block (below trees and plants) is where the first level starts. */
+	private void makePlan(ServerLevel level) {
+		int top = Integer.MIN_VALUE;
+		BlockPos.MutableBlockPos pos = new BlockPos.MutableBlockPos();
+
+		for (Map.Entry<Long, Integer> entry : tops.entrySet()) {
+			pos.set(columnX(entry.getKey()), entry.getValue(), columnZ(entry.getKey()));
+
+			// down through the tree or the grass on top
+			while (pos.getY() > minY && pos.getY() > top) {
+				BlockState state = level.getBlockState(pos);
+
+				if (!state.isAir() && !vegetation(level, pos, state)) {
+					break;
+				}
+
+				pos.move(Direction.DOWN);
+			}
+
+			top = Math.max(top, pos.getY());
+		}
+
+		planTop = top == Integer.MIN_VALUE ? minY : top;
+		frontierTick = Long.MIN_VALUE;
+	}
+
+	/** Works out, once a tick, which level is on top and how far each level has got. */
+	private void updateFrontier(ServerLevel level, long now) {
+		if (frontierTick == now || planTop == null) {
+			return;
+		}
+
+		frontierTick = now;
+		int levels = level(minY) + 1;
+		int[] innermost = new int[levels];
+		java.util.Arrays.fill(innermost, Integer.MAX_VALUE);
+		BlockPos.MutableBlockPos pos = new BlockPos.MutableBlockPos();
+
+		for (Map.Entry<Long, Integer> entry : tops.entrySet()) {
+			pos.set(columnX(entry.getKey()), entry.getValue(), columnZ(entry.getKey()));
+
+			// a block nobody gets to for now, and trees, do not hold the others up
+			if (skipped.containsKey(pos.asLong()) || !level.isLoaded(pos) || vegetation(level, pos, level.getBlockState(pos))) {
+				continue;
+			}
+
+			int l = Math.min(levels - 1, level(entry.getValue()));
+			innermost[l] = Math.min(innermost[l], ring(entry.getKey()));
+		}
+
+		firstLevel = levels;
+
+		for (int l = 0; l < levels; l++) {
+			if (innermost[l] != Integer.MAX_VALUE && firstLevel == levels) {
+				firstLevel = l;
+			}
+
+			if (l > 0) {
+				innermost[l] = Math.min(innermost[l], innermost[l - 1]);
+			}
+		}
+
+		frontier = innermost;
+	}
+
+	/**
+	 * May the block be dug now, by the plan? The top level always; the next ones only where the level above is done
+	 * {@value #LAG} rings further out, so every level is dug from the staircase outwards, three at most at the same
+	 * time. Trees and plants always.
+	 */
+	private boolean allowed(ServerLevel level, long column, BlockPos pos) {
+		if (planTop == null) {
+			return false;
+		}
+
+		int l = level(pos.getY());
+
+		if (l <= firstLevel || vegetation(level, pos, level.getBlockState(pos))) {
+			return true;
+		}
+
+		if (l >= firstLevel + MAX_LEVELS || l - 1 >= frontier.length) {
+			return false;
+		}
+
+		return frontier[l - 1] > ring(column) + LAG;
 	}
 
 	/**
@@ -182,7 +336,7 @@ public final class MiningJob implements DigJob {
 	/**
 	 * How far the quarry is, in tenths of a percent: of all the blocks from the top of each column down to the
 	 * bottom, how many are gone. -1 while not every column has been looked at yet. The work at the start is kept
-	 * with the world, so after a restart the count goes on from there.
+	 * with the world, so after a restart the count goes on from there. It never goes back: see {@link #total()}.
 	 */
 	int progress() {
 		if (finished()) {
@@ -193,9 +347,40 @@ public final class MiningJob implements DigJob {
 			return -1;
 		}
 
+		long total = total();
+		int permille = total <= 0 ? 0 : (int) Math.clamp((total - remaining) * 1000 / total, 0, 999);
+		StationProgress.Entry saved = saved();
+		return saved == null ? permille : Math.max(permille, Math.min(999, saved.permille()));
+	}
+
+	/** What was saved for this quarry, or null (none yet, or saved for another area). */
+	private StationProgress.Entry saved() {
 		StationProgress.Entry saved = StationProgress.get(dim, station);
-		long total = saved != null && saved.key().equals(key()) ? Math.max(saved.total(), initial) : initial;
-		return total <= 0 ? 0 : (int) Math.clamp((total - remaining) * 1000 / total, 0, 999);
+		return saved != null && saved.key().equals(key()) ? saved : null;
+	}
+
+	/**
+	 * All the blocks to dig, for the progress. A job that is looked at afresh (after a restart, or when its robots
+	 * left it alone for a while) can find more to dig than was left before: water that ran into the pit, the
+	 * cobblestone walls against a sea, sand that fell in. The bar used to jump back then (9.9 % to 6.2 %, say).
+	 * Instead the total grows by so much that the bar stays where it was and goes on from there.
+	 */
+	private long total() {
+		StationProgress.Entry saved = saved();
+
+		if (saved == null) {
+			return initial;
+		}
+
+		long total = Math.max(saved.total(), initial);
+		int floor = Math.clamp(saved.permille(), 0, 999);
+
+		if (floor > 0 && (total - remaining) * 1000 < (long) floor * total) {
+			// rounded up: (total - remaining) / total is then at least floor / 1000
+			total = (remaining * 1000 + (1000 - floor) - 1) / (1000 - floor);
+		}
+
+		return total;
 	}
 
 	private void saveProgress(long now) {
@@ -207,9 +392,7 @@ public final class MiningJob implements DigJob {
 		int permille = progress();
 
 		if (permille >= 0) {
-			StationProgress.Entry saved = StationProgress.get(dim, station);
-			long total = saved != null && saved.key().equals(key()) ? Math.max(saved.total(), initial) : initial;
-			StationProgress.put(dim, station, new StationProgress.Entry(key(), total, permille));
+			StationProgress.put(dim, station, new StationProgress.Entry(key(), total(), permille));
 		}
 	}
 
@@ -338,7 +521,7 @@ public final class MiningJob implements DigJob {
 		}
 
 		// where water kept coming back (from a sea beside the area) the cobblestone stays as a wall
-		return diggable(level, pos, state) && !isProtected(level, pos, state) && pumped.getOrDefault(pos.asLong(), 0) < MAX_PUMPS;
+		return diggable(level, pos, state) && !isProtected(level, pos, state) && pumped.getOrDefault(pos.asLong(), 0) < MAX_PUMPS && !givenUp.contains(pos.asLong());
 	}
 
 	@Override
@@ -479,6 +662,10 @@ public final class MiningJob implements DigJob {
 				initial += top == CLEARED ? 0 : top - minY + 1;
 			}
 		}
+
+		if (planTop == null && scanned >= order.length) {
+			makePlan(level);
+		}
 	}
 
 	/** The highest block of a column (from the height map), so the air above the ground is not looked through block by block. */
@@ -517,8 +704,9 @@ public final class MiningJob implements DigJob {
 	// ---- handing out blocks ----
 
 	/**
-	 * Blocks for a robot standing at {@code from}, best first: from the highest layers that still have blocks to
-	 * dig, those closest to the robot. Blocks another robot took or none could get to are left out.
+	 * The next steps of the plan for a robot: the blocks the plan allows now (see {@link #allowed}), the highest level
+	 * first, within it ring by ring from the staircase outwards, so the robots work through the plan in its order like
+	 * a machine through its program. Blocks another robot took or none could get to are left out.
 	 */
 	@Override
 	public List<BlockPos> candidates(ServerLevel level, BlockPos from, UUID robot, int count, long now) {
@@ -529,47 +717,70 @@ public final class MiningJob implements DigJob {
 		seen.put(robot, now);
 		seen.values().removeIf(last -> now - last > CLAIM_TICKS);
 		claimed.values().removeIf(owner -> !seen.containsKey(owner));
+
+		if (planTop == null) {
+			// the station is still looking at the area
+			return new ArrayList<>();
+		}
+
+		for (BlockPos pos : pendingGiveUp) {
+			long column = column(pos.getX(), pos.getZ());
+			Integer top = tops.get(column);
+
+			if (top != null && top == pos.getY()) {
+				Integer next = findTop(level, pos.getX(), pos.getZ(), top, new int[1]);
+
+				if (next != null) {
+					setTop(column, next);
+				}
+			}
+		}
+
+		pendingGiveUp.clear();
+
+		updateFrontier(level, now);
+		List<long[]> steps = new ArrayList<>();
+
+		for (Map.Entry<Long, Integer> entry : tops.entrySet()) {
+			long column = entry.getKey();
+			int y = entry.getValue();
+			long packed = BlockPos.asLong(columnX(column), y, columnZ(column));
+
+			if (claimed.containsKey(packed) || skippedFor(BlockPos.of(packed), robot)) {
+				continue;
+			}
+
+			// level, then step of the plan, then from the top down
+			steps.add(new long[] {column, y, (long) level(y) << 40 | (long) planIndex.getOrDefault(column, 0) << 12 | (4095 - Math.clamp(y - minY, 0, 4095))});
+		}
+
+		steps.sort(Comparator.comparingLong(step -> step[2]));
 		List<BlockPos> found = new ArrayList<>();
 		List<long[]> moved = new ArrayList<>();
-		Integer firstLayer = null;
 		int checks = 0;
 
-		for (Map.Entry<Integer, Set<Long>> layer : layers.descendingMap().entrySet()) {
-			int y = layer.getKey();
-
-			if (firstLayer != null && y < firstLayer - LAYER_BAND) {
+		for (long[] step : steps) {
+			if (found.size() >= count || checks++ > 4000) {
 				break;
 			}
 
-			for (Iterator<Long> it = layer.getValue().iterator(); it.hasNext() && checks < 40000; ) {
-				long column = it.next();
-				BlockPos pos = new BlockPos(columnX(column), y, columnZ(column));
-				checks++;
+			BlockPos pos = new BlockPos(columnX(step[0]), (int) step[1], columnZ(step[0]));
 
-				if (claimed.containsKey(pos.asLong()) || skippedFor(pos, robot)) {
-					continue;
-				}
-
-				if (!level.isLoaded(pos)) {
-					continue;
-				}
-
-				if (!wanted(level, pos)) {
-					// dug by a player or fallen away: the column is looked at again below
-					moved.add(new long[] {column, y});
-					continue;
-				}
-
-				if (!exposed(level, pos) || besideWater(level, pos)) {
-					continue;
-				}
-
-				found.add(pos);
+			if (!level.isLoaded(pos)) {
+				continue;
 			}
 
-			if (!found.isEmpty() && firstLayer == null) {
-				firstLayer = y;
+			if (!wanted(level, pos)) {
+				// dug by a player or fallen away: the column is looked at again below
+				moved.add(step);
+				continue;
 			}
+
+			if (!allowed(level, step[0], pos) || !exposed(level, pos) || besideWater(level, pos)) {
+				continue;
+			}
+
+			found.add(pos);
 		}
 
 		for (long[] m : moved) {
@@ -580,10 +791,7 @@ public final class MiningJob implements DigJob {
 			}
 		}
 
-		// the highest first, within those the closest; a little height counts like a little distance
-		int base = firstLayer == null ? 0 : firstLayer;
-		found.sort(Comparator.comparingDouble(pos -> pos.distSqr(from) - (pos.getY() - base) * 6.0));
-		return found.size() > count ? new ArrayList<>(found.subList(0, count)) : found;
+		return found;
 	}
 
 	/**
@@ -594,6 +802,7 @@ public final class MiningJob implements DigJob {
 	@Override
 	public List<BlockPos> nearby(ServerLevel level, BlockPos from, UUID robot, int count, long now) {
 		forget(now);
+		updateFrontier(level, now);
 		List<BlockPos> found = new ArrayList<>();
 
 		for (BlockPos pos : BlockPos.betweenClosed(from.offset(-6, -1, -6), from.offset(6, 5, 6))) {
@@ -601,7 +810,10 @@ public final class MiningJob implements DigJob {
 				continue;
 			}
 
-			if (wanted(level, pos) && exposed(level, pos) && !besideWater(level, pos)) {
+			boolean free = pos.distSqr(from) <= 12 && pos.getY() >= from.getY();
+
+			// the plan holds here too: no holes into the levels below, except to get free
+			if (wanted(level, pos) && exposed(level, pos) && !besideWater(level, pos) && (free || allowed(level, column(pos.getX(), pos.getZ()), pos))) {
 				found.add(pos.immutable());
 			}
 		}
@@ -635,6 +847,14 @@ public final class MiningJob implements DigJob {
 		if (robots.size() >= SKIP_ROBOTS) {
 			skipped.put(pos.asLong(), now + SKIP_TICKS);
 			failed.remove(pos.asLong());
+
+			if (skipRounds.merge(pos.asLong(), 1, Integer::sum) >= GIVE_UP_ROUNDS) {
+				// nobody gets there, again and again: left standing, the column goes on below it
+				givenUp.add(pos.asLong());
+				skipRounds.remove(pos.asLong());
+				skipped.remove(pos.asLong());
+				pendingGiveUp.add(pos.immutable());
+			}
 		}
 
 		claimed.remove(pos.asLong());

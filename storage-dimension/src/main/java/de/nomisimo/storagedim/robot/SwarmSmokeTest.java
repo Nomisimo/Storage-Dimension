@@ -331,7 +331,7 @@ public final class SwarmSmokeTest {
 		}
 
 		MiningJob job = miningJob();
-		return "Spalten übrig=" + job.columnsLeft() + " oberste Schicht=" + job.highestLayer();
+		return "Spalten übrig=" + job.columnsLeft() + " oberste Schicht=" + job.highestLayer() + " " + job.describePlan();
 	}
 
 	private static MiningJob miningJob() {
