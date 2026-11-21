@@ -151,6 +151,8 @@ public class RobotEntity extends PathfinderMob {
 	/** How far from its eyes a mining robot digs, like a player. */
 	/** How far it reaches to dig: like a player. */
 	private static final double MINE_REACH = 4.5;
+	/** How high it builds itself up at most to get at a block of the mining plan. */
+	private static final int MAX_CLIMB = 24;
 	/**
 	 * A chest it sees this close is in reach: with many robots crowding round the station's chests it does not have to
 	 * squeeze right up to one (it used to stand behind the others with its load and wait for good).
@@ -790,6 +792,10 @@ public class RobotEntity extends PathfinderMob {
 
 		if (minePhase == 3 && mineTarget != null) {
 			return Component.literal("Baut ").append(level().getBlockState(mineTarget).getBlock().getName()).append(" ab").withStyle(ChatFormatting.GREEN);
+		}
+
+		if (minePhase == 4) {
+			return Component.literal("Baut sich hoch").withStyle(ChatFormatting.GREEN);
 		}
 
 		if (minePhase == 1) {
@@ -2269,6 +2275,11 @@ public class RobotEntity extends PathfinderMob {
 		public void stop() {
 			getNavigation().stop();
 			dropMineTarget();
+
+			if (minePhase == 4) {
+				stopClimb(miningJob(), false);
+			}
+
 			minePhase = 0;
 			updateMiningLook();
 		}
@@ -2324,6 +2335,8 @@ public class RobotEntity extends PathfinderMob {
 
 			List<BlockPos> candidates = job.candidates((ServerLevel) level(), blockPosition(), getUUID(), PATH_CHECKS, now);
 			candidates.addAll(job.nearby((ServerLevel) level(), blockPosition(), getUUID(), PATH_CHECKS, now));
+			BlockPos climbTo = null;
+			BlockPos climbFrom = null;
 
 			for (BlockPos pos : candidates) {
 				if (getEyePosition().distanceTo(Vec3.atCenterOf(pos)) <= MINE_REACH) {
@@ -2338,7 +2351,23 @@ public class RobotEntity extends PathfinderMob {
 					return startDigging(job, pos);
 				}
 
+				// (not for the leaves of a tree: cutting its trunk fells the whole tree)
+				if (climbTo == null && job instanceof MiningJob area && pos.getY() > getY() + 1 && !level().getBlockState(pos).is(net.minecraft.tags.BlockTags.LEAVES)) {
+					// too high to walk up to: it builds itself up there
+					climbFrom = climbStand(area, pos);
+
+					if (climbFrom != null) {
+						climbTo = pos;
+						continue;
+					}
+				}
+
 				job.skip(pos, getUUID(), now);
+			}
+
+			if (climbTo != null) {
+				startClimb(job, climbTo, climbFrom);
+				return true;
 			}
 
 			mineIdle = true;
@@ -2353,6 +2382,174 @@ public class RobotEntity extends PathfinderMob {
 		 */
 		private Path digPath(BlockPos pos) {
 			return getNavigation().createPath(Set.of(pos.immutable()), 4);
+		}
+
+		/** What it builds itself up to, and the spot it builds its pillar from. */
+		private BlockPos climbTarget;
+		private BlockPos climbFrom;
+		private int climbTicks;
+		private int climbWait;
+
+		/**
+		 * Where it can build itself up to a block it cannot walk up to: the ground right below it or beside it, inside
+		 * the area and away from the staircase, that it can walk to. Null when there is none.
+		 */
+		private BlockPos climbStand(MiningJob area, BlockPos target) {
+			ServerLevel server = (ServerLevel) level();
+
+			for (BlockPos column : List.of(target, target.north(), target.south(), target.east(), target.west())) {
+				if (!area.contains(column) || Math.abs(column.getX() - area.pillar().getX()) <= 1 && Math.abs(column.getZ() - area.pillar().getZ()) <= 1) {
+					continue;
+				}
+
+				BlockPos.MutableBlockPos pos = column.mutable().move(Direction.DOWN);
+
+				for (int i = 0; i < MAX_CLIMB && pos.getY() > server.getMinY(); i++, pos.move(Direction.DOWN)) {
+					BlockPos below = pos.below();
+
+					if (!server.getBlockState(pos).getCollisionShape(server, pos).isEmpty()) {
+						break;
+					}
+
+					if (server.getBlockState(below).getCollisionShape(server, below).isEmpty()) {
+						continue;
+					}
+
+					// ground: can it get there?
+					if (server.getFluidState(pos).isEmpty() && !area.onPlatform(pos)) {
+						Path path = getNavigation().createPath(pos.immutable(), 0);
+
+						if (path != null && path.canReach()) {
+							return pos.immutable();
+						}
+					}
+
+					break;
+				}
+			}
+
+			return null;
+		}
+
+		private void startClimb(DigJob job, BlockPos target, BlockPos from) {
+			job.claim(target, getUUID());
+			climbTarget = target.immutable();
+			climbFrom = from;
+			climbTicks = 0;
+			climbWait = 0;
+			bestDistance = Double.MAX_VALUE;
+			stuckTicks = 0;
+			minePhase = 4;
+			mineIdle = false;
+			mineFinished = false;
+		}
+
+		private void stopClimb(DigJob job, boolean skip) {
+			if (climbTarget != null && job != null) {
+				if (skip) {
+					job.skip(climbTarget, getUUID(), level().getGameTime());
+				} else {
+					job.release(climbTarget, getUUID());
+				}
+			}
+
+			climbTarget = null;
+			climbFrom = null;
+			minePhase = 0;
+		}
+
+		/**
+		 * Builds itself up to a block high above: walks to the foot of its pillar, then hops up a block at a time and
+		 * puts cobblestone under itself, like a player, until it reaches the block. The pillar is dug again with its level.
+		 */
+		private void tickClimb() {
+			DigJob job = miningJob();
+			ServerLevel server = (ServerLevel) level();
+
+			if (!(job instanceof MiningJob area) || climbTarget == null || !job.wanted(server, climbTarget)) {
+				stopClimb(job, false);
+				cooldown = 0;
+				return;
+			}
+
+			Vec3 centre = Vec3.atCenterOf(climbTarget);
+			getLookControl().setLookAt(centre.x, centre.y, centre.z);
+
+			if (onGround() && getEyePosition().distanceTo(centre) <= MINE_REACH) {
+				// up there: it digs it
+				BlockPos target = climbTarget;
+				climbTarget = null;
+				plannedPath = null;
+				startDigging(job, target);
+				return;
+			}
+
+			if (++climbTicks > WAY_TICKS) {
+				stopClimb(job, true);
+				noteFruitless();
+				return;
+			}
+
+			if (net.minecraft.util.Mth.floor(getX()) != climbFrom.getX() || net.minecraft.util.Mth.floor(getZ()) != climbFrom.getZ() || getY() < climbFrom.getY() - 0.5) {
+				// on the way to the foot of the pillar
+				Vec3 foot = Vec3.atBottomCenterOf(climbFrom);
+
+				if (stuck(position().distanceTo(foot))) {
+					stopClimb(job, true);
+					noteFruitless();
+					return;
+				}
+
+				if (getNavigation().isDone()) {
+					Path path = getNavigation().createPath(climbFrom, 0);
+
+					if (path != null && path.canReach() && path.getNodeCount() > 1) {
+						getNavigation().moveTo(path, 1.0);
+					} else {
+						getMoveControl().setWantedPosition(foot.x, foot.y, foot.z, 1.0);
+					}
+				}
+
+				return;
+			}
+
+			getNavigation().stop();
+
+			if (!onGround() || ++climbWait < 6) {
+				return;
+			}
+
+			climbWait = 0;
+			BlockPos feet = BlockPos.containing(getX(), getY() + 0.1, getZ());
+			BlockPos head = feet.above();
+			BlockState overhead = server.getBlockState(head);
+
+			if (!overhead.getCollisionShape(server, head).isEmpty()) {
+				// something above its head: dug first, then it climbs on
+				if (job.wanted(server, head)) {
+					job.release(climbTarget, getUUID());
+					climbTarget = null;
+					plannedPath = null;
+					startDigging(job, head);
+				} else {
+					stopClimb(job, true);
+				}
+
+				return;
+			}
+
+			if (feet.getY() - climbFrom.getY() >= MAX_CLIMB || !server.getBlockState(feet).canBeReplaced() || area.isStair(feet) || area.onPlatform(feet)) {
+				stopClimb(job, true);
+				return;
+			}
+
+			// hop up and put a block under itself
+			setDeltaMovement(Vec3.ZERO);
+			setPos(feet.getX() + 0.5, feet.getY() + 1, feet.getZ() + 0.5);
+			server.setBlockAndUpdate(feet, Blocks.COBBLESTONE.defaultBlockState());
+			playSound(SoundEvents.STONE_PLACE, 0.5F, 1.0F);
+			bestDistance = Double.MAX_VALUE;
+			stuckTicks = 0;
 		}
 
 		private boolean startDigging(DigJob job, BlockPos pos) {
@@ -2396,6 +2593,8 @@ public class RobotEntity extends PathfinderMob {
 				tickToolChest();
 			} else if (minePhase == 3) {
 				tickDigging();
+			} else if (minePhase == 4) {
+				tickClimb();
 			}
 
 			updateMiningLook();

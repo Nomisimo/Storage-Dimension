@@ -25,7 +25,8 @@ import net.minecraft.world.level.block.state.BlockState;
 /**
  * Smoke test of the mining mode (CI, -Dstoragedim.smoketest=true): high above the overworld a station with a chest,
  * two robots and a few blocks around it. Mining is switched on (the tool chest has to appear), the robots fetch their
- * tools, dig everything except the staircase and pump a pond dry, a worn-out pickaxe breaks and is replaced from the tool chest, all
+ * tools, dig everything except the staircase by the station's plan (building themselves up to a block high in the
+ * air) and pump a pond dry, a worn-out pickaxe breaks and is replaced from the tool chest, all
  * drops end up in the chest; switched off, the tools go back into the tool chest.
  */
 public final class MiningSmokeTest {
@@ -78,6 +79,9 @@ public final class MiningSmokeTest {
 				put(station.offset(dx, 2, dz), Blocks.STONE);
 			}
 		}
+
+		// a block high up in the air: no robot can walk up to it, they build themselves up to it (the plan starts there)
+		put(station.offset(-6, 6, 6), Blocks.STONE);
 
 		// sand that falls when the block below it goes
 		put(station.offset(-6, 0, 3), Blocks.COBBLESTONE);
@@ -213,6 +217,9 @@ public final class MiningSmokeTest {
 		ticks++;
 
 		if (ticks % 200 == 0) {
+			MiningJob job = MiningJob.peek(Rooms.id(level), station);
+			StorageDimensionMod.LOGGER.info("SMOKETEST Abbauplan {}: {}", ticks, job == null ? "-" : job.describePlan());
+
 			for (RobotEntity robot : robots) {
 				StorageDimensionMod.LOGGER.info("SMOKETEST Roboter {}: {} {}", ticks, robot.describeMining(), robot.status().getString());
 			}
