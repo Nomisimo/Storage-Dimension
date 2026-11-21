@@ -2354,13 +2354,6 @@ public class RobotEntity extends PathfinderMob {
 					return startDigging(job, pos);
 				}
 
-				if (approach == null && job instanceof MiningJob && closerAlong(path, pos)) {
-					// too far for one way (a mountain top, say): it walks as far as the way goes and looks again from there
-					approach = pos;
-					approachPath = path;
-					continue;
-				}
-
 				// (not for the leaves of a tree: cutting its trunk fells the whole tree)
 				if (climbTo == null && job instanceof MiningJob area && pos.getY() > getY() + 1 && !level().getBlockState(pos).is(net.minecraft.tags.BlockTags.LEAVES)) {
 					// too high to walk up to: it builds itself up there
@@ -2372,17 +2365,24 @@ public class RobotEntity extends PathfinderMob {
 					}
 				}
 
-				job.skip(pos, getUUID(), now);
-			}
+				if (approach == null && job instanceof MiningJob && closerAlong(path, pos)) {
+					// too far for one way (a mountain top, say): it walks as far as the way goes and looks again from there
+					approach = pos;
+					approachPath = path;
+					continue;
+				}
 
-			if (approach != null) {
-				plannedPath = approachPath;
-				return startDigging(job, approach);
+				job.skip(pos, getUUID(), now);
 			}
 
 			if (climbTo != null) {
 				startClimb(job, climbTo, climbFrom);
 				return true;
+			}
+
+			if (approach != null) {
+				plannedPath = approachPath;
+				return startDigging(job, approach);
 			}
 
 			mineIdle = true;
@@ -2767,6 +2767,12 @@ public class RobotEntity extends PathfinderMob {
 
 				if (path != null && (path.canReach() || job instanceof MiningJob && closerAlong(path, mineTarget))) {
 					getNavigation().moveTo(path, 1.0);
+				} else if (job instanceof MiningJob area && mineTarget.getY() > getY() + 1 && climbStand(area, mineTarget) != null) {
+					// walked as far as it could and the block is still above it: it builds itself up from here
+					BlockPos target = mineTarget;
+					BlockPos from = climbStand(area, target);
+					dropMineTarget();
+					startClimb(job, target, from);
 				} else {
 					getMoveControl().setWantedPosition(centre.x, centre.y, centre.z, 1.0);
 				}
