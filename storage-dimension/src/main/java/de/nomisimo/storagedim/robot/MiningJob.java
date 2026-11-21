@@ -446,6 +446,93 @@ public final class MiningJob implements DigJob {
 		return Math.floorMod(pos.getY() - station.getY() - 1, RING.length) == index;
 	}
 
+	/** The step of the staircase at a height: one of the eight columns around the pillar. */
+	public BlockPos step(int y) {
+		int[] cell = RING[Math.floorMod(y - station.getY() - 1, RING.length)];
+		return new BlockPos(pillar.getX() + cell[0], y, pillar.getZ() + cell[1]);
+	}
+
+	/** How far up or down the staircase one way goes at most. */
+	private static final int WAYPOINT_SPAN = 16;
+
+	/**
+	 * Places along the central staircase between a robot and where it wants to go (up to the chests at the station, or
+	 * down into the quarry), the farthest first: a way all the way up out of a deep quarry is often more than the game
+	 * finds at once, so it goes up the staircase a stretch at a time instead of digging a staircase of its own.
+	 */
+	public List<BlockPos> waypoints(ServerLevel level, BlockPos from, int toY) {
+		List<BlockPos> found = new ArrayList<>();
+		int dy = toY - from.getY();
+
+		if (Math.abs(dy) <= 3 || !contains(from) && !contains(new BlockPos(from.getX(), toY, from.getZ()))) {
+			return found;
+		}
+
+		int dir = Integer.signum(dy);
+		int far = from.getY() + dir * Math.min(Math.abs(dy) - 1, WAYPOINT_SPAN);
+
+		for (int y = far; (y - from.getY()) * dir >= 0 && found.size() < 5; y -= dir) {
+			if (y >= station.getY() || y <= minY) {
+				continue;
+			}
+
+			BlockPos stepPos = step(y);
+			BlockPos feet = stepPos.above();
+
+			if (level.isLoaded(stepPos) && level.getBlockState(stepPos).isFaceSturdy(level, stepPos, Direction.UP) && level.getBlockState(feet).getCollisionShape(level, feet).isEmpty()
+					&& level.getFluidState(feet).isEmpty()) {
+				found.add(feet);
+				y -= dir * 3;
+			}
+		}
+
+		return found;
+	}
+
+	/** Down to here the central staircase has been checked for missing steps. */
+	private int stairsCheckedTo = Integer.MAX_VALUE;
+	private long stairsTick = Long.MIN_VALUE;
+
+	/**
+	 * The central staircase gets a cobblestone step wherever one is missing (a cave, water, air above the ground),
+	 * as soon as the quarry around it has got down to that height: then every robot can always walk up to the
+	 * station by it and none has to dig a way of its own.
+	 */
+	private void repairStairs(ServerLevel level, long now) {
+		if (now - stairsTick < 40) {
+			return;
+		}
+
+		stairsTick = now;
+		int from = Math.min(stairsCheckedTo, station.getY() - 1);
+
+		for (int y = from; y > minY; y--) {
+			BlockPos stepPos = step(y);
+
+			if (!level.isLoaded(stepPos)) {
+				return;
+			}
+
+			// the ring around the staircase is dug down to here?
+			int ox = Integer.signum(stepPos.getX() - pillar.getX());
+			int oz = Integer.signum(stepPos.getZ() - pillar.getZ());
+			BlockPos outside = stepPos.offset(ox, 0, oz);
+			Integer top = tops.get(column(outside.getX(), outside.getZ()));
+
+			if (contains(outside) && (top == null && scanned < order.length || top != null && top >= y)) {
+				return;
+			}
+
+			BlockState state = level.getBlockState(stepPos);
+
+			if (state.getCollisionShape(level, stepPos).isEmpty() || isWater(state) || state.getBlock() instanceof FallingBlock) {
+				level.setBlockAndUpdate(stepPos, Blocks.COBBLESTONE.defaultBlockState());
+			}
+
+			stairsCheckedTo = y - 1;
+		}
+	}
+
 	/**
 	 * The platform around the station: {@value #PLATFORM} blocks all round (9 by 9), one block thick under the
 	 * station's floor, and everything on it (chests, a house, waystones) stays. Only the way down to the staircase is
@@ -739,6 +826,7 @@ public final class MiningJob implements DigJob {
 		pendingGiveUp.clear();
 
 		updateFrontier(level, now);
+		repairStairs(level, now);
 		List<long[]> steps = new ArrayList<>();
 
 		for (Map.Entry<Long, Integer> entry : tops.entrySet()) {
