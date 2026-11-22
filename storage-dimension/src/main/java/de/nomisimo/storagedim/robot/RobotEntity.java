@@ -109,10 +109,10 @@ public class RobotEntity extends PathfinderMob {
 	 * fit wait for a later tick; without this some 50 robots with unreachable goals could hold up a tick for over a
 	 * minute, and the watchdog shut the server down (issue #43).
 	 */
-	private static final long PATH_BUDGET_NANOS = 20_000_000L;
-	private static final long ROBOT_PATH_BUDGET_NANOS = 5_000_000L;
+	private static final long PATH_BUDGET_NANOS = 40_000_000L;
+	private static final long ROBOT_PATH_BUDGET_NANOS = 12_000_000L;
 	/** A robot that used up its own share rests this many ticks before it works out ways again, so the others get their turn. */
-	private static final int PATH_REST_TICKS = 4;
+	private static final int PATH_REST_TICKS = 2;
 	/** Upper limit for the places one search for a way looks at, however far the robot's range reaches. */
 	private static final int MAX_PATH_NODES = 6000;
 	private static int pathBudgetTick = Integer.MIN_VALUE;
@@ -2829,9 +2829,6 @@ public class RobotEntity extends PathfinderMob {
 			if (plannedPath != null) {
 				getNavigation().moveTo(plannedPath, 1.0);
 				plannedPath = null;
-			} else if (getNavigation().isDone() && level().getGameTime() < goalPathWait) {
-				// its last way did not get there: straight on for a bit before working out the next one
-				getMoveControl().setWantedPosition(centre.x, centre.y, centre.z, 1.0);
 			} else if (getNavigation().isDone()) {
 				Path path = digPath(mineTarget);
 
@@ -2843,7 +2840,6 @@ public class RobotEntity extends PathfinderMob {
 				BlockPos from;
 
 				if (path != null && (path.canReach() || job instanceof MiningJob && closerAlong(path, mineTarget))) {
-					goalPathMisses = 0;
 					getNavigation().moveTo(path, 1.0);
 				} else if (job instanceof MiningJob area && mineTarget.getY() > getY() + 1 && (from = climbStand(area, mineTarget)) != null) {
 					// walked as far as it could and the block is still above it: it builds itself up from here
@@ -2851,7 +2847,6 @@ public class RobotEntity extends PathfinderMob {
 					dropMineTarget();
 					startClimb(job, target, from);
 				} else if (!pathDenied) {
-					missedGoalPath();
 					getMoveControl().setWantedPosition(centre.x, centre.y, centre.z, 1.0);
 				}
 			}
@@ -3745,7 +3740,7 @@ public class RobotEntity extends PathfinderMob {
 	/** After a way that did not get to the chest or block: waits a little longer each time before the next try. */
 	private void missedGoalPath() {
 		goalPathMisses = Math.min(goalPathMisses + 1, 4);
-		goalPathWait = level().getGameTime() + (10L << goalPathMisses);
+		goalPathWait = level().getGameTime() + (5L << goalPathMisses);
 	}
 
 	/**

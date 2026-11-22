@@ -43,7 +43,7 @@ public final class SwarmSmokeTest {
 	private static final double MIN_WORKING = 0.6;
 	/** More than this many standing about for long at the same time is a failure. */
 	private static final int MAX_STUCK = 3;
-	/** Longest all robots together may spend working out ways in one tick (the budget is 20 ms, plus one search running over it). */
+	/** Longest all robots together may spend working out ways in one tick (the budget is 40 ms, plus one search running over it). */
 	private static final long MAX_PATH_MILLIS = 150;
 
 	private static ServerLevel level;
