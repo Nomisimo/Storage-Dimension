@@ -1,0 +1,12 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "category": "misc",
+  "ingredients": [
+    "storagedim:filter_chest",
+    "minecraft:book"
+  ],
+  "result": {
+    "id": "storagedim:project_chest",
+    "count": 1
+  }
+}

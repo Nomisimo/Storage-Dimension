@@ -1,0 +1,8 @@
+{
+  "sharedStorage": true,
+  "jeiSearchSync": false,
+  "robotChestSound": false,
+  "keepServerAwake": true,
+  "webPort": 8765,
+  "webAddress": ""
+}

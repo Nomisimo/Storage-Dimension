@@ -1,0 +1,14 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "category": "redstone",
+  "ingredients": [
+    "minecraft:lightning_rod",
+    "minecraft:copper_ingot",
+    "minecraft:copper_ingot",
+    "minecraft:redstone"
+  ],
+  "result": {
+    "id": "storagedim:antenna",
+    "count": 1
+  }
+}

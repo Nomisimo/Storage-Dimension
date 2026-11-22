@@ -1,0 +1,8 @@
+{
+  "parent": "minecraft:block/orientable",
+  "textures": {
+    "front": "storagedim:block/mailbox_front",
+    "side": "storagedim:block/mailbox_side",
+    "top": "storagedim:block/mailbox_top"
+  }
+}
