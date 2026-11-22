@@ -1,5 +1,7 @@
 Storage Dimension für **Minecraft 26.1.2** (Fabric).
 
+**Neu in 0.8.9:** **Kein Watchdog-Absturz mehr durch die Roboter:** Mit vielen Robotern (z. B. 50 an einer Station) und Zielen, zu denen kein Weg führt, konnte die Wegsuche einen Server-Tick über eine Minute aufhalten, und der Server wurde vom Watchdog beendet (`A single server tick took 60.00 seconds`), auch ohne Spieler online. Jetzt haben alle Roboter zusammen pro Tick nur 20 ms für die Wegsuche, ein einzelner höchstens 5 ms; was nicht mehr passt, kommt einen Tick später dran, und wer seine Zeit aufgebraucht hat, lässt die anderen zuerst. Findet ein Roboter keinen Weg zur Kiste oder zum nächsten Block, wartet er vor dem nächsten Versuch etwas länger statt in jedem Tick neu zu suchen, und eine einzelne Suche schaut sich höchstens 6000 Felder an. Danke an MrPancake für die genaue Analyse (#43). Server und alle Spieler brauchen 0.8.9.
+
 **Neu in 0.8.8:** **Abbau ganzer Chunks neu:** Die Station scannt zuerst den Bereich und legt einen festen **Abbauplan** an, den die Roboter der Reihe nach abarbeiten: **Ebenen von 3 Blöcken Höhe** vom höchsten Block nach unten, jede Ebene **Ring für Ring von der Treppe aus** (aus der Ecke, in der die Station steht, sonst rund um die Station). Jede Ebene bleibt etwas hinter der darüber, so entsteht ein Steinbruch in Terrassen wie ein Trichter, der immer an der **zentralen Wendeltreppe** zur Station hängt. Über diese eine Treppe laufen alle Roboter hoch zur Kiste und wieder runter; fehlende Stufen setzen sie mit Bruchstein, statt sich jedes Mal eine eigene Treppe zu graben. Vorher liefen die Roboter kreuz und quer durch den ganzen Bereich und saßen in einzelnen Löchern fest. Kommt ein Roboter nicht an einen hohen Block, **baut er sich mit Bruchstein hoch**. Blöcke, an die niemand herankommt, halten den Plan nicht mehr auf. **Fortschritt:** Die Prozentanzeige beim Abbau springt nicht mehr zurück (z. B. von 9,9 % auf 6,2 %), wenn Wasser nachläuft oder Sand nachrutscht. Server und alle Spieler brauchen 0.8.8.
 
 **Neu in 0.8.7:** **Paketpost:** Neuer **Briefkasten** und neuer Stationsmodus **Kurier** (Sammeln → Abbauen → Erzsuche → Kurier). Ein Briefkasten steht neben einer Kiste oder Maschine und hat eine **Adresse** und ein Ziel (**Schickt an**). Die Roboter holen, was in der Kiste daneben liegt (bis 9 Stapel auf einmal), und bringen es zum Briefkasten mit dieser Adresse. Platzhalter `*` und `?` gehen, und mit `Ofen:2` landet die Post in Slot 2 der Maschine am Ziel. Rote Fahne, solange Post wartet. Aus ME-Blöcken und Enderkisten wird nie etwas abgeschickt. **Webseite:** Anmelden mit **Minecraft-Name und Passwort** (einmal `/storage web passwort <passwort>` im Spiel oder auf der Seite unter „Konto“), also ohne Link aus dem Spiel und auf jedem Gerät. Neue Seite **Stationen** mit Modus, Fortschritt in Prozent und jedem Roboter einzeln (was er tut, Fehler, Entfernung, Herzen, Laune). Neue Seite **Briefkästen**: alle Briefkästen mit Zustand, Adresse und Ziel lassen sich dort ändern. **Erzsuche:** Eingemauerte Roboter graben sich zuverlässig frei, statt endlos neue Blöcke anzufangen oder unter der Wendeltreppe festzustecken. Server und alle Spieler brauchen 0.8.7.
@@ -52,14 +54,14 @@ Storage Dimension für **Minecraft 26.1.2** (Fabric).
 
 ## Server, in den Ordner `mods`
 
-- `storage-dimension-0.8.7.jar`
-- `storagedim-tb-0.8.7.jar`
+- `storage-dimension-0.8.9.jar`
+- `storagedim-tb-0.8.9.jar`
 - dazu [Fabric API](https://modrinth.com/mod/fabric-api), [Traveler's Backpack](https://modrinth.com/mod/travelersbackpack) und [Forge Config API Port](https://modrinth.com/mod/forge-config-api-port), alle für 26.1.2
 
 ## Jeder Spieler, in den Ordner `mods`
 
-- `storage-dimension-0.8.7.jar`
-- `storagedim-tb-0.8.7.jar`
+- `storage-dimension-0.8.9.jar`
+- `storagedim-tb-0.8.9.jar`
 - dazu [Fabric API](https://modrinth.com/mod/fabric-api), [Traveler's Backpack](https://modrinth.com/mod/travelersbackpack), [Forge Config API Port](https://modrinth.com/mod/forge-config-api-port) und [JEI](https://modrinth.com/mod/jei), alle für 26.1.2
 
 ## Nur Storage Dimension, ohne Traveler's Backpack

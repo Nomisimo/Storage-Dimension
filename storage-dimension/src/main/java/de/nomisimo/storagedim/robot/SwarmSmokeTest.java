@@ -43,6 +43,8 @@ public final class SwarmSmokeTest {
 	private static final double MIN_WORKING = 0.6;
 	/** More than this many standing about for long at the same time is a failure. */
 	private static final int MAX_STUCK = 3;
+	/** Longest all robots together may spend working out ways in one tick (the budget is 20 ms, plus one search running over it). */
+	private static final long MAX_PATH_MILLIS = 150;
 
 	private static ServerLevel level;
 	private static BlockPos station;
@@ -53,6 +55,7 @@ public final class SwarmSmokeTest {
 	private static final List<String> errors = new ArrayList<>();
 	private static final List<RobotEntity> reported = new ArrayList<>();
 	private static int ticks;
+	private static long maxPathNanos;
 	private static long workingSum;
 	private static long samples;
 	private static Consumer<List<String>> done;
@@ -72,6 +75,7 @@ public final class SwarmSmokeTest {
 			running = true;
 			ServerTickEvents.END_SERVER_TICK.register(s -> {
 				try {
+					maxPathNanos = Math.max(maxPathNanos, RobotEntity.pathTimeInTick(s.getTickCount()));
 					tick();
 				} catch (Throwable t) {
 					StorageDimensionMod.LOGGER.error("SMOKETEST Ausnahme im Schwarm-Test", t);
@@ -99,6 +103,7 @@ public final class SwarmSmokeTest {
 		lastPos.clear();
 		reported.clear();
 		ticks = 0;
+		maxPathNanos = 0;
 		workingSum = 0;
 		samples = 0;
 		String dim = Rooms.id(level);
@@ -260,7 +265,12 @@ public final class SwarmSmokeTest {
 
 		if (ticks >= PHASE_TICKS || !robots.isEmpty() && robots.stream().noneMatch(RobotEntity::isAlive)) {
 			double share = samples == 0 ? 0 : workingSum / (double) samples / ROBOTS;
-			StorageDimensionMod.LOGGER.info("SMOKETEST {}: im Schnitt {} % der Roboter bei der Arbeit", name(), Math.round(share * 100));
+			StorageDimensionMod.LOGGER.info("SMOKETEST {}: im Schnitt {} % der Roboter bei der Arbeit, Wegsuche höchstens {} ms pro Tick", name(),
+					Math.round(share * 100), maxPathNanos / 1_000_000);
+
+			if (maxPathNanos / 1_000_000 > MAX_PATH_MILLIS) {
+				errors.add(name() + ": Wegsuche brauchte in einem Tick " + maxPathNanos / 1_000_000 + " ms (erlaubt " + MAX_PATH_MILLIS + ")");
+			}
 
 			if (share < MIN_WORKING && !jobFinished()) {
 				errors.add(name() + ": im Schnitt nur " + Math.round(share * 100) + " % der Roboter bei der Arbeit (" + jobInfo() + ")");

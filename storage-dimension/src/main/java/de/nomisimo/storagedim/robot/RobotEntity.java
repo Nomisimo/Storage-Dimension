@@ -104,6 +104,19 @@ public class RobotEntity extends PathfinderMob {
 	private static final int PATH_CHECKS = 4;
 	/** Ticks between two searches for dropped items. */
 	private static final int SEARCH_TICKS = 10;
+	/**
+	 * Time all robots together may spend working out ways in one server tick, and one robot alone. Ways that do not
+	 * fit wait for a later tick; without this some 50 robots with unreachable goals could hold up a tick for over a
+	 * minute, and the watchdog shut the server down (issue #43).
+	 */
+	private static final long PATH_BUDGET_NANOS = 20_000_000L;
+	private static final long ROBOT_PATH_BUDGET_NANOS = 5_000_000L;
+	/** A robot that used up its own share rests this many ticks before it works out ways again, so the others get their turn. */
+	private static final int PATH_REST_TICKS = 4;
+	/** Upper limit for the places one search for a way looks at, however far the robot's range reaches. */
+	private static final int MAX_PATH_NODES = 6000;
+	private static int pathBudgetTick = Integer.MIN_VALUE;
+	private static long pathBudgetUsed;
 	private static final int VERTICAL_RANGE = 48;
 	public static final int DEFAULT_COLOR = 0xF06E1E;
 	public static final int ACTION_TICKS = 14;
@@ -223,6 +236,15 @@ public class RobotEntity extends PathfinderMob {
 	/** The largest range of its station's group (10 chunks for a single station, one more per further station). */
 	private int groupRange = RANGE;
 	private long homeUnreachableUntil;
+	/** Its own time for working out ways in the current server tick, and the tick it waits for after using it up. */
+	private int ownPathTick = Integer.MIN_VALUE;
+	private long ownPathUsed;
+	private int pathRestUntil = Integer.MIN_VALUE;
+	/** The last way it asked for was not worked out at all: no time was left in this tick (see {@link #mayPath()}). */
+	private boolean pathDenied;
+	/** No new way to the chest or block it goes for before this game time (after one that did not get there). */
+	private long goalPathWait;
+	private int goalPathMisses;
 	/** No chest or other storage right next to its station. */
 	private boolean noChest;
 	/** Where it waits, out of the water (see {@link #restSpot()}). */
@@ -579,6 +601,11 @@ public class RobotEntity extends PathfinderMob {
 	/** Called back and not getting closer: it only teleports when no way to the station can be found. */
 	private void recallStuck() {
 		Path path = getNavigation().createPath(home(), 1);
+
+		if (path == null && pathDenied) {
+			// no time for a way in this tick: tries again shortly
+			return;
+		}
 
 		if (path == null || !path.canReach()) {
 			teleportHome();
@@ -1241,7 +1268,7 @@ public class RobotEntity extends PathfinderMob {
 	 */
 	private ItemEntity findItem() {
 		// a way can only be worked out standing (or swimming); try again on the next search
-		if (!standing()) {
+		if (!standing() || !mayPath()) {
 			return null;
 		}
 
@@ -1271,6 +1298,10 @@ public class RobotEntity extends PathfinderMob {
 		for (int i = 0; i < Math.min(items.size(), PATH_CHECKS); i++) {
 			ItemEntity item = items.get(i);
 			Path path = getNavigation().createPath(item, 1);
+
+			if (pathDenied) {
+				return null;
+			}
 
 			if (path != null && path.canReach()) {
 				plannedPath = path;
@@ -1304,7 +1335,7 @@ public class RobotEntity extends PathfinderMob {
 
 	private BlockPos planDelivery() {
 		// a way can only be worked out standing (or swimming); try again on the next search
-		if (!standing()) {
+		if (!standing() || !mayPath()) {
 			return null;
 		}
 
@@ -1330,6 +1361,10 @@ public class RobotEntity extends PathfinderMob {
 			chestsFull = false;
 
 			Path path = getNavigation().createPath(chest, 3);
+
+			if (pathDenied) {
+				return null;
+			}
 
 			if (path != null && path.canReach()) {
 				plannedPath = path;
@@ -1375,6 +1410,10 @@ public class RobotEntity extends PathfinderMob {
 			chestsFull = false;
 			Path path = getNavigation().createPath(courierTo, 3);
 
+			if (pathDenied) {
+				return null;
+			}
+
 			if (path != null && path.canReach()) {
 				plannedPath = path;
 				courierBlockedSince = 0;
@@ -1410,7 +1449,7 @@ public class RobotEntity extends PathfinderMob {
 	private BlockPos findPost() {
 		StorageData data = StorageData.get();
 
-		if (!standing() || areaOff || data == null) {
+		if (!standing() || areaOff || data == null || !mayPath()) {
 			return null;
 		}
 
@@ -1442,6 +1481,10 @@ public class RobotEntity extends PathfinderMob {
 			}
 
 			Path path = getNavigation().createPath(pos, 3);
+
+			if (pathDenied) {
+				return null;
+			}
 
 			if (path != null && path.canReach()) {
 				plannedPath = path;
@@ -2287,8 +2330,9 @@ public class RobotEntity extends PathfinderMob {
 
 		/** Works out what to do next; false when there is nothing (then it waits at the station). */
 		private boolean plan() {
-			// a way can only be worked out standing (or swimming); try again on the next search
-			if (!standing()) {
+			// a way can only be worked out standing (or swimming); try again on the next search (or when there is
+			// time for working out ways again)
+			if (!standing() || !mayPath()) {
 				return false;
 			}
 
@@ -2340,6 +2384,7 @@ public class RobotEntity extends PathfinderMob {
 			BlockPos climbFrom = null;
 			BlockPos approach = null;
 			Path approachPath = null;
+			boolean denied = false;
 
 			for (BlockPos pos : candidates) {
 				if (getEyePosition().distanceTo(Vec3.atCenterOf(pos)) <= MINE_REACH) {
@@ -2348,6 +2393,12 @@ public class RobotEntity extends PathfinderMob {
 				}
 
 				Path path = digPath(pos);
+
+				if (pathDenied) {
+					// no time left for ways in this tick: the rest is looked at on the next search
+					denied = true;
+					break;
+				}
 
 				if (path != null && path.canReach()) {
 					plannedPath = path;
@@ -2362,6 +2413,11 @@ public class RobotEntity extends PathfinderMob {
 					if (climbFrom != null) {
 						climbTo = pos;
 						continue;
+					}
+
+					if (pathDenied) {
+						denied = true;
+						break;
 					}
 				}
 
@@ -2383,6 +2439,11 @@ public class RobotEntity extends PathfinderMob {
 			if (approach != null) {
 				plannedPath = approachPath;
 				return startDigging(job, approach);
+			}
+
+			if (denied) {
+				cooldown = 1 + getRandom().nextInt(SEARCH_TICKS);
+				return false;
 			}
 
 			mineIdle = true;
@@ -2445,6 +2506,10 @@ public class RobotEntity extends PathfinderMob {
 
 						if (path != null && path.canReach()) {
 							return pos.immutable();
+						}
+
+						if (pathDenied) {
+							return null;
 						}
 					}
 
@@ -2578,6 +2643,8 @@ public class RobotEntity extends PathfinderMob {
 
 		private boolean startDigging(DigJob job, BlockPos pos) {
 			wayTicks = 0;
+			goalPathWait = 0;
+			goalPathMisses = 0;
 			stillTicks = 0;
 			job.claim(pos, getUUID());
 			mineTarget = pos.immutable();
@@ -2762,18 +2829,29 @@ public class RobotEntity extends PathfinderMob {
 			if (plannedPath != null) {
 				getNavigation().moveTo(plannedPath, 1.0);
 				plannedPath = null;
+			} else if (getNavigation().isDone() && level().getGameTime() < goalPathWait) {
+				// its last way did not get there: straight on for a bit before working out the next one
+				getMoveControl().setWantedPosition(centre.x, centre.y, centre.z, 1.0);
 			} else if (getNavigation().isDone()) {
 				Path path = digPath(mineTarget);
 
+				if (pathDenied) {
+					// no time for ways in this tick: on the next one
+					return;
+				}
+
+				BlockPos from;
+
 				if (path != null && (path.canReach() || job instanceof MiningJob && closerAlong(path, mineTarget))) {
+					goalPathMisses = 0;
 					getNavigation().moveTo(path, 1.0);
-				} else if (job instanceof MiningJob area && mineTarget.getY() > getY() + 1 && climbStand(area, mineTarget) != null) {
+				} else if (job instanceof MiningJob area && mineTarget.getY() > getY() + 1 && (from = climbStand(area, mineTarget)) != null) {
 					// walked as far as it could and the block is still above it: it builds itself up from here
 					BlockPos target = mineTarget;
-					BlockPos from = climbStand(area, target);
 					dropMineTarget();
 					startClimb(job, target, from);
-				} else {
+				} else if (!pathDenied) {
+					missedGoalPath();
 					getMoveControl().setWantedPosition(centre.x, centre.y, centre.z, 1.0);
 				}
 			}
@@ -2828,6 +2906,12 @@ public class RobotEntity extends PathfinderMob {
 			// a way home after all: nothing to dig; unless it has not moved from the spot all the while (a way the
 			// game finds but the robot cannot go, out of a hole with its head under a step, say)
 			Path home = getNavigation().createPath(home(), 2);
+
+			if (home == null && pathDenied) {
+				// no time for ways in this tick: it looks again on the next one
+				return false;
+			}
+
 			boolean moved = strandedAt == null || position().distanceTo(strandedAt) > 1.0;
 			strandedTicks = home != null && home.canReach() && moved ? 0 : strandedTicks;
 			return strandedTicks > 0;
@@ -3246,6 +3330,8 @@ public class RobotEntity extends PathfinderMob {
 		private boolean gaveUp(Object goalKey, double distance) {
 			if (goalKey != lastGoal) {
 				lastGoal = goalKey;
+				goalPathWait = 0;
+				goalPathMisses = 0;
 				bestDistance = distance;
 				stuckTicks = 0;
 				return false;
@@ -3478,18 +3564,28 @@ public class RobotEntity extends PathfinderMob {
 				} else {
 					getNavigation().moveTo(path, 1.0);
 				}
+			} else if (getNavigation().isDone() && (goalKey == delivery || goalKey == pickupBox) && level().getGameTime() < goalPathWait) {
+				// the last ways did not get to the chest: straight towards it for a bit before working out the next one
+				getMoveControl().setWantedPosition(approach.x, approach.y, approach.z, 1.0);
 			} else if (getNavigation().isDone() && (goalKey == delivery || goalKey == pickupBox)) {
 				// out of the water again (or its way ended a bit off): a new way right up to the chest, or as close as it goes
 				BlockPos box = (BlockPos) goalKey;
 				Path path = getNavigation().createPath(box, 1);
 				BlockPos side = openSide(box);
 
-				if ((path == null || !path.canReach()) && side != null) {
+				if ((path == null || !path.canReach()) && side != null && !pathDenied) {
 					path = getNavigation().createPath(side, 0);
 				}
 
-				if (path == null || !path.canReach()) {
+				if ((path == null || !path.canReach()) && !pathDenied) {
 					path = getNavigation().createPath(box, 3);
+				}
+
+				if (path != null && path.canReach()) {
+					goalPathMisses = 0;
+				} else if (!pathDenied) {
+					// none gets there: the next try only after a while, a little longer each time
+					missedGoalPath();
 				}
 
 				if (path != null) {
@@ -3602,6 +3698,56 @@ public class RobotEntity extends PathfinderMob {
 		return mining ? Math.max(range, stationRange) : range;
 	}
 
+	/** Whether it may work out a way now: there is time left in this server tick for all robots and for itself. */
+	private boolean mayPath() {
+		return pathTimeLeft(0);
+	}
+
+	private boolean pathTimeLeft(long running) {
+		if (!(level() instanceof ServerLevel server)) {
+			return true;
+		}
+
+		int tick = server.getServer().getTickCount();
+
+		if (tick != pathBudgetTick) {
+			pathBudgetTick = tick;
+			pathBudgetUsed = 0;
+		}
+
+		if (tick != ownPathTick) {
+			ownPathTick = tick;
+			ownPathUsed = 0;
+		}
+
+		if (tick < pathRestUntil) {
+			return false;
+		}
+
+		return pathBudgetUsed + running < PATH_BUDGET_NANOS && ownPathUsed + running < ROBOT_PATH_BUDGET_NANOS;
+	}
+
+	/** Time all robots spent on working out ways in the given server tick (0 for another tick), for the smoke tests. */
+	static long pathTimeInTick(int tick) {
+		return tick == pathBudgetTick ? pathBudgetUsed : 0;
+	}
+
+	private void notePathTime(long nanos) {
+		pathTimeLeft(0);
+		pathBudgetUsed += nanos;
+		ownPathUsed += nanos;
+
+		if (ownPathUsed >= ROBOT_PATH_BUDGET_NANOS && level() instanceof ServerLevel server) {
+			pathRestUntil = server.getServer().getTickCount() + 1 + PATH_REST_TICKS;
+		}
+	}
+
+	/** After a way that did not get to the chest or block: waits a little longer each time before the next try. */
+	private void missedGoalPath() {
+		goalPathMisses = Math.min(goalPathMisses + 1, 4);
+		goalPathWait = level().getGameTime() + (10L << goalPathMisses);
+	}
+
 	/**
 	 * Paths may be as long as its range, so it can work out the whole way to anything in range; in the ore search
 	 * also all the way down the staircase.
@@ -3628,7 +3774,15 @@ public class RobotEntity extends PathfinderMob {
 				nodeEvaluator = new BarrierAwareEvaluator();
 				nodeEvaluator.setCanPassDoors(true);
 				nodeEvaluator.setCanWalkOverFences(true);
-				return new PathFinder(nodeEvaluator, maxVisitedNodes);
+				return new PathFinder(nodeEvaluator, Math.min(maxVisitedNodes, MAX_PATH_NODES));
+			}
+
+			/** A block changed next to its way: with no time left in this tick it keeps the way it has instead of losing it. */
+			@Override
+			public void recomputePath() {
+				if (mayPath()) {
+					super.recomputePath();
+				}
 			}
 
 			/**
@@ -3637,6 +3791,23 @@ public class RobotEntity extends PathfinderMob {
 			 */
 			@Override
 			protected Path createPath(Set<BlockPos> targets, int regionOffset, boolean offsetUpward, int reachRange, float maxPathLength) {
+				// no time left in this tick: no way now, the caller tries again later
+				if (!mayPath()) {
+					pathDenied = true;
+					return null;
+				}
+
+				pathDenied = false;
+				long start = System.nanoTime();
+
+				try {
+					return createPathTimed(targets, regionOffset, offsetUpward, reachRange, maxPathLength, start);
+				} finally {
+					notePathTime(System.nanoTime() - start);
+				}
+			}
+
+			private Path createPathTimed(Set<BlockPos> targets, int regionOffset, boolean offsetUpward, int reachRange, float maxPathLength, long start) {
 				Path path = super.createPath(targets, regionOffset, offsetUpward, reachRange, maxPathLength);
 
 				if (path != null && path.canReach() || targets.isEmpty() || station == null || !(level() instanceof ServerLevel server)) {
@@ -3648,6 +3819,10 @@ public class RobotEntity extends PathfinderMob {
 				// in the quarry: up or down the central staircase, a stretch at a time (also just after mining was switched off)
 				if (!oreSearch && lastMine != null && Math.abs(toY - getBlockY()) > 3) {
 					for (BlockPos waypoint : lastMine.waypoints(server, blockPosition(), toY)) {
+						if (!pathTimeLeft(System.nanoTime() - start)) {
+							return path;
+						}
+
 						Path part = super.createPath(Set.of(waypoint), regionOffset, false, 1, maxPathLength);
 
 						if (part != null && part.canReach() && part.getNodeCount() > 1) {
@@ -3666,6 +3841,10 @@ public class RobotEntity extends PathfinderMob {
 				}
 
 				for (BlockPos waypoint : ores.waypoints(server, blockPosition(), toY)) {
+					if (!pathTimeLeft(System.nanoTime() - start)) {
+						return path;
+					}
+
 					Path part = super.createPath(Set.of(waypoint), regionOffset, false, 1, maxPathLength);
 
 					if (part != null && part.canReach() && part.getNodeCount() > 1) {
