@@ -1735,6 +1735,7 @@ public class RobotEntity extends PathfinderMob {
 		MiningJob job = MiningJob.get(Rooms.id(level()), station, minX, minY, minZ, maxX, maxY, maxZ, level().getGameTime());
 		// the platforms of the other stations of its group stay too
 		job.setGroup(groupMembers);
+		lastMine = job;
 		return job;
 	}
 
@@ -2337,6 +2338,8 @@ public class RobotEntity extends PathfinderMob {
 			candidates.addAll(job.nearby((ServerLevel) level(), blockPosition(), getUUID(), PATH_CHECKS, now));
 			BlockPos climbTo = null;
 			BlockPos climbFrom = null;
+			BlockPos approach = null;
+			Path approachPath = null;
 
 			for (BlockPos pos : candidates) {
 				if (getEyePosition().distanceTo(Vec3.atCenterOf(pos)) <= MINE_REACH) {
@@ -2362,12 +2365,24 @@ public class RobotEntity extends PathfinderMob {
 					}
 				}
 
+				if (approach == null && job instanceof MiningJob && closerAlong(path, pos)) {
+					// too far for one way (a mountain top, say): it walks as far as the way goes and looks again from there
+					approach = pos;
+					approachPath = path;
+					continue;
+				}
+
 				job.skip(pos, getUUID(), now);
 			}
 
 			if (climbTo != null) {
 				startClimb(job, climbTo, climbFrom);
 				return true;
+			}
+
+			if (approach != null) {
+				plannedPath = approachPath;
+				return startDigging(job, approach);
 			}
 
 			mineIdle = true;
@@ -2382,6 +2397,15 @@ public class RobotEntity extends PathfinderMob {
 		 */
 		private Path digPath(BlockPos pos) {
 			return getNavigation().createPath(Set.of(pos.immutable()), 4);
+		}
+
+		/** A way that does not get there but ends a good bit closer to the block. */
+		private boolean closerAlong(Path path, BlockPos target) {
+			if (path == null || path.getNodeCount() < 3) {
+				return false;
+			}
+
+			return path.getEndNode().asBlockPos().distSqr(target) + 16 < blockPosition().distSqr(target);
 		}
 
 		/** What it builds itself up to, and the spot it builds its pillar from. */
@@ -2741,8 +2765,14 @@ public class RobotEntity extends PathfinderMob {
 			} else if (getNavigation().isDone()) {
 				Path path = digPath(mineTarget);
 
-				if (path != null && path.canReach()) {
+				if (path != null && (path.canReach() || job instanceof MiningJob && closerAlong(path, mineTarget))) {
 					getNavigation().moveTo(path, 1.0);
+				} else if (job instanceof MiningJob area && mineTarget.getY() > getY() + 1 && climbStand(area, mineTarget) != null) {
+					// walked as far as it could and the block is still above it: it builds itself up from here
+					BlockPos target = mineTarget;
+					BlockPos from = climbStand(area, target);
+					dropMineTarget();
+					startClimb(job, target, from);
 				} else {
 					getMoveControl().setWantedPosition(centre.x, centre.y, centre.z, 1.0);
 				}
@@ -2751,8 +2781,8 @@ public class RobotEntity extends PathfinderMob {
 	}
 
 	/**
-	 * When it is stuck down in the mine (no way home, nothing it can get to), it digs itself out with its pickaxe: a
-	 * staircase towards its station, up to the station's height and then on along the ground, with cobblestone where a
+	 * When it is stuck down in the mine (no way home, nothing it can get to), it digs itself out with its pickaxe (in
+	 * the quarry only over to the central staircase, on its own level): a staircase towards its station, up to the station's height and then on along the ground, with cobblestone where a
 	 * step or the floor is missing and over water or lava beside the way. As soon as there is a way home again it
 	 * stops and walks.
 	 */
@@ -2928,6 +2958,16 @@ public class RobotEntity extends PathfinderMob {
 		private void planStep(ServerLevel server) {
 			BlockPos at = blockPosition();
 			BlockPos h = home();
+
+			if (!oreSearch && lastMine != null && lastMine.contains(at) && station != null && at.getY() < station.getY() - 1) {
+				// down in the quarry: not a staircase of its own, but a way on its level over to the central staircase,
+				// which leads up to the station
+				BlockPos pillar = lastMine.pillar();
+				int sx = Integer.signum(at.getX() - pillar.getX());
+				int sz = Integer.signum(at.getZ() - pillar.getZ());
+				h = new BlockPos(pillar.getX() + 2 * (sx == 0 && sz == 0 ? 1 : sx), at.getY(), pillar.getZ() + 2 * sz);
+			}
+
 			int dx = h.getX() - at.getX();
 			int dz = h.getZ() - at.getZ();
 			boolean up = at.getY() < h.getY();
@@ -3576,6 +3616,8 @@ public class RobotEntity extends PathfinderMob {
 
 	/** The strip mine it last worked in: its staircase still leads it up when the ore search is switched off. */
 	private OreJob lastOres;
+	/** The quarry it last worked in: its central staircase still leads it up when mining is switched off. */
+	private MiningJob lastMine;
 
 	/** Walks like any mob, but treats robot barriers as walls when working out a way. */
 	@Override
@@ -3601,14 +3643,27 @@ public class RobotEntity extends PathfinderMob {
 					return path;
 				}
 
+				int toY = targets.iterator().next().getY();
+
+				// in the quarry: up or down the central staircase, a stretch at a time (also just after mining was switched off)
+				if (!oreSearch && lastMine != null && Math.abs(toY - getBlockY()) > 3) {
+					for (BlockPos waypoint : lastMine.waypoints(server, blockPosition(), toY)) {
+						Path part = super.createPath(Set.of(waypoint), regionOffset, false, 1, maxPathLength);
+
+						if (part != null && part.canReach() && part.getNodeCount() > 1) {
+							return part;
+						}
+					}
+
+					return path;
+				}
+
 				// also when the ore search was just switched off and it is still down the staircase with its tools
 				OreJob ores = oreSearch && miningJob() instanceof OreJob current ? current : lastOres;
 
 				if (ores == null || getY() >= station.getY() && targets.iterator().next().getY() >= station.getY()) {
 					return path;
 				}
-
-				int toY = targets.iterator().next().getY();
 
 				for (BlockPos waypoint : ores.waypoints(server, blockPosition(), toY)) {
 					Path part = super.createPath(Set.of(waypoint), regionOffset, false, 1, maxPathLength);
