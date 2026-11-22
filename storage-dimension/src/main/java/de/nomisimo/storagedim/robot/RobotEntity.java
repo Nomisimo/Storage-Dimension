@@ -3727,6 +3727,15 @@ public class RobotEntity extends PathfinderMob {
 		return tick == pathBudgetTick ? pathBudgetUsed : 0;
 	}
 
+	/**
+	 * The stretches along the staircase are what gets it up or down the mine at all, so they only stop when the time of
+	 * all robots in this tick is used up, not already at its own share.
+	 */
+	private boolean waypointTimeLeft(long running) {
+		pathTimeLeft(0);
+		return pathBudgetUsed + running < PATH_BUDGET_NANOS;
+	}
+
 	private void notePathTime(long nanos) {
 		pathTimeLeft(0);
 		pathBudgetUsed += nanos;
@@ -3814,7 +3823,7 @@ public class RobotEntity extends PathfinderMob {
 				// in the quarry: up or down the central staircase, a stretch at a time (also just after mining was switched off)
 				if (!oreSearch && lastMine != null && Math.abs(toY - getBlockY()) > 3) {
 					for (BlockPos waypoint : lastMine.waypoints(server, blockPosition(), toY)) {
-						if (!pathTimeLeft(System.nanoTime() - start)) {
+						if (!waypointTimeLeft(System.nanoTime() - start)) {
 							return path;
 						}
 
@@ -3836,7 +3845,7 @@ public class RobotEntity extends PathfinderMob {
 				}
 
 				for (BlockPos waypoint : ores.waypoints(server, blockPosition(), toY)) {
-					if (!pathTimeLeft(System.nanoTime() - start)) {
+					if (!waypointTimeLeft(System.nanoTime() - start)) {
 						return path;
 					}
 
