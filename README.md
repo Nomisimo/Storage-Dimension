@@ -155,6 +155,7 @@ Rechtsklick auf die Station öffnet ihr Fenster:
 - **Robotername:** für die nächsten Roboter, die eingestellt werden. Bekommen mehrere Roboter einer Station denselben Namen, werden sie durchnummeriert (Quak1, Quak2 …). Das Benennen kostet keine Level.
 - **Roboter einstellen:** Roboter links in den Eingang legen, er kommt rechts eingestellt wieder heraus. Genauso werden Antennen mit der Station gepaart. Die Einstellungen stehen im Tooltip des Roboter-Items.
 - **Bereich geladen halten** (standardmäßig aus): hält den ganzen Arbeitsbereich der Station geladen, also alle Chunks ihrer Reichweite oder ihrer Antennen-Area (plus ein paar Blöcke Rand), wie mit `/forceload`. Dann sammeln und bauen die Roboter weiter, auch wenn kein Spieler in der Nähe oder online ist. Der Knopf zeigt, wie viele Chunks geladen sind. Ausschalten oder die Station abbauen gibt die Chunks wieder frei. Chunks, die schon vorher von Hand geladen waren, bleiben unberührt. Viele Chunks kosten Server-Leistung, also lieber eine kleine Reichweite oder eine Antennen-Area nehmen. Beim Abbau und bei der Erzsuche kommen 2 Chunks Rand rund um das Quadrat dazu. Solange eine Station ihren Bereich geladen hält, pausiert ein Server ohne Spieler nicht (`pause-when-empty-seconds` in `server.properties`). Das lässt sich in den Mod-Einstellungen (Mod Menu) mit „Server ohne Spieler: Läuft weiter / Pausiert“ umschalten; nur Operatoren können das ändern, es gilt für den ganzen Server und steht als `keepServerAwake` in `config/storagedim.json`.
+- **Chunkloading für den ganzen Server ausschalten:** `/storage chunkloading aus` gibt alle Chunks frei, die die Mod geladen hält, und solange es aus ist, hält keine Station etwas geladen (der Knopf in der Station sagt dann Bescheid). Die Stationen merken sich ihre Einstellung: `/storage chunkloading an` lädt ihre Bereiche wieder. `/storage chunkloading` allein zeigt, ob es an ist und welche Stationen wie viele Chunks laden. Der Schalter bleibt über Neustarts erhalten (`chunkLoading` in `config/storagedim.json`). Auf einem Server nur für Operatoren, in einer Einzelspieler- oder LAN-Welt für alle. `/forceload remove all` reicht nicht, weil die Mod ihre Chunks nach ein paar Sekunden wieder lädt.
 - **Roboterliste** rechts daneben: alle Roboter der Station (höchstens 32, im [Stations-Verbund](#stations-verbund) 32 pro Station) mit Entfernung und dem, was jeder gerade tut. Das Mausrad blättert.
 
 ![Fenster der Roboter-Station mit Roboterliste](docs/screenshots/roboter-station-menu.png)
@@ -381,6 +382,7 @@ Alle Rezepte stehen auch in [JEI](https://modrinth.com/mod/jei), auch auf Server
 | `/storage verlassen` | Zurück zum eigenen Speicher |
 | `/storage entfernen <spieler>` | Wirft ein Mitglied raus |
 | `/storage kiste besitzer <spieler>` | Danach eine eigene Dimensionskiste anklicken, um sie jemandem zu übertragen |
+| `/storage chunkloading [an\|aus]` | (OP, in Einzelspieler für alle) Schaltet das Chunkloading der Stationen für den ganzen Server an oder aus, ohne Zusatz der Status mit allen Stationen ([mehr](#roboter-station)) |
 | `/storage einlagern <spieler> <item> [anzahl]` | (OP, auch Konsole) Legt Items direkt ins ME-Netz des Spielers, Item mit Komponenten wie bei `/give`, z. B. `minecraft:diamond_pickaxe[enchantments={mending:1}] 32` |
 | `/storage give [spieler]` | (OP) Gibt eine Dimensionskiste |
 | `/storage give terminal` | (OP) Gibt ein ME-Terminal |
@@ -399,6 +401,7 @@ In `config/storagedim.json`:
 | Einstellung | Standard | Wirkung |
 | --- | --- | --- |
 | `sharedStorage` | `true` | Alle Spieler teilen sich einen Speicher und eine Bibliothek. Mit `false` bekommt jeder seinen eigenen, der sich per `/storage teilen` freigeben lässt (auf dem Server). |
+| `chunkLoading` | `true` | Mit `false` hält keine Roboter-Station Chunks geladen, egal wie sie eingestellt ist. Wird mit `/storage chunkloading an\|aus` umgeschaltet (auf dem Server). |
 | `robotChestSound` | `false` | Geht eine Kiste beim Einlagern durch einen Roboter auf, ist sie standardmäßig still (nur der Deckel bewegt sich). Mit `true` macht sie dabei das Öffnen- und Schließen-Geräusch (auf dem Server). |
 | `webPort` | `8765` | Port der [Webansicht](#me-speicher-im-browser) (auf dem Server). `0` schaltet sie aus. |
 | `webAddress` | `""` | Adresse des Servers für den Link von `/storage web`, z. B. `mc.example.de` (ohne Port). Mit `http://` oder `https://` davor der komplette Anfang des Links, z. B. `https://mc.example.de:10000` (hinter Reverse-Proxy/Tunnel). Leer: `localhost`. |

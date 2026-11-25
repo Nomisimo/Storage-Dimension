@@ -90,7 +90,7 @@ public final class ServerSettings {
 	 * loaded, so its robots go on working.
 	 */
 	public static boolean keepsAwake() {
-		if (!StorageConfig.get().keepServerAwake) {
+		if (!StorageConfig.get().keepServerAwake || !StorageConfig.get().chunkLoading) {
 			return false;
 		}
 

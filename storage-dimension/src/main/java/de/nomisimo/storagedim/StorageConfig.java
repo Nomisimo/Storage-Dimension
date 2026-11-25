@@ -33,6 +33,12 @@ public final class StorageConfig {
 	 */
 	public boolean keepServerAwake = true;
 
+	/**
+	 * Server. false: robot stations keep no chunks loaded at all, whatever they are set to; the chunks the mod forced
+	 * are released. Changed with {@code /storage chunkloading an|aus}.
+	 */
+	public boolean chunkLoading = true;
+
 	/** Server. Port of the ME web view ({@code /storage web}); 0 switches it off. */
 	public int webPort = 8765;
 
