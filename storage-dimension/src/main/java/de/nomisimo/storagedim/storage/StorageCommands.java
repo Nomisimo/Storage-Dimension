@@ -2,6 +2,7 @@ package de.nomisimo.storagedim.storage;
 
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
@@ -12,6 +13,7 @@ import com.mojang.brigadier.context.CommandContext;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
 
 import de.nomisimo.storagedim.StorageConfig;
+import de.nomisimo.storagedim.robot.StationChunks;
 import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback;
 import net.minecraft.ChatFormatting;
 import net.minecraft.commands.CommandBuildContext;
@@ -19,6 +21,7 @@ import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
 import net.minecraft.commands.arguments.EntityArgument;
 import net.minecraft.commands.arguments.item.ItemArgument;
+import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.item.ItemStack;
@@ -81,6 +84,11 @@ public final class StorageCommands {
 									send(player, "Klicke jetzt die Dimensionskiste an, die " + name(target) + " gehören soll.", ChatFormatting.YELLOW);
 									return 1;
 								}))))
+				.then(Commands.literal("chunkloading")
+						.requires(source -> !source.getServer().isDedicatedServer() || Commands.hasPermission(Commands.LEVEL_GAMEMASTERS).test(source))
+						.executes(StorageCommands::chunkStatus)
+						.then(Commands.literal("aus").executes(ctx -> chunkLoading(ctx, false)))
+						.then(Commands.literal("an").executes(ctx -> chunkLoading(ctx, true))))
 				.then(Commands.literal("einlagern")
 						.requires(Commands.hasPermission(Commands.LEVEL_GAMEMASTERS))
 						.then(Commands.argument("spieler", EntityArgument.players())
@@ -109,6 +117,51 @@ public final class StorageCommands {
 								.executes(ctx -> give(ctx.getSource().getPlayerOrException(), new ItemStack(de.nomisimo.storagedim.robot.RobotBarrierBlock.ITEM, 16))))
 						.then(Commands.argument("spieler", EntityArgument.player())
 								.executes(ctx -> give(EntityArgument.getPlayer(ctx, "spieler"), StorageItems.storageChest())))));
+	}
+
+	private static int chunkLoading(CommandContext<CommandSourceStack> ctx, boolean on) {
+		CommandSourceStack source = ctx.getSource();
+		int before = StationChunks.forcedCount();
+		StationChunks.setAllowed(source.getServer(), on);
+		de.nomisimo.storagedim.StorageDimensionMod.LOGGER.info("{} hat das Chunkloading der Stationen {}", source.getTextName(),
+				on ? "eingeschaltet" : "ausgeschaltet");
+
+		if (on) {
+			int stations = StationChunks.list().size();
+			source.sendSuccess(() -> Component.literal("Chunkloading der Mod ist wieder an. " + stations
+					+ (stations == 1 ? " Station hält" : " Stationen halten") + " ihren Bereich geladen ("
+					+ StationChunks.forcedCount() + " Chunks).").withStyle(ChatFormatting.GREEN), true);
+		} else {
+			source.sendSuccess(() -> Component.literal("Chunkloading der Mod ist aus. " + before
+					+ (before == 1 ? " Chunk wurde" : " Chunks wurden") + " freigegeben. Die Stationen merken sich ihre Einstellung, "
+					+ "/storage chunkloading an schaltet es wieder ein.").withStyle(ChatFormatting.YELLOW), true);
+		}
+
+		return 1;
+	}
+
+	private static int chunkStatus(CommandContext<CommandSourceStack> ctx) {
+		CommandSourceStack source = ctx.getSource();
+		List<StationChunks.Loaded> stations = StationChunks.list();
+
+		if (!StationChunks.allowed()) {
+			source.sendSuccess(() -> Component.literal("Chunkloading der Mod ist aus: keine Station hält Chunks geladen"
+					+ (stations.isEmpty() ? "." : " (" + stations.size() + " würden es, wenn es an wäre).")
+					+ " Einschalten: /storage chunkloading an").withStyle(ChatFormatting.YELLOW), false);
+			return 0;
+		}
+
+		source.sendSuccess(() -> Component.literal("Chunkloading der Mod ist an: " + stations.size()
+				+ (stations.size() == 1 ? " Station, " : " Stationen, ") + StationChunks.forcedCount() + " Chunks geladen."
+				+ " Ausschalten: /storage chunkloading aus").withStyle(ChatFormatting.AQUA), false);
+
+		for (StationChunks.Loaded station : stations) {
+			BlockPos pos = station.station();
+			source.sendSuccess(() -> Component.literal("  " + station.dim() + " " + pos.getX() + " " + pos.getY() + " " + pos.getZ()
+					+ ": " + station.chunks() + " Chunks").withStyle(ChatFormatting.GRAY), false);
+		}
+
+		return stations.size();
 	}
 
 	private static int info(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException {

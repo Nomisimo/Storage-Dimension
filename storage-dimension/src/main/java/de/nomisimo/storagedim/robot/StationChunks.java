@@ -1,11 +1,14 @@
 package de.nomisimo.storagedim.robot;
 
+import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import de.nomisimo.storagedim.StorageConfig;
 import de.nomisimo.storagedim.storage.Rooms;
 import de.nomisimo.storagedim.storage.StorageData;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
@@ -62,6 +65,11 @@ public final class StationChunks {
 
 	/** The station's button: keeps its work area loaded, or no longer. */
 	public static Component toggle(ServerLevel level, String dim, BlockPos station) {
+		if (!allowed()) {
+			return Component.literal("Das Chunkloading der Mod ist auf diesem Server ausgeschaltet (/storage chunkloading).")
+					.withStyle(ChatFormatting.RED);
+		}
+
 		StorageData data = StorageData.get();
 		Set<Long> stations = data.loadedStations.computeIfAbsent(dim, d -> new HashSet<>());
 		boolean on = !stations.remove(station.asLong());
@@ -82,9 +90,54 @@ public final class StationChunks {
 				+ "), auch wenn kein Spieler in der Nähe ist. Die Roboter arbeiten weiter.").withStyle(ChatFormatting.GREEN);
 	}
 
+	/** A station that keeps its area loaded, for {@code /storage chunkloading}. */
+	public record Loaded(String dim, BlockPos station, int chunks) {
+	}
+
+	/** Every station that keeps its area loaded right now. */
+	public static List<Loaded> list() {
+		StorageData data = StorageData.get();
+		List<Loaded> list = new ArrayList<>();
+
+		if (data == null) {
+			return list;
+		}
+
+		for (Map.Entry<String, Set<Long>> entry : data.loadedStations.entrySet()) {
+			for (long station : entry.getValue()) {
+				BlockPos pos = BlockPos.of(station);
+				list.add(new Loaded(entry.getKey(), pos, chunks(data, entry.getKey(), pos).size()));
+			}
+		}
+
+		list.sort(Comparator.comparing(Loaded::dim).thenComparing(Loaded::station));
+		return list;
+	}
+
+	/** How many chunks the mod itself has force-loaded, over all dimensions. */
+	public static int forcedCount() {
+		StorageData data = StorageData.get();
+		return data == null ? 0 : data.forcedChunks.values().stream().mapToInt(Set::size).sum();
+	}
+
+	/** Whether the mod may keep chunks loaded at all: switched off server wide with {@code /storage chunkloading aus}. */
+	public static boolean allowed() {
+		return StorageConfig.get().chunkLoading;
+	}
+
+	/**
+	 * Switches the mod's chunk loading on or off for the whole server. Off, every chunk the mod forced is released
+	 * and no station keeps its area loaded; the stations keep their setting, so switching on again restores them.
+	 */
+	public static void setAllowed(MinecraftServer server, boolean on) {
+		StorageConfig.get().chunkLoading = on;
+		StorageConfig.save();
+		update(server);
+	}
+
 	/** How many chunks the station keeps loaded, 0 when it is switched off. */
 	public static int loaded(String dim, BlockPos station) {
-		return enabled(dim, station) ? chunks(StorageData.get(), dim, station).size() : 0;
+		return allowed() && enabled(dim, station) ? chunks(StorageData.get(), dim, station).size() : 0;
 	}
 
 	/**
@@ -177,7 +230,10 @@ public final class StationChunks {
 					continue;
 				}
 
-				wanted.addAll(chunks(data, dim, station));
+				// switched off server wide: the station keeps its setting, but nothing is loaded
+				if (allowed()) {
+					wanted.addAll(chunks(data, dim, station));
+				}
 			}
 
 			Set<Long> forced = data.forcedChunks.computeIfAbsent(dim, d -> new HashSet<>());
@@ -239,6 +295,29 @@ public final class StationChunks {
 		if (data.forcedChunks.getOrDefault(dim, Set.of()).contains(own)) {
 			errors.add("Station hat einen von Hand geladenen Chunk übernommen");
 		}
+
+		// switched off for the whole server: everything the mod forced is released, the own chunk stays
+		boolean wasAllowed = allowed();
+		setAllowed(level.getServer(), false);
+		Set<Long> off = new HashSet<>(level.getForceLoadedChunks());
+
+		if (!data.forcedChunks.getOrDefault(dim, Set.of()).isEmpty() || !off.contains(own) || loaded(dim, station) != 0) {
+			errors.add("Chunkloading aus gibt die Chunks der Mod nicht frei");
+		}
+
+		toggle(level, dim, station);
+
+		if (!enabled(dim, station)) {
+			errors.add("Station-Knopf ändert die Einstellung, obwohl das Chunkloading aus ist");
+		}
+
+		setAllowed(level.getServer(), true);
+
+		if (!new HashSet<>(level.getForceLoadedChunks()).containsAll(chunks)) {
+			errors.add("Chunkloading an lädt den Bereich der Station nicht wieder");
+		}
+
+		setAllowed(level.getServer(), wasAllowed);
 
 		level.setBlockAndUpdate(station, Blocks.AIR.defaultBlockState());
 		update(level.getServer());
